@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		CEAC57FB2FEB04E200E9D691 /* AGENTS.md in Resources */ = {isa = PBXBuildFile; fileRef = CEAC57F92FEB04D300E9D691 /* AGENTS.md */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		CEAC57DC2FEB03E000E9D691 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,7 +31,28 @@
 		CEAC57CE2FEB03DE00E9D691 /* GigaCat.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GigaCat.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CEAC57DB2FEB03E000E9D691 /* GigaCatTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GigaCatTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CEAC57E52FEB03E000E9D691 /* GigaCatUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GigaCatUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		CEAC57F92FEB04D300E9D691 /* AGENTS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = AGENTS.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		CEAC57FF2FEB064200E9D691 /* Exceptions for "Docs" folder in "GigaCat" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				DOMAIN_MODEL.md,
+			);
+			target = CEAC57CD2FEB03DE00E9D691 /* GigaCat */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+		CEAC58002FEB064200E9D691 /* Exceptions for "Docs" folder in "Compile Sources" phase from "GigaCat" target */ = {
+			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
+			buildPhase = CEAC57CA2FEB03DE00E9D691 /* Sources */;
+			membershipExceptions = (
+				DOMAIN_MODEL.md,
+			);
+		};
+/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		CEAC57D02FEB03DE00E9D691 /* GigaCat */ = {
@@ -43,6 +68,15 @@
 		CEAC57E82FEB03E000E9D691 /* GigaCatUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = GigaCatUITests;
+			sourceTree = "<group>";
+		};
+		CEAC57F82FEB046400E9D691 /* Docs */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CEAC57FF2FEB064200E9D691 /* Exceptions for "Docs" folder in "GigaCat" target */,
+				CEAC58002FEB064200E9D691 /* Exceptions for "Docs" folder in "Compile Sources" phase from "GigaCat" target */,
+			);
+			path = Docs;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -79,6 +113,8 @@
 				CEAC57DE2FEB03E000E9D691 /* GigaCatTests */,
 				CEAC57E82FEB03E000E9D691 /* GigaCatUITests */,
 				CEAC57CF2FEB03DE00E9D691 /* Products */,
+				CEAC57F82FEB046400E9D691 /* Docs */,
+				CEAC57F92FEB04D300E9D691 /* AGENTS.md */,
 			);
 			sourceTree = "<group>";
 		};
@@ -109,6 +145,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				CEAC57D02FEB03DE00E9D691 /* GigaCat */,
+				CEAC57F82FEB046400E9D691 /* Docs */,
 			);
 			name = GigaCat;
 			packageProductDependencies = (
@@ -212,6 +249,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CEAC57FB2FEB04E200E9D691 /* AGENTS.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
