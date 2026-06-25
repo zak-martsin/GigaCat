@@ -34,26 +34,6 @@
 		CEAC57F92FEB04D300E9D691 /* AGENTS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = AGENTS.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		CEAC57FF2FEB064200E9D691 /* Exceptions for "Docs" folder in "GigaCat" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				DOMAIN_MODEL.md,
-			);
-			target = CEAC57CD2FEB03DE00E9D691 /* GigaCat */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
-/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-		CEAC58002FEB064200E9D691 /* Exceptions for "Docs" folder in "Compile Sources" phase from "GigaCat" target */ = {
-			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
-			buildPhase = CEAC57CA2FEB03DE00E9D691 /* Sources */;
-			membershipExceptions = (
-				DOMAIN_MODEL.md,
-			);
-		};
-/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		CEAC57D02FEB03DE00E9D691 /* GigaCat */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -72,10 +52,6 @@
 		};
 		CEAC57F82FEB046400E9D691 /* Docs */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				CEAC57FF2FEB064200E9D691 /* Exceptions for "Docs" folder in "GigaCat" target */,
-				CEAC58002FEB064200E9D691 /* Exceptions for "Docs" folder in "Compile Sources" phase from "GigaCat" target */,
-			);
 			path = Docs;
 			sourceTree = "<group>";
 		};
@@ -145,7 +121,6 @@
 			);
 			fileSystemSynchronizedGroups = (
 				CEAC57D02FEB03DE00E9D691 /* GigaCat */,
-				CEAC57F82FEB046400E9D691 /* Docs */,
 			);
 			name = GigaCat;
 			packageProductDependencies = (
@@ -452,7 +427,6 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
@@ -484,7 +458,6 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
