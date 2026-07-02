@@ -3,6 +3,7 @@ GigaCat AI Development Rules
 Project Overview
 
 GigaCat is an offline-first fitness tracking application built with SwiftUI.
+Target platform: iOS 26.
 
 Architecture
 
