@@ -3,6 +3,7 @@ GigaCat AI Development Rules
 Project Overview
 
 GigaCat is an offline-first fitness tracking application built with SwiftUI.
+Target platform: iOS 26.
 
 Architecture
 
@@ -41,6 +42,14 @@ Documentation Rules
 * Documentation must explain intent, not repeat the code.
 * For complex flows, add a short `// MARK:` section.
 * Keep comments short and useful.
+
+Design Rules
+
+* Use a small internal DesignSystem.
+* Do not hardcode random spacing, colors, or corner radii in feature views.
+* Prefer reusable components for cards, buttons, and input rows.
+* UI should be simple, clean, and native iOS-like.
+* Do not overdesign screens before core flows work.
 
 Current Domain
 
