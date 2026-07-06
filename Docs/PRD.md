@@ -431,7 +431,7 @@ ExerciseLog
 
 * id
 * sessionId
-* exerciseId
+* workoutDayExerciseId
 * weight
 * reps
 * setNumber

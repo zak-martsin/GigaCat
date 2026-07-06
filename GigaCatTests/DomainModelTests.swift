@@ -42,7 +42,7 @@ struct DomainModelTests {
         #expect(throws: DomainValidationError.nonPositiveValue(field: "reps")) {
             try ExerciseLog(
                 sessionId: UUID(),
-                exerciseId: UUID(),
+                workoutDayExerciseId: UUID(),
                 weight: 40,
                 reps: 0,
                 setNumber: 1
@@ -61,5 +61,16 @@ struct DomainModelTests {
         )
 
         #expect(assignment.targetWeight == nil)
+    }
+
+    @Test
+    func workoutProgramPreservesTags() throws {
+        let program = try WorkoutProgram(
+            title: "Home Strength",
+            description: "Simple bodyweight progression.",
+            tags: [.home, .strength, .bodyweight]
+        )
+
+        #expect(program.tags == [.home, .strength, .bodyweight])
     }
 }

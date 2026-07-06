@@ -40,6 +40,7 @@ Represents a predefined training program that organizes workouts into reusable t
 - `id`: Stable program identifier.
 - `title`: Program name shown to the user.
 - `description`: Short summary of the program.
+- `tags`: User-facing categories such as gym, home, cardio, strength, or mobility that help filter and surface the program.
 
 ### Relationships
 
@@ -89,7 +90,7 @@ Represents an exercise assignment within a planned workout day. This entity exis
 
 ### Purpose
 
-Represents a reusable exercise definition that can appear in workout plans and workout logs. It should contain exercise identity information, not session-specific or plan-specific performance values.
+Represents a reusable exercise definition that can appear in workout plans. It should contain exercise identity information, not session-specific or plan-specific performance values.
 
 ### Fields
 
@@ -100,7 +101,6 @@ Represents a reusable exercise definition that can appear in workout plans and w
 ### Relationships
 
 - One `Exercise` can appear in many `WorkoutDayExercise` records.
-- One `Exercise` can appear in many `ExerciseLog` records.
 
 ## WorkoutSession
 
@@ -133,15 +133,16 @@ Represents a single logged set for an exercise during a workout session. This ke
 
 - `id`: Stable exercise log identifier.
 - `sessionId`: Identifier of the parent `WorkoutSession`.
-- `exerciseId`: Identifier of the performed `Exercise`.
+- `workoutDayExerciseId`: Identifier of the planned `WorkoutDayExercise` entry being performed.
 - `weight`: Weight used for the set.
 - `reps`: Number of repetitions completed.
-- `setNumber`: Sequence number of the set within the exercise for that session.
+- `setNumber`: Sequence number of the set within that planned workout day exercise for the session.
+- `performedAt`: Timestamp when the set was logged, used to reconstruct workout activity over time.
 
 ### Relationships
 
 - Each `ExerciseLog` belongs to one `WorkoutSession`.
-- Each `ExerciseLog` references one `Exercise`.
+- Each `ExerciseLog` references one `WorkoutDayExercise`.
 
 ## Relationship Summary
 
@@ -150,5 +151,5 @@ Represents a single logged set for an exercise during a workout session. This ke
 - `WorkoutDay` 1 -> many `WorkoutDayExercise`
 - `WorkoutDay` 1 -> many `WorkoutSession`
 - `Exercise` 1 -> many `WorkoutDayExercise`
-- `Exercise` 1 -> many `ExerciseLog`
+- `WorkoutDayExercise` 1 -> many `ExerciseLog`
 - `WorkoutSession` 1 -> many `ExerciseLog`

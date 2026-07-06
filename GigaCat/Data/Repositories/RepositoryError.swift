@@ -8,6 +8,7 @@ enum RepositoryError: LocalizedError, Equatable {
     case exerciseNotFound
     case workoutSessionNotFound
     case activeSessionAlreadyExists
+    case workoutSessionNotActive
 
     var errorDescription: String? {
         switch self {
@@ -23,6 +24,8 @@ enum RepositoryError: LocalizedError, Equatable {
             return "The workout session could not be found."
         case .activeSessionAlreadyExists:
             return "The user already has an active workout session."
+        case .workoutSessionNotActive:
+            return "The workout session is no longer active."
         }
     }
 }

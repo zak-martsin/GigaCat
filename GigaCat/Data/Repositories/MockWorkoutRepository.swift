@@ -20,6 +20,36 @@ struct MockWorkoutRepository: WorkoutRepository {
         try await store.completeSession(sessionId: sessionId, completedAt: completedAt)
     }
 
+    func deleteSession(sessionId: UUID) async throws {
+        try await store.deleteSession(sessionId: sessionId)
+    }
+
+    func completeSessionAndSelectProgram(
+        sessionId: UUID,
+        completedAt: Date,
+        userId: UUID,
+        programId: UUID
+    ) async throws -> User {
+        try await store.completeSessionAndSelectProgram(
+            sessionId: sessionId,
+            completedAt: completedAt,
+            userId: userId,
+            programId: programId
+        )
+    }
+
+    func deleteSessionAndSelectProgram(
+        sessionId: UUID,
+        userId: UUID,
+        programId: UUID
+    ) async throws -> User {
+        try await store.deleteSessionAndSelectProgram(
+            sessionId: sessionId,
+            userId: userId,
+            programId: programId
+        )
+    }
+
     func saveExerciseLog(_ log: ExerciseLog) async throws -> ExerciseLog {
         try await store.saveExerciseLog(log)
     }
