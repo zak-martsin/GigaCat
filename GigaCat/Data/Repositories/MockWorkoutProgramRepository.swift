@@ -20,6 +20,10 @@ struct MockWorkoutProgramRepository: WorkoutProgramRepository {
         await store.workoutDays(programId: programId)
     }
 
+    func fetchWorkoutDay(id: UUID) async throws -> WorkoutDay? {
+        await store.workoutDay(id: id)
+    }
+
     func fetchWorkoutDayExercises(workoutDayId: UUID) async throws -> [WorkoutDayExercise] {
         await store.workoutDayExercises(workoutDayId: workoutDayId)
     }

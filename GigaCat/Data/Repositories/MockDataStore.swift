@@ -1,9 +1,26 @@
 import Foundation
 
+struct HomeProgramCatalogMetadata: Equatable, Sendable {
+    let isRecommended: Bool
+    let isPopular: Bool
+    let rateScore: Double?
+
+    init(
+        isRecommended: Bool = false,
+        isPopular: Bool = false,
+        rateScore: Double? = nil
+    ) {
+        self.isRecommended = isRecommended
+        self.isPopular = isPopular
+        self.rateScore = rateScore
+    }
+}
+
 /// Shared in-memory source used by mock repositories to simulate a consistent offline-first data layer.
 actor MockDataStore {
     private(set) var usersByID: [UUID: User]
     private(set) var programsByID: [UUID: WorkoutProgram]
+    private(set) var homeProgramCatalogMetadataByProgramIDStorage: [UUID: HomeProgramCatalogMetadata]
     private(set) var workoutDaysByID: [UUID: WorkoutDay]
     private(set) var dayExercisesByID: [UUID: WorkoutDayExercise]
     private(set) var exercisesByID: [UUID: Exercise]
@@ -14,6 +31,7 @@ actor MockDataStore {
     init(
         users: [User] = [],
         programs: [WorkoutProgram] = [],
+        homeProgramCatalogMetadataByProgramID: [UUID: HomeProgramCatalogMetadata] = [:],
         workoutDays: [WorkoutDay] = [],
         dayExercises: [WorkoutDayExercise] = [],
         exercises: [Exercise] = [],
@@ -23,6 +41,7 @@ actor MockDataStore {
     ) {
         self.usersByID = Dictionary(uniqueKeysWithValues: users.map { ($0.id, $0) })
         self.programsByID = Dictionary(uniqueKeysWithValues: programs.map { ($0.id, $0) })
+        self.homeProgramCatalogMetadataByProgramIDStorage = homeProgramCatalogMetadataByProgramID
         self.workoutDaysByID = Dictionary(uniqueKeysWithValues: workoutDays.map { ($0.id, $0) })
         self.dayExercisesByID = Dictionary(uniqueKeysWithValues: dayExercises.map { ($0.id, $0) })
         self.exercisesByID = Dictionary(uniqueKeysWithValues: exercises.map { ($0.id, $0) })
@@ -73,6 +92,10 @@ actor MockDataStore {
 
     func program(id: UUID) -> WorkoutProgram? {
         programsByID[id]
+    }
+
+    func homeProgramCatalogMetadataByProgramID() -> [UUID: HomeProgramCatalogMetadata] {
+        homeProgramCatalogMetadataByProgramIDStorage
     }
 
     func workoutDays(programId: UUID) -> [WorkoutDay] {
@@ -135,17 +158,73 @@ actor MockDataStore {
         return completedSession
     }
 
+    func completeSessionAndSelectProgram(
+        sessionId: UUID,
+        completedAt: Date,
+        userId: UUID,
+        programId: UUID
+    ) throws -> User {
+        guard let session = sessionsByID[sessionId] else {
+            throw RepositoryError.workoutSessionNotFound
+        }
+
+        let completedSession = try session.markCompleted(at: completedAt)
+        let updatedUser = try updatedUserSelectingProgram(for: userId, programId: programId)
+
+        sessionsByID[sessionId] = completedSession
+        usersByID[userId] = updatedUser
+        return updatedUser
+    }
+
+    func deleteSession(sessionId: UUID) throws {
+        guard sessionsByID[sessionId] != nil else {
+            throw RepositoryError.workoutSessionNotFound
+        }
+
+        sessionsByID.removeValue(forKey: sessionId)
+        exerciseLogsByID = exerciseLogsByID.filter { $0.value.sessionId != sessionId }
+    }
+
+    func deleteSessionAndSelectProgram(
+        sessionId: UUID,
+        userId: UUID,
+        programId: UUID
+    ) throws -> User {
+        guard sessionsByID[sessionId] != nil else {
+            throw RepositoryError.workoutSessionNotFound
+        }
+
+        let updatedUser = try updatedUserSelectingProgram(for: userId, programId: programId)
+
+        sessionsByID.removeValue(forKey: sessionId)
+        exerciseLogsByID = exerciseLogsByID.filter { $0.value.sessionId != sessionId }
+        usersByID[userId] = updatedUser
+        return updatedUser
+    }
+
     func saveExerciseLog(_ log: ExerciseLog) throws -> ExerciseLog {
         guard let session = sessionsByID[log.sessionId] else {
             throw RepositoryError.workoutSessionNotFound
         }
 
-        guard exercisesByID[log.exerciseId] != nil else {
+        guard let workoutDayExercise = dayExercisesByID[log.workoutDayExerciseId] else {
             throw RepositoryError.exerciseNotFound
         }
 
-        guard session.status == .inProgress || session.status == .completed else {
-            throw RepositoryError.workoutSessionNotFound
+        guard workoutDayExercise.workoutDayId == session.workoutDayId else {
+            throw RepositoryError.exerciseNotFound
+        }
+
+        guard session.status == .inProgress else {
+            throw RepositoryError.workoutSessionNotActive
+        }
+
+        if let existingLogID = exerciseLogsByID.values.first(where: {
+            $0.sessionId == log.sessionId &&
+                $0.workoutDayExerciseId == log.workoutDayExerciseId &&
+                $0.setNumber == log.setNumber
+        })?.id {
+            exerciseLogsByID.removeValue(forKey: existingLogID)
         }
 
         exerciseLogsByID[log.id] = log
@@ -170,7 +249,11 @@ actor MockDataStore {
         exerciseLogsByID.values
             .filter { $0.sessionId == sessionId }
             .sorted { lhs, rhs in
-                if lhs.exerciseId == rhs.exerciseId {
+                if lhs.workoutDayExerciseId == rhs.workoutDayExerciseId {
+                    if lhs.setNumber == rhs.setNumber {
+                        return lhs.performedAt < rhs.performedAt
+                    }
+
                     return lhs.setNumber < rhs.setNumber
                 }
 
@@ -181,12 +264,20 @@ actor MockDataStore {
     /// Filters logs to one user and one exercise, then orders from newest performance backward.
     func recentExerciseLogs(userId: UUID, exerciseId: UUID, limit: Int) -> [ExerciseLog] {
         let userSessionIDs = Set(sessionsByID.values.filter { $0.userId == userId }.map(\.id))
+        let matchingWorkoutDayExerciseIDs = Set(
+            dayExercisesByID.values
+                .filter { $0.exerciseId == exerciseId }
+                .map(\.id)
+        )
 
         return exerciseLogsByID.values
-            .filter { $0.exerciseId == exerciseId && userSessionIDs.contains($0.sessionId) }
+            .filter {
+                matchingWorkoutDayExerciseIDs.contains($0.workoutDayExerciseId) &&
+                    userSessionIDs.contains($0.sessionId)
+            }
             .sorted { lhs, rhs in
-                let lhsDate = sessionsByID[lhs.sessionId]?.startedAt ?? .distantPast
-                let rhsDate = sessionsByID[rhs.sessionId]?.startedAt ?? .distantPast
+                let lhsDate = lhs.performedAt
+                let rhsDate = rhs.performedAt
 
                 if lhsDate == rhsDate {
                     return lhs.setNumber > rhs.setNumber
@@ -196,5 +287,17 @@ actor MockDataStore {
             }
             .prefix(limit)
             .map { $0 }
+    }
+
+    private func updatedUserSelectingProgram(for userId: UUID, programId: UUID) throws -> User {
+        guard let user = usersByID[userId] else {
+            throw RepositoryError.userNotFound
+        }
+
+        guard programsByID[programId] != nil else {
+            throw RepositoryError.workoutProgramNotFound
+        }
+
+        return user.selectingProgram(programId)
     }
 }
