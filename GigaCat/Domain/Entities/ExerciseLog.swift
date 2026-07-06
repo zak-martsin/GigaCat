@@ -1,21 +1,23 @@
 import Foundation
 
-/// Single performed set recorded for an exercise within a workout session.
+/// Single performed set recorded for a planned workout day exercise within a workout session.
 struct ExerciseLog: Identifiable, Codable, Equatable, Sendable {
     let id: UUID
     let sessionId: UUID
-    let exerciseId: UUID
+    let workoutDayExerciseId: UUID
     let weight: Double
     let reps: Int
     let setNumber: Int
+    let performedAt: Date
 
     init(
         id: UUID = UUID(),
         sessionId: UUID,
-        exerciseId: UUID,
+        workoutDayExerciseId: UUID,
         weight: Double,
         reps: Int,
-        setNumber: Int
+        setNumber: Int,
+        performedAt: Date = Date()
     ) throws {
         guard weight >= 0 else {
             throw DomainValidationError.negativeValue(field: "weight")
@@ -31,9 +33,10 @@ struct ExerciseLog: Identifiable, Codable, Equatable, Sendable {
 
         self.id = id
         self.sessionId = sessionId
-        self.exerciseId = exerciseId
+        self.workoutDayExerciseId = workoutDayExerciseId
         self.weight = weight
         self.reps = reps
         self.setNumber = setNumber
+        self.performedAt = performedAt
     }
 }
