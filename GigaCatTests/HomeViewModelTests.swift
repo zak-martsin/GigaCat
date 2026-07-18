@@ -50,7 +50,35 @@ struct HomeViewModelTests {
 
     @Test
     func recentExerciseActivityKeepsAnOldSessionAlive() async throws {
-        let now = Date()
+        let viewModel = try makeViewModelWithRecentExerciseActivity()
+
+        await viewModel.load()
+        let route = await viewModel.handleMiniPlayerAction()
+
+        #expect(route == .openWorkout)
+        #expect(viewModel.expiredSessionAlert == nil)
+        #expect(viewModel.miniPlayerState.action == .continueWorkout)
+    }
+
+    /// Builds a HomeViewModel wired to a scenario where the active session started long ago but has recent log activity.
+    private func makeViewModelWithRecentExerciseActivity(
+        now: Date = Date()
+    ) throws -> HomeViewModel {
+        let store = try makeStoreWithRecentExerciseActivity(now: now)
+        let factory = MockRepositoryFactory(store: store)
+        return HomeViewModel(
+            userRepository: factory.userRepository,
+            homeRepository: factory.homeRepository,
+            workoutProgramRepository: factory.workoutProgramRepository,
+            workoutRepository: factory.workoutRepository
+        )
+    }
+
+    /// Creates the minimal seeded store needed to verify that recent exercise logs keep an in-progress session alive.
+    // swiftlint:disable function_body_length
+    private func makeStoreWithRecentExerciseActivity(
+        now: Date
+    ) throws -> MockDataStore {
         let userID = UUID()
         let programID = UUID()
         let workoutDayID = UUID()
@@ -58,7 +86,7 @@ struct HomeViewModelTests {
         let workoutDayExerciseID = UUID()
         let sessionID = UUID()
 
-        let store = MockDataStore(
+        return MockDataStore(
             users: [
                 try User(
                     id: userID,
@@ -129,20 +157,6 @@ struct HomeViewModelTests {
             ],
             currentUserID: userID
         )
-
-        let factory = MockRepositoryFactory(store: store)
-        let viewModel = HomeViewModel(
-            userRepository: factory.userRepository,
-            homeRepository: factory.homeRepository,
-            workoutProgramRepository: factory.workoutProgramRepository,
-            workoutRepository: factory.workoutRepository
-        )
-
-        await viewModel.load()
-        let route = await viewModel.handleMiniPlayerAction()
-
-        #expect(route == .openWorkout)
-        #expect(viewModel.expiredSessionAlert == nil)
-        #expect(viewModel.miniPlayerState.action == .continueWorkout)
     }
+    // swiftlint:enable function_body_length
 }

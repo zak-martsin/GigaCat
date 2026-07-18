@@ -141,7 +141,6 @@ struct MockRepositoryTests {
     func sessionCompletionPercentageTracksRepeatedExerciseBlocksIndependently() throws {
         let workoutDayID = UUID()
         let repeatedExerciseID = UUID()
-        let sessionID = UUID()
 
         let plannedExercises = [
             try WorkoutDayExercise(
@@ -160,7 +159,21 @@ struct MockRepositoryTests {
             )
         ]
 
-        let logs = try [
+        let logs = try makeLogs(plannedExercises: plannedExercises)
+
+        let completionPercentage = HomePresentationService.completionPercentage(
+            plannedExercises: plannedExercises,
+            logs: logs
+        )
+
+        #expect(completionPercentage == 100)
+    }
+
+    /// Creates duplicate and repeated set logs so completion calculations can prove they deduplicate by set number.
+    private func makeLogs(plannedExercises: [WorkoutDayExercise])throws -> [ExerciseLog] {
+        let sessionID = UUID()
+
+      return try [
             ExerciseLog(
                 sessionId: sessionID,
                 workoutDayExerciseId: plannedExercises[0].id,
@@ -204,13 +217,6 @@ struct MockRepositoryTests {
                 setNumber: 2
             )
         ]
-
-        let completionPercentage = HomePresentationService.completionPercentage(
-            plannedExercises: plannedExercises,
-            logs: logs
-        )
-
-        #expect(completionPercentage == 100)
     }
 
     @Test

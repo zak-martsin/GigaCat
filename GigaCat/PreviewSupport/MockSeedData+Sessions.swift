@@ -1,6 +1,7 @@
 import Foundation
 
 extension MockSeedData {
+    /// Seeds the minimal session history needed to exercise active and completed workout flows.
     static func makeSessions(_ context: MockSeedContext) -> [WorkoutSession] {
         compact([
             try? WorkoutSession(
@@ -28,6 +29,8 @@ extension MockSeedData {
         ])
     }
 
+    /// Provides representative logged sets across active and completed sessions for progress and recency calculations.
+    // swiftlint:disable function_body_length
     static func makeExerciseLogs(_ context: MockSeedContext) -> [ExerciseLog] {
         compact([
             try? ExerciseLog(
@@ -95,4 +98,5 @@ extension MockSeedData {
             )
         ])
     }
+    // swiftlint:enable function_body_length
 }

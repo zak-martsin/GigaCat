@@ -2,6 +2,7 @@ import Foundation
 
 extension MockSeedData {
 
+    /// Combines all planned workout-day exercise links so previews and tests can load the full catalog at once.
     static func makeDayExercises(_ context: MockSeedContext) -> [WorkoutDayExercise] {
         makeUpperBodyDayExercises(context)
             + makeStrengthDayExercises(context)
@@ -9,6 +10,7 @@ extension MockSeedData {
             + makeMobilityDayExercises(context)
     }
 
+    /// Seeds the upper-body split with exercises grouped under Push, Pull, and Arms days.
     static func makeUpperBodyDayExercises(_ context: MockSeedContext) -> [WorkoutDayExercise] {
         compact([
             try? WorkoutDayExercise(
@@ -68,6 +70,7 @@ extension MockSeedData {
         ])
     }
 
+    /// Seeds the strength program with compound lift prescriptions across squat, upper, and deadlift days.
     static func makeStrengthDayExercises(_ context: MockSeedContext) -> [WorkoutDayExercise] {
         compact([
             try? WorkoutDayExercise(
@@ -109,6 +112,7 @@ extension MockSeedData {
         ])
     }
 
+    /// Seeds the conditioning program with interval, leg, and core-focused exercise assignments.
     static func makeConditioningDayExercises(_ context: MockSeedContext) -> [WorkoutDayExercise] {
         compact([
             try? WorkoutDayExercise(
@@ -150,6 +154,7 @@ extension MockSeedData {
         ])
     }
 
+    /// Seeds the mobility program with lower-volume recovery and movement-quality work.
     static func makeMobilityDayExercises(_ context: MockSeedContext) -> [WorkoutDayExercise] {
         compact([
             try? WorkoutDayExercise(
@@ -173,6 +178,7 @@ extension MockSeedData {
         ])
     }
 
+    /// Builds workout days in display order so feature code can assume stable navigation through a program.
     static func makeWorkoutDays(_ context: MockSeedContext) -> [WorkoutDay] {
         compact([
             try? WorkoutDay(id: context.pushDayID, programId: context.upperBodyProgramID, title: "Push", orderIndex: 0),
@@ -219,6 +225,7 @@ extension MockSeedData {
         ])
     }
 
+    /// Defines reusable exercise entities separately from their workout-day prescriptions.
     static func makeExercises(_ context: MockSeedContext) -> [Exercise] {
         compact([
             try? Exercise(id: context.benchExerciseID, name: "Bench Press", muscleGroup: .chest),
@@ -241,6 +248,5 @@ extension MockSeedData {
             try? Exercise(id: context.hipBridgeExerciseID, name: "Hip Bridge", muscleGroup: .legs)
         ])
     }
-
 
 }

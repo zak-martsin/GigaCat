@@ -271,6 +271,7 @@ struct HomePresentationService: HomePresentationServicing {
 
     // MARK: - Detail Presentation Rules
 
+    /// Chooses the detail CTA based on whether the program is selected and whether that selected program owns an active session.
     private nonisolated static func primaryAction(
         for programID: UUID,
         isSelected: Bool,
@@ -281,7 +282,7 @@ struct HomePresentationService: HomePresentationServicing {
             return .chooseProgram
         }
 
-        if case .activeSession(_, _, _, _) = miniPlayerContext,
+        if case .activeSession = miniPlayerContext,
            selectedProgram?.id == programID {
             return .continueWorkout
         }
@@ -289,6 +290,7 @@ struct HomePresentationService: HomePresentationServicing {
         return .startWorkout
     }
 
+    /// Shows progress text only for the selected program while its active session is the source of the mini player state.
     private nonisolated static func activeProgramProgressText(
         for programID: UUID,
         selectedProgram: SelectedProgramSummary?,
@@ -297,13 +299,14 @@ struct HomePresentationService: HomePresentationServicing {
         guard selectedProgram?.id == programID else { return nil }
 
         switch miniPlayerContext {
-        case .activeSession(_, _, _, _):
+        case .activeSession:
             return selectedProgram?.progressText
         case .noProgramSelected, .readyToStart:
             return nil
         }
     }
 
+    /// Flags only the selected program as session-backed so detail presentation can highlight the active training flow.
     private nonisolated static func activeProgramHasSession(
         for programID: UUID,
         selectedProgram: SelectedProgramSummary?,
@@ -311,7 +314,7 @@ struct HomePresentationService: HomePresentationServicing {
     ) -> Bool {
         guard selectedProgram?.id == programID else { return false }
 
-        if case .activeSession(_, _, _, _) = miniPlayerContext {
+        if case .activeSession = miniPlayerContext {
             return true
         }
 

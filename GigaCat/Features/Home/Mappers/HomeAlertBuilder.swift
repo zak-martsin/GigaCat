@@ -25,7 +25,8 @@ struct HomeAlertBuilder: HomeAlertBuilding {
         ExpiredSessionAlert(
             id: sessionID,
             title: "Session Timed Out",
-            message: "Your \(programTitle) session on \(workoutDayTitle) has been inactive for a while. You can continue it, finish it, or discard it."
+            message: "Your \(programTitle) session on \(workoutDayTitle)" +
+            "has been inactive for a while. You can continue it, finish it, or discard it."
         )
     }
 
@@ -37,7 +38,8 @@ struct HomeAlertBuilder: HomeAlertBuilding {
         ProgramSelectionConflictAlert(
             id: sessionID,
             title: "Unfinished Workout In Progress",
-            message: "You already have an active workout session. Before switching programs, you need to either finish this session or cancel it. If you press Cancel, nothing will change and your current session will stay active.",
+            message: "You already have an active workout session." +
+            "Please rewiew it",
             currentProgramTitle: currentProgramTitle,
             currentWorkoutDayTitle: currentWorkoutDayTitle
         )

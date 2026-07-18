@@ -1,56 +1,10 @@
 import Foundation
 
-struct MockSeedContext {
-    let currentUserID: UUID
-    let secondUserID: UUID
-
-    let upperBodyProgramID: UUID
-    let strengthProgramID: UUID
-    let conditioningProgramID: UUID
-    let mobilityProgramID: UUID
-
-    let pushDayID: UUID
-    let pullDayID: UUID
-    let armsDayID: UUID
-    let squatDayID: UUID
-    let upperStrengthDayID: UUID
-    let deadliftDayID: UUID
-    let sprintDayID: UUID
-    let conditioningDayID: UUID
-    let coreDayID: UUID
-    let flowDayID: UUID
-    let recoveryDayID: UUID
-
-    let benchExerciseID: UUID
-    let pressExerciseID: UUID
-    let rowExerciseID: UUID
-    let squatExerciseID: UUID
-    let deadliftExerciseID: UUID
-    let runExerciseID: UUID
-    let lungeExerciseID: UUID
-    let inclinePressExerciseID: UUID
-    let pullUpExerciseID: UUID
-    let lateralRaiseExerciseID: UUID
-    let plankExerciseID: UUID
-    let burpeeExerciseID: UUID
-    let catCowExerciseID: UUID
-    let hipBridgeExerciseID: UUID
-
-    let activeSessionID: UUID
-    let completedStrengthSessionID: UUID
-    let secondUserSessionID: UUID
-
-    let now: Date
-    let createdAt: Date
-    let activeSessionStartedAt: Date
-    let completedStrengthStartedAt: Date
-    let completedStrengthEndedAt: Date
-    let secondUserSessionStartedAt: Date
-    let secondUserSessionEndedAt: Date
-}
-
 /// Fixture builder for previews, tests, and early feature development before real persistence exists.
 enum MockSeedData {
+
+    /// Collects all stable IDs and timestamps once so fixture builders can share a coherent seeded world.
+    // swiftlint:disable function_body_length
     private static func makeContext() -> MockSeedContext {
         let currentUserID = uuid("11111111-1111-1111-1111-111111111111")
         let secondUserID = uuid("11111111-1111-1111-1111-222222222222")
@@ -143,6 +97,7 @@ enum MockSeedData {
             secondUserSessionEndedAt: secondUserSessionEndedAt
         )
     }
+    // swiftlint:enable function_body_length
 
     /// Creates a coherent graph of users, programs, workout days, exercises, sessions, and logs.
     static func makeStore() -> MockDataStore {
@@ -175,7 +130,57 @@ enum MockSeedData {
         values.compactMap { $0 }
     }
 
+    /// Falls back to a fresh UUID only if a hard-coded fixture identifier becomes invalid during editing.
     static func uuid(_ rawValue: String) -> UUID {
         UUID(uuidString: rawValue) ?? UUID()
     }
+}
+
+struct MockSeedContext {
+    let currentUserID: UUID
+    let secondUserID: UUID
+
+    let upperBodyProgramID: UUID
+    let strengthProgramID: UUID
+    let conditioningProgramID: UUID
+    let mobilityProgramID: UUID
+
+    let pushDayID: UUID
+    let pullDayID: UUID
+    let armsDayID: UUID
+    let squatDayID: UUID
+    let upperStrengthDayID: UUID
+    let deadliftDayID: UUID
+    let sprintDayID: UUID
+    let conditioningDayID: UUID
+    let coreDayID: UUID
+    let flowDayID: UUID
+    let recoveryDayID: UUID
+
+    let benchExerciseID: UUID
+    let pressExerciseID: UUID
+    let rowExerciseID: UUID
+    let squatExerciseID: UUID
+    let deadliftExerciseID: UUID
+    let runExerciseID: UUID
+    let lungeExerciseID: UUID
+    let inclinePressExerciseID: UUID
+    let pullUpExerciseID: UUID
+    let lateralRaiseExerciseID: UUID
+    let plankExerciseID: UUID
+    let burpeeExerciseID: UUID
+    let catCowExerciseID: UUID
+    let hipBridgeExerciseID: UUID
+
+    let activeSessionID: UUID
+    let completedStrengthSessionID: UUID
+    let secondUserSessionID: UUID
+
+    let now: Date
+    let createdAt: Date
+    let activeSessionStartedAt: Date
+    let completedStrengthStartedAt: Date
+    let completedStrengthEndedAt: Date
+    let secondUserSessionStartedAt: Date
+    let secondUserSessionEndedAt: Date
 }
