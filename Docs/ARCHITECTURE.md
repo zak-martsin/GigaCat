@@ -258,6 +258,32 @@ WorkoutSession updated with status = completed and completedAt
 ### Lifecycle Rules
 
 - Only one active `inProgress` session per workout flow unless a future feature requires otherwise.
+
+## 6. PreviewSupport and Mock Data
+
+`PreviewSupport` is allowed to stay simpler than production data infrastructure, but it should still follow clear boundaries.
+
+Current approach:
+
+- `MockSeedData.makeStore()` is the single entry point for building seeded in-memory app data.
+- `MockDataStore` acts as the shared in-memory source for mock repositories.
+- Mock repository implementations read from the same seeded store so previews and tests stay coherent.
+
+### Organization Rule
+
+Keep `MockSeedData` readable by separating fixture builders by concern:
+
+- users and programs
+- workout structure
+- sessions and exercise logs
+
+Use `extension MockSeedData` in separate files when the fixture set grows large, instead of introducing many new mock-specific types too early.
+
+### Practical Rule
+
+- Keep `makeStore()` short and orchestration-focused.
+- Keep fixture helpers grouped by domain meaning, not by arbitrary code size alone.
+- Prefer one shared seeded store over disconnected mock values so feature flows behave consistently in previews and tests.
 - `startedAt` is set when the workout begins.
 - `completedAt` is set only when the session is completed.
 - `ExerciseLog` records belong to a session, not directly to a workout day.

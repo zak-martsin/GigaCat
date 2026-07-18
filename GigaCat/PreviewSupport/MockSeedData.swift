@@ -1,9 +1,57 @@
 import Foundation
 
+struct MockSeedContext {
+    let currentUserID: UUID
+    let secondUserID: UUID
+
+    let upperBodyProgramID: UUID
+    let strengthProgramID: UUID
+    let conditioningProgramID: UUID
+    let mobilityProgramID: UUID
+
+    let pushDayID: UUID
+    let pullDayID: UUID
+    let armsDayID: UUID
+    let squatDayID: UUID
+    let upperStrengthDayID: UUID
+    let deadliftDayID: UUID
+    let sprintDayID: UUID
+    let conditioningDayID: UUID
+    let coreDayID: UUID
+    let flowDayID: UUID
+    let recoveryDayID: UUID
+
+    let benchExerciseID: UUID
+    let pressExerciseID: UUID
+    let rowExerciseID: UUID
+    let squatExerciseID: UUID
+    let deadliftExerciseID: UUID
+    let runExerciseID: UUID
+    let lungeExerciseID: UUID
+    let inclinePressExerciseID: UUID
+    let pullUpExerciseID: UUID
+    let lateralRaiseExerciseID: UUID
+    let plankExerciseID: UUID
+    let burpeeExerciseID: UUID
+    let catCowExerciseID: UUID
+    let hipBridgeExerciseID: UUID
+
+    let activeSessionID: UUID
+    let completedStrengthSessionID: UUID
+    let secondUserSessionID: UUID
+
+    let now: Date
+    let createdAt: Date
+    let activeSessionStartedAt: Date
+    let completedStrengthStartedAt: Date
+    let completedStrengthEndedAt: Date
+    let secondUserSessionStartedAt: Date
+    let secondUserSessionEndedAt: Date
+}
+
 /// Fixture builder for previews, tests, and early feature development before real persistence exists.
 enum MockSeedData {
-    /// Creates a coherent graph of users, programs, workout days, exercises, sessions, and logs.
-    static func makeStore() -> MockDataStore {
+    private static func makeContext() -> MockSeedContext {
         let currentUserID = uuid("11111111-1111-1111-1111-111111111111")
         let secondUserID = uuid("11111111-1111-1111-1111-222222222222")
 
@@ -51,345 +99,67 @@ enum MockSeedData {
         let secondUserSessionStartedAt = now.addingTimeInterval(-86_400 * 3)
         let secondUserSessionEndedAt = now.addingTimeInterval(-86_400 * 3 + 1_900)
 
-        let currentUser = try? User(
-            id: currentUserID,
-            appleUserId: "mock-apple-user",
-            selectedProgramId: upperBodyProgramID,
+        return MockSeedContext(
+            currentUserID: currentUserID,
+            secondUserID: secondUserID,
+            upperBodyProgramID: upperBodyProgramID,
+            strengthProgramID: strengthProgramID,
+            conditioningProgramID: conditioningProgramID,
+            mobilityProgramID: mobilityProgramID,
+            pushDayID: pushDayID,
+            pullDayID: pullDayID,
+            armsDayID: armsDayID,
+            squatDayID: squatDayID,
+            upperStrengthDayID: upperStrengthDayID,
+            deadliftDayID: deadliftDayID,
+            sprintDayID: sprintDayID,
+            conditioningDayID: conditioningDayID,
+            coreDayID: coreDayID,
+            flowDayID: flowDayID,
+            recoveryDayID: recoveryDayID,
+            benchExerciseID: benchExerciseID,
+            pressExerciseID: pressExerciseID,
+            rowExerciseID: rowExerciseID,
+            squatExerciseID: squatExerciseID,
+            deadliftExerciseID: deadliftExerciseID,
+            runExerciseID: runExerciseID,
+            lungeExerciseID: lungeExerciseID,
+            inclinePressExerciseID: inclinePressExerciseID,
+            pullUpExerciseID: pullUpExerciseID,
+            lateralRaiseExerciseID: lateralRaiseExerciseID,
+            plankExerciseID: plankExerciseID,
+            burpeeExerciseID: burpeeExerciseID,
+            catCowExerciseID: catCowExerciseID,
+            hipBridgeExerciseID: hipBridgeExerciseID,
+            activeSessionID: activeSessionID,
+            completedStrengthSessionID: completedStrengthSessionID,
+            secondUserSessionID: secondUserSessionID,
+            now: now,
             createdAt: createdAt,
-            updatedAt: createdAt
+            activeSessionStartedAt: activeSessionStartedAt,
+            completedStrengthStartedAt: completedStrengthStartedAt,
+            completedStrengthEndedAt: completedStrengthEndedAt,
+            secondUserSessionStartedAt: secondUserSessionStartedAt,
+            secondUserSessionEndedAt: secondUserSessionEndedAt
         )
+    }
 
-        let secondUser = try? User(
-            id: secondUserID,
-            appleUserId: "mock-second-user",
-            selectedProgramId: strengthProgramID,
-            createdAt: createdAt.addingTimeInterval(600),
-            updatedAt: createdAt.addingTimeInterval(600)
-        )
-
-        let upperBodyProgram = try? WorkoutProgram(
-            id: upperBodyProgramID,
-            title: "Upper Body Foundation",
-            description: "A three-day upper body split focused on steady strength and hypertrophy work.",
-            tags: [.gym, .strength, .muscleGain]
-        )
-
-        let strengthProgram = try? WorkoutProgram(
-            id: strengthProgramID,
-            title: "Strength Essentials",
-            description: "A barbell-focused plan built around compound lifts and simple linear progression.",
-            tags: [.gym, .strength, .muscleGain]
-        )
-
-        let conditioningProgram = try? WorkoutProgram(
-            id: conditioningProgramID,
-            title: "Conditioning Boost",
-            description: "A faster, lighter training block for work capacity, cardio, and bodyweight output.",
-            tags: [.home, .cardio, .hiit, .mobility, .bodyweight]
-        )
-
-        let mobilityProgram = try? WorkoutProgram(
-            id: mobilityProgramID,
-            title: "Mobility Reset",
-            description: "A recovery-focused program for posture, movement quality, and full-body mobility.",
-            tags: [.home, .mobility, .bodyweight]
-        )
-
-        let homeProgramCatalogMetadataByProgramID: [UUID: HomeProgramCatalogMetadata] = [
-            upperBodyProgramID: HomeProgramCatalogMetadata(
-                isRecommended: true,
-                isPopular: true,
-                rateScore: 4.8
-            ),
-            strengthProgramID: HomeProgramCatalogMetadata(
-                isRecommended: true,
-                isPopular: true,
-                rateScore: 4.9
-            ),
-            conditioningProgramID: HomeProgramCatalogMetadata(
-                isRecommended: false,
-                isPopular: true,
-                rateScore: 4.6
-            ),
-            mobilityProgramID: HomeProgramCatalogMetadata(
-                isRecommended: false,
-                isPopular: false,
-                rateScore: nil
-            )
-        ]
-
-        let workoutDays = compact([
-            try? WorkoutDay(id: pushDayID, programId: upperBodyProgramID, title: "Push", orderIndex: 0),
-            try? WorkoutDay(id: pullDayID, programId: upperBodyProgramID, title: "Pull", orderIndex: 1),
-            try? WorkoutDay(id: armsDayID, programId: upperBodyProgramID, title: "Arms & Delts", orderIndex: 2),
-            try? WorkoutDay(id: squatDayID, programId: strengthProgramID, title: "Squat Focus", orderIndex: 0),
-            try? WorkoutDay(id: upperStrengthDayID, programId: strengthProgramID, title: "Upper Strength", orderIndex: 1),
-            try? WorkoutDay(id: deadliftDayID, programId: strengthProgramID, title: "Deadlift Focus", orderIndex: 2),
-            try? WorkoutDay(id: sprintDayID, programId: conditioningProgramID, title: "Sprint Intervals", orderIndex: 0),
-            try? WorkoutDay(id: conditioningDayID, programId: conditioningProgramID, title: "Leg Conditioning", orderIndex: 1),
-            try? WorkoutDay(id: coreDayID, programId: conditioningProgramID, title: "Core Density", orderIndex: 2),
-            try? WorkoutDay(id: flowDayID, programId: mobilityProgramID, title: "Flow Reset", orderIndex: 0),
-            try? WorkoutDay(id: recoveryDayID, programId: mobilityProgramID, title: "Recovery Mobility", orderIndex: 1)
-        ])
-
-        let exercises = compact([
-            try? Exercise(id: benchExerciseID, name: "Bench Press", muscleGroup: .chest),
-            try? Exercise(id: pressExerciseID, name: "Overhead Press", muscleGroup: .shoulders),
-            try? Exercise(id: rowExerciseID, name: "Barbell Row", muscleGroup: .back),
-            try? Exercise(id: squatExerciseID, name: "Back Squat", muscleGroup: .legs),
-            try? Exercise(id: deadliftExerciseID, name: "Deadlift", muscleGroup: .fullBody),
-            try? Exercise(id: runExerciseID, name: "Sprint Run", muscleGroup: .cardio),
-            try? Exercise(id: lungeExerciseID, name: "Walking Lunge", muscleGroup: .legs),
-            try? Exercise(id: inclinePressExerciseID, name: "Incline Dumbbell Press", muscleGroup: .chest),
-            try? Exercise(id: pullUpExerciseID, name: "Pull-Up", muscleGroup: .back),
-            try? Exercise(id: lateralRaiseExerciseID, name: "Lateral Raise", muscleGroup: .shoulders),
-            try? Exercise(id: plankExerciseID, name: "Plank Hold", muscleGroup: .core),
-            try? Exercise(id: burpeeExerciseID, name: "Burpee", muscleGroup: .cardio),
-            try? Exercise(id: catCowExerciseID, name: "Cat-Cow", muscleGroup: .core),
-            try? Exercise(id: hipBridgeExerciseID, name: "Hip Bridge", muscleGroup: .legs)
-        ])
-
-        let dayExercises = compact([
-            try? WorkoutDayExercise(
-                id: uuid("88888888-8888-8888-8888-888888888888"),
-                workoutDayId: pushDayID,
-                exerciseId: benchExerciseID,
-                targetSets: 4,
-                targetReps: 8,
-                targetWeight: 60,
-                orderIndex: 0
-            ),
-            try? WorkoutDayExercise(
-                id: uuid("99999999-9999-9999-9999-999999999999"),
-                workoutDayId: pushDayID,
-                exerciseId: pressExerciseID,
-                targetSets: 3,
-                targetReps: 10,
-                targetWeight: 35,
-                orderIndex: 1
-            ),
-            try? WorkoutDayExercise(
-                id: uuid("9a9a9a9a-9a9a-9a9a-9a9a-9a9a9a9a9a9a"),
-                workoutDayId: pushDayID,
-                exerciseId: inclinePressExerciseID,
-                targetSets: 3,
-                targetReps: 12,
-                targetWeight: 22,
-                orderIndex: 2
-            ),
-            try? WorkoutDayExercise(
-                id: uuid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
-                workoutDayId: pullDayID,
-                exerciseId: rowExerciseID,
-                targetSets: 4,
-                targetReps: 10,
-                targetWeight: 50,
-                orderIndex: 0
-            ),
-            try? WorkoutDayExercise(
-                id: uuid("abababab-abab-abab-abab-abababababaa"),
-                workoutDayId: pullDayID,
-                exerciseId: pullUpExerciseID,
-                targetSets: 4,
-                targetReps: 8,
-                targetWeight: nil,
-                orderIndex: 1
-            ),
-            try? WorkoutDayExercise(
-                id: uuid("acacacac-acac-acac-acac-acacacacacaa"),
-                workoutDayId: armsDayID,
-                exerciseId: lateralRaiseExerciseID,
-                targetSets: 4,
-                targetReps: 15,
-                targetWeight: 8,
-                orderIndex: 0
-            ),
-            try? WorkoutDayExercise(
-                id: uuid("abababab-abab-abab-abab-abababababab"),
-                workoutDayId: squatDayID,
-                exerciseId: squatExerciseID,
-                targetSets: 5,
-                targetReps: 5,
-                targetWeight: 90,
-                orderIndex: 0
-            ),
-            try? WorkoutDayExercise(
-                id: uuid("adadadad-adad-adad-adad-adadadadadad"),
-                workoutDayId: upperStrengthDayID,
-                exerciseId: benchExerciseID,
-                targetSets: 4,
-                targetReps: 6,
-                targetWeight: 70,
-                orderIndex: 0
-            ),
-            try? WorkoutDayExercise(
-                id: uuid("aeaeaeae-aeae-aeae-aeae-aeaeaeaeaeae"),
-                workoutDayId: upperStrengthDayID,
-                exerciseId: rowExerciseID,
-                targetSets: 4,
-                targetReps: 8,
-                targetWeight: 60,
-                orderIndex: 1
-            ),
-            try? WorkoutDayExercise(
-                id: uuid("afafafaf-afaf-afaf-afaf-afafafafafaf"),
-                workoutDayId: deadliftDayID,
-                exerciseId: deadliftExerciseID,
-                targetSets: 4,
-                targetReps: 5,
-                targetWeight: 110,
-                orderIndex: 0
-            ),
-            try? WorkoutDayExercise(
-                id: uuid("b0b0b0b0-b0b0-b0b0-b0b0-b0b0b0b0b0b0"),
-                workoutDayId: sprintDayID,
-                exerciseId: runExerciseID,
-                targetSets: 6,
-                targetReps: 1,
-                targetWeight: nil,
-                orderIndex: 0
-            ),
-            try? WorkoutDayExercise(
-                id: uuid("b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b1b1"),
-                workoutDayId: conditioningDayID,
-                exerciseId: lungeExerciseID,
-                targetSets: 4,
-                targetReps: 12,
-                targetWeight: 20,
-                orderIndex: 0
-            ),
-            try? WorkoutDayExercise(
-                id: uuid("b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b2b2"),
-                workoutDayId: conditioningDayID,
-                exerciseId: burpeeExerciseID,
-                targetSets: 4,
-                targetReps: 10,
-                targetWeight: nil,
-                orderIndex: 1
-            ),
-            try? WorkoutDayExercise(
-                id: uuid("b3b3b3b3-b3b3-b3b3-b3b3-b3b3b3b3b3b3"),
-                workoutDayId: coreDayID,
-                exerciseId: plankExerciseID,
-                targetSets: 5,
-                targetReps: 1,
-                targetWeight: nil,
-                orderIndex: 0
-            ),
-            try? WorkoutDayExercise(
-                id: uuid("b4b4b4b4-b4b4-b4b4-b4b4-b4b4b4b4b4b4"),
-                workoutDayId: flowDayID,
-                exerciseId: catCowExerciseID,
-                targetSets: 3,
-                targetReps: 12,
-                targetWeight: nil,
-                orderIndex: 0
-            ),
-            try? WorkoutDayExercise(
-                id: uuid("b5b5b5b5-b5b5-b5b5-b5b5-b5b5b5b5b5b5"),
-                workoutDayId: recoveryDayID,
-                exerciseId: hipBridgeExerciseID,
-                targetSets: 3,
-                targetReps: 15,
-                targetWeight: nil,
-                orderIndex: 0
-            )
-        ])
-
-        let sessions = compact([
-            try? WorkoutSession(
-                id: activeSessionID,
-                userId: currentUserID,
-                workoutDayId: pushDayID,
-                startedAt: activeSessionStartedAt
-            ),
-            try? WorkoutSession(
-                id: completedStrengthSessionID,
-                userId: currentUserID,
-                workoutDayId: squatDayID,
-                status: .completed,
-                startedAt: completedStrengthStartedAt,
-                completedAt: completedStrengthEndedAt
-            ),
-            try? WorkoutSession(
-                id: secondUserSessionID,
-                userId: secondUserID,
-                workoutDayId: upperStrengthDayID,
-                status: .completed,
-                startedAt: secondUserSessionStartedAt,
-                completedAt: secondUserSessionEndedAt
-            )
-        ])
-
-        let exerciseLogs = compact([
-            try? ExerciseLog(
-                id: uuid("cccccccc-cccc-cccc-cccc-cccccccccccc"),
-                sessionId: activeSessionID,
-                workoutDayExerciseId: uuid("88888888-8888-8888-8888-888888888888"),
-                weight: 60,
-                reps: 8,
-                setNumber: 1,
-                performedAt: activeSessionStartedAt.addingTimeInterval(300)
-            ),
-            try? ExerciseLog(
-                id: uuid("dddddddd-dddd-dddd-dddd-dddddddddddd"),
-                sessionId: activeSessionID,
-                workoutDayExerciseId: uuid("88888888-8888-8888-8888-888888888888"),
-                weight: 60,
-                reps: 7,
-                setNumber: 2,
-                performedAt: activeSessionStartedAt.addingTimeInterval(660)
-            ),
-            try? ExerciseLog(
-                id: uuid("dededede-dede-dede-dede-dededededede"),
-                sessionId: activeSessionID,
-                workoutDayExerciseId: uuid("99999999-9999-9999-9999-999999999999"),
-                weight: 35,
-                reps: 10,
-                setNumber: 1,
-                performedAt: activeSessionStartedAt.addingTimeInterval(1_020)
-            ),
-            try? ExerciseLog(
-                id: uuid("dfdfdfdf-dfdf-dfdf-dfdf-dfdfdfdfdfdf"),
-                sessionId: completedStrengthSessionID,
-                workoutDayExerciseId: uuid("abababab-abab-abab-abab-abababababab"),
-                weight: 90,
-                reps: 5,
-                setNumber: 1,
-                performedAt: completedStrengthStartedAt.addingTimeInterval(420)
-            ),
-            try? ExerciseLog(
-                id: uuid("e0e0e0e0-e0e0-e0e0-e0e0-e0e0e0e0e0e0"),
-                sessionId: completedStrengthSessionID,
-                workoutDayExerciseId: uuid("abababab-abab-abab-abab-abababababab"),
-                weight: 92.5,
-                reps: 5,
-                setNumber: 2,
-                performedAt: completedStrengthStartedAt.addingTimeInterval(900)
-            ),
-            try? ExerciseLog(
-                id: uuid("e1e1e1e1-e1e1-e1e1-e1e1-e1e1e1e1e1e1"),
-                sessionId: secondUserSessionID,
-                workoutDayExerciseId: uuid("adadadad-adad-adad-adad-adadadadadad"),
-                weight: 72.5,
-                reps: 6,
-                setNumber: 1,
-                performedAt: secondUserSessionStartedAt.addingTimeInterval(360)
-            ),
-            try? ExerciseLog(
-                id: uuid("e2e2e2e2-e2e2-e2e2-e2e2-e2e2e2e2e2e2"),
-                sessionId: secondUserSessionID,
-                workoutDayExerciseId: uuid("aeaeaeae-aeae-aeae-aeae-aeaeaeaeaeae"),
-                weight: 62.5,
-                reps: 8,
-                setNumber: 1,
-                performedAt: secondUserSessionStartedAt.addingTimeInterval(780)
-            )
-        ])
+    /// Creates a coherent graph of users, programs, workout days, exercises, sessions, and logs.
+    static func makeStore() -> MockDataStore {
+        let context = makeContext()
+        let users = makeUsers(context)
+        let programs = makePrograms(context)
+        let homeProgramCatalogMetadataByProgramID = makeHomeProgramCatalogMetadata(context)
+        let workoutDays = makeWorkoutDays(context)
+        let exercises = makeExercises(context)
+        let dayExercises = makeDayExercises(context)
+        let sessions = makeSessions(context)
+        let exerciseLogs = makeExerciseLogs(context)
+        let currentUserID = context.currentUserID
 
         return MockDataStore(
-            users: compact([currentUser, secondUser]),
-            programs: compact([upperBodyProgram, strengthProgram, conditioningProgram, mobilityProgram]),
+            users: users,
+            programs: programs,
             homeProgramCatalogMetadataByProgramID: homeProgramCatalogMetadataByProgramID,
             workoutDays: workoutDays,
             dayExercises: dayExercises,
@@ -401,11 +171,11 @@ enum MockSeedData {
     }
 
     /// Keeps fixture creation readable while ignoring entities that failed domain validation.
-    private static func compact<T>(_ values: [T?]) -> [T] {
+    static func compact<T>(_ values: [T?]) -> [T] {
         values.compactMap { $0 }
     }
 
-    private static func uuid(_ rawValue: String) -> UUID {
+    static func uuid(_ rawValue: String) -> UUID {
         UUID(uuidString: rawValue) ?? UUID()
     }
 }
