@@ -2,14 +2,14 @@ import Foundation
 
 protocol HomeViewDataMapping: Sendable {
     func mapProgramSectionItem(
-        entry: HomeProgramCatalogEntry,
+        entry: ProgramCatalogEntry,
         dayCount: Int,
         exerciseCount: Int,
         selectedProgramID: UUID?
     ) -> ProgramSectionItem
 
     func mapSelectedProgramSummary(
-        entry: HomeProgramCatalogEntry,
+        entry: ProgramCatalogEntry,
         dayCount: Int,
         nextWorkoutTitle: String?,
         progressText: String?
@@ -46,7 +46,7 @@ protocol HomeViewDataMapping: Sendable {
 
 struct HomeViewDataMapper: HomeViewDataMapping {
     func mapProgramSectionItem(
-        entry: HomeProgramCatalogEntry,
+        entry: ProgramCatalogEntry,
         dayCount: Int,
         exerciseCount: Int,
         selectedProgramID: UUID?
@@ -66,7 +66,7 @@ struct HomeViewDataMapper: HomeViewDataMapping {
     }
 
     func mapSelectedProgramSummary(
-        entry: HomeProgramCatalogEntry,
+        entry: ProgramCatalogEntry,
         dayCount: Int,
         nextWorkoutTitle: String?,
         progressText: String?

@@ -146,6 +146,7 @@ GigaCat/
       ExerciseLog.swift
     Repositories/
       UserRepository.swift
+      ProgramCatalogRepository.swift
       WorkoutProgramRepository.swift
       WorkoutRepository.swift
 
@@ -300,6 +301,14 @@ Responsibilities:
 - Save or update user
 - Change selected program
 - Later coordinate user auth identity with local profile state
+
+## ProgramCatalogRepository
+
+Responsibilities:
+
+- Fetch the curated program catalog
+- Expose recommendation, popularity, and rating metadata
+- Serve discovery and workout entry flows without coupling them to Home
 
 ## WorkoutProgramRepository
 

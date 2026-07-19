@@ -49,26 +49,26 @@ extension MockSeedData {
         ])
     }
 
-    static func makeHomeProgramCatalogMetadata(
+    static func makeProgramCatalogMetadata(
         _ context: MockSeedContext
-    ) -> [UUID: HomeProgramCatalogMetadata] {
+    ) -> [UUID: ProgramCatalogMetadata] {
         [
-            context.upperBodyProgramID: HomeProgramCatalogMetadata(
+            context.upperBodyProgramID: ProgramCatalogMetadata(
                 isRecommended: true,
                 isPopular: true,
                 rateScore: 4.8
             ),
-            context.strengthProgramID: HomeProgramCatalogMetadata(
+            context.strengthProgramID: ProgramCatalogMetadata(
                 isRecommended: true,
                 isPopular: true,
                 rateScore: 4.9
             ),
-            context.conditioningProgramID: HomeProgramCatalogMetadata(
+            context.conditioningProgramID: ProgramCatalogMetadata(
                 isRecommended: false,
                 isPopular: true,
                 rateScore: 4.6
             ),
-            context.mobilityProgramID: HomeProgramCatalogMetadata(
+            context.mobilityProgramID: ProgramCatalogMetadata(
                 isRecommended: false,
                 isPopular: false,
                 rateScore: nil

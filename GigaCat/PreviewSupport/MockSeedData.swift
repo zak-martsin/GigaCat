@@ -3,8 +3,8 @@ import Foundation
 /// Fixture builder for previews, tests, and early feature development before real persistence exists.
 enum MockSeedData {
 
-    /// Collects all stable IDs and timestamps once so fixture builders can share a coherent seeded world.
     // swiftlint:disable function_body_length
+    /// Collects all stable IDs and timestamps once so fixture builders can share a coherent seeded world.
     private static func makeContext() -> MockSeedContext {
         let currentUserID = uuid("11111111-1111-1111-1111-111111111111")
         let secondUserID = uuid("11111111-1111-1111-1111-222222222222")
@@ -104,7 +104,7 @@ enum MockSeedData {
         let context = makeContext()
         let users = makeUsers(context)
         let programs = makePrograms(context)
-        let homeProgramCatalogMetadataByProgramID = makeHomeProgramCatalogMetadata(context)
+        let programCatalogMetadataByProgramID = makeProgramCatalogMetadata(context)
         let workoutDays = makeWorkoutDays(context)
         let exercises = makeExercises(context)
         let dayExercises = makeDayExercises(context)
@@ -115,7 +115,7 @@ enum MockSeedData {
         return MockDataStore(
             users: users,
             programs: programs,
-            homeProgramCatalogMetadataByProgramID: homeProgramCatalogMetadataByProgramID,
+            programCatalogMetadataByProgramID: programCatalogMetadataByProgramID,
             workoutDays: workoutDays,
             dayExercises: dayExercises,
             exercises: exercises,

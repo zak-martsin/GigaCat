@@ -21,7 +21,7 @@ final class HomeViewModel: ObservableObject {
     @Published var searchQuery = ""
 
     private let userRepository: UserRepository
-    private let homeRepository: HomeRepository
+    private let programCatalogRepository: ProgramCatalogRepository
     private let discoveryService: HomeProgramDiscoveryServicing
     private let presentationService: HomePresentationServicing
     private let sessionCoordinator: HomeSessionCoordinating
@@ -33,7 +33,7 @@ final class HomeViewModel: ObservableObject {
 
     init(
         userRepository: UserRepository,
-        homeRepository: HomeRepository,
+        programCatalogRepository: ProgramCatalogRepository,
         workoutProgramRepository: WorkoutProgramRepository,
         workoutRepository: WorkoutRepository,
         discoveryService: HomeProgramDiscoveryServicing = HomeProgramDiscoveryService(),
@@ -42,7 +42,7 @@ final class HomeViewModel: ObservableObject {
         sessionCoordinator: HomeSessionCoordinating? = nil
     ) {
         self.userRepository = userRepository
-        self.homeRepository = homeRepository
+        self.programCatalogRepository = programCatalogRepository
         self.discoveryService = discoveryService
         self.presentationService = presentationService ?? HomePresentationService(
             workoutProgramRepository: workoutProgramRepository,
@@ -106,7 +106,7 @@ final class HomeViewModel: ObservableObject {
                 return
             }
 
-            let catalog = try await homeRepository.fetchProgramCatalog()
+            let catalog = try await programCatalogRepository.fetchProgramCatalog()
             let selectedProgramID = user.selectedProgramId
             let items = try await presentationService.makeProgramItems(
                 from: catalog,

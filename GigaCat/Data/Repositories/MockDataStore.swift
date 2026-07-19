@@ -1,6 +1,6 @@
 import Foundation
 
-struct HomeProgramCatalogMetadata: Equatable, Sendable {
+struct ProgramCatalogMetadata: Equatable, Sendable {
     let isRecommended: Bool
     let isPopular: Bool
     let rateScore: Double?
@@ -20,7 +20,7 @@ struct HomeProgramCatalogMetadata: Equatable, Sendable {
 actor MockDataStore {
     private(set) var usersByID: [UUID: User]
     private(set) var programsByID: [UUID: WorkoutProgram]
-    private(set) var homeProgramCatalogMetadataByProgramIDStorage: [UUID: HomeProgramCatalogMetadata]
+    private(set) var programCatalogMetadataByProgramIDStorage: [UUID: ProgramCatalogMetadata]
     private(set) var workoutDaysByID: [UUID: WorkoutDay]
     private(set) var dayExercisesByID: [UUID: WorkoutDayExercise]
     private(set) var exercisesByID: [UUID: Exercise]
@@ -31,7 +31,7 @@ actor MockDataStore {
     init(
         users: [User] = [],
         programs: [WorkoutProgram] = [],
-        homeProgramCatalogMetadataByProgramID: [UUID: HomeProgramCatalogMetadata] = [:],
+        programCatalogMetadataByProgramID: [UUID: ProgramCatalogMetadata] = [:],
         workoutDays: [WorkoutDay] = [],
         dayExercises: [WorkoutDayExercise] = [],
         exercises: [Exercise] = [],
@@ -41,7 +41,7 @@ actor MockDataStore {
     ) {
         self.usersByID = Dictionary(uniqueKeysWithValues: users.map { ($0.id, $0) })
         self.programsByID = Dictionary(uniqueKeysWithValues: programs.map { ($0.id, $0) })
-        self.homeProgramCatalogMetadataByProgramIDStorage = homeProgramCatalogMetadataByProgramID
+        self.programCatalogMetadataByProgramIDStorage = programCatalogMetadataByProgramID
         self.workoutDaysByID = Dictionary(uniqueKeysWithValues: workoutDays.map { ($0.id, $0) })
         self.dayExercisesByID = Dictionary(uniqueKeysWithValues: dayExercises.map { ($0.id, $0) })
         self.exercisesByID = Dictionary(uniqueKeysWithValues: exercises.map { ($0.id, $0) })
@@ -94,8 +94,8 @@ actor MockDataStore {
         programsByID[id]
     }
 
-    func homeProgramCatalogMetadataByProgramID() -> [UUID: HomeProgramCatalogMetadata] {
-        homeProgramCatalogMetadataByProgramIDStorage
+    func programCatalogMetadataByProgramID() -> [UUID: ProgramCatalogMetadata] {
+        programCatalogMetadataByProgramIDStorage
     }
 
     func workoutDays(programId: UUID) -> [WorkoutDay] {

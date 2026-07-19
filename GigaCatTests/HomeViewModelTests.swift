@@ -10,7 +10,7 @@ struct HomeViewModelTests {
         let factory = MockRepositoryFactory()
         let viewModel = HomeViewModel(
             userRepository: factory.userRepository,
-            homeRepository: factory.homeRepository,
+            programCatalogRepository: factory.programCatalogRepository,
             workoutProgramRepository: factory.workoutProgramRepository,
             workoutRepository: factory.workoutRepository
         )
@@ -28,7 +28,7 @@ struct HomeViewModelTests {
         let factory = MockRepositoryFactory()
         let viewModel = HomeViewModel(
             userRepository: factory.userRepository,
-            homeRepository: factory.homeRepository,
+            programCatalogRepository: factory.programCatalogRepository,
             workoutProgramRepository: factory.workoutProgramRepository,
             workoutRepository: factory.workoutRepository
         )
@@ -68,14 +68,14 @@ struct HomeViewModelTests {
         let factory = MockRepositoryFactory(store: store)
         return HomeViewModel(
             userRepository: factory.userRepository,
-            homeRepository: factory.homeRepository,
+            programCatalogRepository: factory.programCatalogRepository,
             workoutProgramRepository: factory.workoutProgramRepository,
             workoutRepository: factory.workoutRepository
         )
     }
 
-    /// Creates the minimal seeded store needed to verify that recent exercise logs keep an in-progress session alive.
     // swiftlint:disable function_body_length
+    /// Creates the minimal seeded store needed to verify that recent exercise logs keep an in-progress session alive.
     private func makeStoreWithRecentExerciseActivity(
         now: Date
     ) throws -> MockDataStore {
@@ -104,8 +104,8 @@ struct HomeViewModelTests {
                     tags: [.strength]
                 )
             ],
-            homeProgramCatalogMetadataByProgramID: [
-                programID: HomeProgramCatalogMetadata(
+            programCatalogMetadataByProgramID: [
+                programID: ProgramCatalogMetadata(
                     isRecommended: true,
                     isPopular: true,
                     rateScore: 4.7

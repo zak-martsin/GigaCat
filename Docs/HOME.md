@@ -71,17 +71,17 @@ Used for:
 - reading the current user
 - reading and updating the selected program
 
-### `HomeRepository`
+### `ProgramCatalogRepository`
 
 Used for:
 
-- fetching the curated Home catalog
-- providing Home-specific metadata such as:
+- fetching the curated program catalog
+- providing shared discovery metadata such as:
   - recommended flag
   - popular flag
   - rating score
 
-This repository exists because that metadata is discovery-oriented presentation data, not core program structure.
+This repository is shared with other flows that need catalog metadata, while Home remains responsible for its own presentation.
 
 ### `WorkoutProgramRepository`
 
@@ -106,7 +106,7 @@ When `Home` loads:
 
 1. `HomeView` triggers `loadIfNeeded()`.
 2. `HomeViewModel` loads the current user from `UserRepository`.
-3. `HomeViewModel` fetches the Home catalog from `HomeRepository`.
+3. `HomeViewModel` fetches the curated catalog from `ProgramCatalogRepository`.
 4. `HomePresentationService` maps catalog entries into `ProgramSectionItem`.
 5. `HomePresentationService` builds:
    - selected program summary
@@ -272,7 +272,7 @@ Mocks include:
 - exercises
 - workout sessions
 - exercise logs
-- Home catalog metadata
+- program catalog metadata
 
 This keeps the feature testable and lets UI work continue before SwiftData and sync are introduced.
 

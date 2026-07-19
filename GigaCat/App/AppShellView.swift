@@ -9,7 +9,7 @@ struct AppShellView: View {
         _homeViewModel = StateObject(
             wrappedValue: HomeViewModel(
                 userRepository: repositoryFactory.userRepository,
-                homeRepository: repositoryFactory.homeRepository,
+                programCatalogRepository: repositoryFactory.programCatalogRepository,
                 workoutProgramRepository: repositoryFactory.workoutProgramRepository,
                 workoutRepository: repositoryFactory.workoutRepository
             )

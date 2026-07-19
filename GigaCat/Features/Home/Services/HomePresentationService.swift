@@ -3,13 +3,13 @@ import Foundation
 /// Builds Home-specific view data from repository-backed domain state.
 protocol HomePresentationServicing: Sendable {
     func makeProgramItems(
-        from catalog: [HomeProgramCatalogEntry],
+        from catalog: [ProgramCatalogEntry],
         selectedProgramID: UUID?
     ) async throws -> [ProgramSectionItem]
 
     func makeSelectedProgramSummary(
         selectedProgramID: UUID?,
-        catalog: [HomeProgramCatalogEntry],
+        catalog: [ProgramCatalogEntry],
         user: User?
     ) async throws -> SelectedProgramSummary?
 
@@ -44,7 +44,7 @@ struct HomePresentationService: HomePresentationServicing {
     }
 
     func makeProgramItems(
-        from catalog: [HomeProgramCatalogEntry],
+        from catalog: [ProgramCatalogEntry],
         selectedProgramID: UUID?
     ) async throws -> [ProgramSectionItem] {
         var items: [ProgramSectionItem] = []
@@ -69,7 +69,7 @@ struct HomePresentationService: HomePresentationServicing {
 
     func makeSelectedProgramSummary(
         selectedProgramID: UUID?,
-        catalog: [HomeProgramCatalogEntry],
+        catalog: [ProgramCatalogEntry],
         user: User?
     ) async throws -> SelectedProgramSummary? {
         guard let selectedProgramID else { return nil }
