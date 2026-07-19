@@ -1,0 +1,132 @@
+import Foundation
+import Testing
+@testable import GigaCat
+
+struct WorkoutViewDataMapperTests {
+
+    @Test
+    func mapsProgramAndDaySelectionState() throws {
+        let fixture = try Fixture()
+
+        let viewData = WorkoutViewDataMapper().map(
+            context: fixture.context,
+            selectedDayID: fixture.firstDay.id
+        )
+
+        #expect(viewData?.programTitle == fixture.context.program.title)
+        #expect(viewData?.programDescription == fixture.context.program.description)
+        #expect(
+            viewData?.days == [
+                WorkoutDayItemViewData(
+                    id: fixture.firstDay.id,
+                    title: fixture.firstDay.title,
+                    isSelected: true,
+                    hasActiveSession: false
+                ),
+                WorkoutDayItemViewData(
+                    id: fixture.secondDay.id,
+                    title: fixture.secondDay.title,
+                    isSelected: false,
+                    hasActiveSession: true
+                )
+            ]
+        )
+    }
+
+    @Test
+    func mapsSelectedDayExercisesWithNumericTargets() throws {
+        let fixture = try Fixture()
+
+        let viewData = WorkoutViewDataMapper().map(
+            context: fixture.context,
+            selectedDayID: fixture.firstDay.id
+        )
+
+        #expect(viewData?.selectedDay.id == fixture.firstDay.id)
+        #expect(viewData?.selectedDay.title == fixture.firstDay.title)
+        #expect(
+            viewData?.selectedDay.exercises == [
+                WorkoutExerciseViewData(
+                    id: fixture.dayExercise.id,
+                    name: fixture.exercise.name,
+                    muscleGroup: "Full Body",
+                    targetSets: 4,
+                    targetReps: 6,
+                    targetWeight: 80
+                )
+            ]
+        )
+    }
+
+    @Test
+    func returnsNilForDayOutsideContext() throws {
+        let fixture = try Fixture()
+
+        let viewData = WorkoutViewDataMapper().map(
+            context: fixture.context,
+            selectedDayID: UUID()
+        )
+
+        #expect(viewData == nil)
+    }
+}
+
+private extension WorkoutViewDataMapperTests {
+    struct Fixture {
+        let firstDay: WorkoutDay
+        let secondDay: WorkoutDay
+        let exercise: Exercise
+        let dayExercise: WorkoutDayExercise
+        let context: WorkoutContext
+
+        init() throws {
+            let program = try WorkoutProgram(
+                title: "Strength Program",
+                description: "A focused strength program."
+            )
+            firstDay = try WorkoutDay(
+                programId: program.id,
+                title: "Push",
+                orderIndex: 0
+            )
+            secondDay = try WorkoutDay(
+                programId: program.id,
+                title: "Pull",
+                orderIndex: 1
+            )
+            exercise = try Exercise(
+                name: "Deadlift",
+                muscleGroup: .fullBody
+            )
+            dayExercise = try WorkoutDayExercise(
+                workoutDayId: firstDay.id,
+                exerciseId: exercise.id,
+                targetSets: 4,
+                targetReps: 6,
+                targetWeight: 80,
+                orderIndex: 0
+            )
+            let activeSession = try WorkoutSession(
+                userId: UUID(),
+                workoutDayId: secondDay.id
+            )
+            context = WorkoutContext(
+                program: program,
+                dayContents: [
+                    WorkoutDayContent(
+                        day: firstDay,
+                        exercises: [
+                            WorkoutExerciseContent(
+                                dayExercise: dayExercise,
+                                exercise: exercise
+                            )
+                        ]
+                    ),
+                    WorkoutDayContent(day: secondDay, exercises: [])
+                ],
+                initialDayID: firstDay.id,
+                activeSession: activeSession
+            )
+        }
+    }
+}

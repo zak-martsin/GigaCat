@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct WorkoutView: View {
+    let viewModel: WorkoutViewModel
     let onHeaderAction: (HeaderAction) -> Void
 
     var body: some View {
@@ -12,5 +13,8 @@ struct WorkoutView: View {
             symbolName: AppTab.workout.systemImage,
             onHeaderAction: onHeaderAction
         )
+        .task {
+            await viewModel.load()
+        }
     }
 }

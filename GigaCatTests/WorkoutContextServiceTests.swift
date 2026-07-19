@@ -67,6 +67,24 @@ struct WorkoutContextServiceTests {
         #expect(context.program.id == fixture.secondProgram.id)
         #expect(context.initialDayID == fixture.secondProgramDays[0].id)
     }
+
+    @Test
+    func contextContainsDaysWithTheirExerciseDefinitionsAndTargets() async throws {
+        let fixture = try Fixture(selection: .firstProgram, sessionState: .none)
+
+        let context = try await fixture.service.loadContext()
+
+        #expect(context.dayContents.map(\.day) == fixture.firstProgramDays)
+        #expect(
+            context.dayContents[0].exercises == [
+                WorkoutExerciseContent(
+                    dayExercise: fixture.firstDayExercise,
+                    exercise: fixture.firstExercise
+                )
+            ]
+        )
+        #expect(context.dayContents[1].exercises.isEmpty)
+    }
 }
 
 private extension WorkoutContextServiceTests {
@@ -88,6 +106,8 @@ private extension WorkoutContextServiceTests {
         let secondProgramID = UUID()
         let firstProgramDayIDs = [UUID(), UUID()]
         let secondProgramDayIDs = [UUID(), UUID()]
+        let firstDayExerciseID = UUID()
+        let firstExerciseID = UUID()
     }
 
     struct Fixture {
@@ -95,6 +115,8 @@ private extension WorkoutContextServiceTests {
         let secondProgram: WorkoutProgram
         let firstProgramDays: [WorkoutDay]
         let secondProgramDays: [WorkoutDay]
+        let firstDayExercise: WorkoutDayExercise
+        let firstExercise: Exercise
         let service: WorkoutContextService
 
         init(selection: Selection, sessionState: SessionState) throws {
@@ -102,6 +124,7 @@ private extension WorkoutContextServiceTests {
             let now = Date(timeIntervalSince1970: 10_000)
             let programs = try Self.makePrograms(identifiers: identifiers)
             let days = try Self.makeDays(identifiers: identifiers)
+            let exerciseContent = try Self.makeExerciseContent(identifiers: identifiers)
             let user = try Self.makeUser(selection: selection, identifiers: identifiers, now: now)
             let sessions = try Self.makeSessions(
                 state: sessionState,
@@ -113,6 +136,8 @@ private extension WorkoutContextServiceTests {
             secondProgram = programs.second
             firstProgramDays = days.firstProgram
             secondProgramDays = days.secondProgram
+            firstDayExercise = exerciseContent.dayExercise
+            firstExercise = exerciseContent.exercise
 
             let store = MockDataStore(
                 users: [user],
@@ -122,6 +147,8 @@ private extension WorkoutContextServiceTests {
                     identifiers.secondProgramID: ProgramCatalogMetadata(isRecommended: true)
                 ],
                 workoutDays: firstProgramDays + secondProgramDays,
+                dayExercises: [firstDayExercise],
+                exercises: [firstExercise],
                 sessions: sessions,
                 currentUserID: identifiers.userID
             )
@@ -179,6 +206,26 @@ private extension WorkoutContextServiceTests {
                     orderIndex: index
                 )
             }
+        }
+
+        private static func makeExerciseContent(
+            identifiers: Identifiers
+        ) throws -> (dayExercise: WorkoutDayExercise, exercise: Exercise) {
+            let exercise = try Exercise(
+                id: identifiers.firstExerciseID,
+                name: "Bench Press",
+                muscleGroup: .chest
+            )
+            let dayExercise = try WorkoutDayExercise(
+                id: identifiers.firstDayExerciseID,
+                workoutDayId: identifiers.firstProgramDayIDs[0],
+                exerciseId: exercise.id,
+                targetSets: 3,
+                targetReps: 8,
+                targetWeight: 60,
+                orderIndex: 0
+            )
+            return (dayExercise, exercise)
         }
 
         private static func makeUser(

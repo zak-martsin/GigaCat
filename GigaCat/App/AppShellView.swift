@@ -3,9 +3,20 @@ import SwiftUI
 struct AppShellView: View {
     @State private var selectedTab: AppTab = .home
     @State private var isProfilePresented = false
+    @State private var workoutViewModel: WorkoutViewModel
     @StateObject private var homeViewModel: HomeViewModel
 
     init(repositoryFactory: MockRepositoryFactory = MockRepositoryFactory()) {
+        let workoutContextService = WorkoutContextService(
+            userRepository: repositoryFactory.userRepository,
+            programCatalogRepository: repositoryFactory.programCatalogRepository,
+            workoutProgramRepository: repositoryFactory.workoutProgramRepository,
+            workoutRepository: repositoryFactory.workoutRepository
+        )
+
+        _workoutViewModel = State(
+            initialValue: WorkoutViewModel(contextService: workoutContextService)
+        )
         _homeViewModel = StateObject(
             wrappedValue: HomeViewModel(
                 userRepository: repositoryFactory.userRepository,
@@ -35,7 +46,10 @@ struct AppShellView: View {
                         Label(AppTab.progress.title, systemImage: AppTab.progress.systemImage)
                     }
 
-                WorkoutView(onHeaderAction: handleHeaderAction)
+                WorkoutView(
+                    viewModel: workoutViewModel,
+                    onHeaderAction: handleHeaderAction
+                )
                     .tag(AppTab.workout)
                     .tabItem {
                         Label(AppTab.workout.title, systemImage: AppTab.workout.systemImage)

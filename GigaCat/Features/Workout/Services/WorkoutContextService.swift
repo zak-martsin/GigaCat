@@ -10,6 +10,7 @@ enum WorkoutContextError: Error, Equatable {
     case programNotFound
     case workoutDayNotFound
     case programHasNoWorkoutDays
+    case exerciseNotFound
 }
 
 struct WorkoutContextService: WorkoutContextServicing {
@@ -53,10 +54,11 @@ struct WorkoutContextService: WorkoutContextServicing {
             in: days,
             latestWorkoutDay: latestWorkoutDay
         )
+        let dayContents = try await makeDayContents(from: days)
 
         return WorkoutContext(
             program: program,
-            days: days,
+            dayContents: dayContents,
             initialDayID: initialDay.id,
             activeSession: nil
         )
@@ -77,10 +79,11 @@ struct WorkoutContextService: WorkoutContextServicing {
         guard days.contains(where: { $0.id == activeWorkoutDay.id }) else {
             throw WorkoutContextError.workoutDayNotFound
         }
+        let dayContents = try await makeDayContents(from: days)
 
         return WorkoutContext(
             program: program,
-            days: days,
+            dayContents: dayContents,
             initialDayID: activeWorkoutDay.id,
             activeSession: activeSession
         )
@@ -122,6 +125,41 @@ struct WorkoutContextService: WorkoutContextServicing {
         }
 
         return days
+    }
+
+    private func makeDayContents(from days: [WorkoutDay]) async throws -> [WorkoutDayContent] {
+        var dayContents: [WorkoutDayContent] = []
+
+        for day in days {
+            let dayExercises = try await workoutProgramRepository.fetchWorkoutDayExercises(
+                workoutDayId: day.id
+            )
+            var exerciseContents: [WorkoutExerciseContent] = []
+
+            for dayExercise in dayExercises.sorted(by: { $0.orderIndex < $1.orderIndex }) {
+                guard let exercise = try await workoutProgramRepository.fetchExercise(
+                    id: dayExercise.exerciseId
+                ) else {
+                    throw WorkoutContextError.exerciseNotFound
+                }
+
+                exerciseContents.append(
+                    WorkoutExerciseContent(
+                        dayExercise: dayExercise,
+                        exercise: exercise
+                    )
+                )
+            }
+
+            dayContents.append(
+                WorkoutDayContent(
+                    day: day,
+                    exercises: exerciseContents
+                )
+            )
+        }
+
+        return dayContents
     }
 
     private static func initialDay(
