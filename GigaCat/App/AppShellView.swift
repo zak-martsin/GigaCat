@@ -67,7 +67,7 @@ struct AppShellView: View {
                         Label(AppTab.library.title, systemImage: AppTab.library.systemImage)
                     }
             }
-            .tabViewBottomAccessory(isEnabled: true) {
+            .tabViewBottomAccessory(isEnabled: selectedTab != .workout) {
                 ProgramMiniPlayerView(
                     state: homeViewModel.miniPlayerState,
                     onTap: openMiniPlayerProgramDetail,

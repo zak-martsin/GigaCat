@@ -14,18 +14,16 @@ struct WorkoutViewDataMapper {
 
         return WorkoutViewData(
             programTitle: context.program.title,
-            programDescription: context.program.description,
             days: context.dayContents.map { content in
                 WorkoutDayItemViewData(
                     id: content.day.id,
-                    title: content.day.title,
+                    title: "Day \(content.day.orderIndex + 1)",
                     isSelected: content.day.id == selectedDayID,
                     hasActiveSession: content.day.id == context.activeSession?.workoutDayId
                 )
             },
             selectedDay: SelectedWorkoutDayViewData(
                 id: selectedDayContent.day.id,
-                title: selectedDayContent.day.title,
                 exercises: selectedDayContent.exercises.map(mapExercise)
             )
         )
@@ -35,19 +33,8 @@ struct WorkoutViewDataMapper {
         WorkoutExerciseViewData(
             id: content.dayExercise.id,
             name: content.exercise.name,
-            muscleGroup: muscleGroupTitle(content.exercise.muscleGroup),
             targetSets: content.dayExercise.targetSets,
-            targetReps: content.dayExercise.targetReps,
-            targetWeight: content.dayExercise.targetWeight
+            targetReps: content.dayExercise.targetReps
         )
-    }
-
-    private func muscleGroupTitle(_ muscleGroup: ExerciseMuscleGroup) -> String {
-        switch muscleGroup {
-        case .fullBody:
-            "Full Body"
-        default:
-            muscleGroup.rawValue.capitalized
-        }
     }
 }

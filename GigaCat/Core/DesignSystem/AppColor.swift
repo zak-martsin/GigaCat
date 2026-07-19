@@ -13,5 +13,6 @@ enum AppColor {
     static let textPrimary = Color(hex: 0x111111)
     static let textSecondary = Color(hex: 0x6B7280)
     static let accent = Color(hex: 0x111111)
+    static let success = Color(hex: 0x22C55E)
     static let border = Color(hex: 0xE8E2DA)
 }

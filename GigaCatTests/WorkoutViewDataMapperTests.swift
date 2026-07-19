@@ -14,18 +14,17 @@ struct WorkoutViewDataMapperTests {
         )
 
         #expect(viewData?.programTitle == fixture.context.program.title)
-        #expect(viewData?.programDescription == fixture.context.program.description)
         #expect(
             viewData?.days == [
                 WorkoutDayItemViewData(
                     id: fixture.firstDay.id,
-                    title: fixture.firstDay.title,
+                    title: "Day 1",
                     isSelected: true,
                     hasActiveSession: false
                 ),
                 WorkoutDayItemViewData(
                     id: fixture.secondDay.id,
-                    title: fixture.secondDay.title,
+                    title: "Day 2",
                     isSelected: false,
                     hasActiveSession: true
                 )
@@ -43,16 +42,13 @@ struct WorkoutViewDataMapperTests {
         )
 
         #expect(viewData?.selectedDay.id == fixture.firstDay.id)
-        #expect(viewData?.selectedDay.title == fixture.firstDay.title)
         #expect(
             viewData?.selectedDay.exercises == [
                 WorkoutExerciseViewData(
                     id: fixture.dayExercise.id,
                     name: fixture.exercise.name,
-                    muscleGroup: "Full Body",
                     targetSets: 4,
-                    targetReps: 6,
-                    targetWeight: 80
+                    targetReps: 6
                 )
             ]
         )
