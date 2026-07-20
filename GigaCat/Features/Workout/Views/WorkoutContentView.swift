@@ -3,6 +3,7 @@ import SwiftUI
 struct WorkoutContentView: View {
     let viewData: WorkoutViewData
     let onSelectDay: (UUID) -> Void
+    let onSelectExercise: (UUID) -> Void
     let onProgramInfo: () -> Void
 
     var body: some View {
@@ -33,13 +34,9 @@ struct WorkoutContentView: View {
                         width: AppControlSize.programInfoButton,
                         height: AppControlSize.programInfoButton
                     )
-                    .background(AppColor.background, in: Circle())
-                    .overlay {
-                        Circle()
-                            .stroke(AppColor.border, lineWidth: 1)
-                    }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.glass)
+            .buttonBorderShape(.circle)
             .accessibilityLabel("Program information")
         }
         .padding(AppSpacing.lg)
@@ -76,7 +73,9 @@ struct WorkoutContentView: View {
                 )
             } else {
                 ForEach(viewData.selectedDay.exercises) { exercise in
-                    WorkoutExerciseRow(exercise: exercise)
+                    WorkoutExerciseRow(exercise: exercise) {
+                        onSelectExercise(exercise.id)
+                    }
                 }
             }
         }
@@ -126,38 +125,43 @@ private struct WorkoutDayChip: View {
 
 private struct WorkoutExerciseRow: View {
     let exercise: WorkoutExerciseViewData
+    let action: () -> Void
 
     var body: some View {
-        HStack(spacing: AppSpacing.md) {
-            RoundedRectangle(cornerRadius: AppRadius.md)
-                .fill(AppColor.background)
-                .frame(
-                    width: AppControlSize.exerciseArtwork,
-                    height: AppControlSize.exerciseArtwork
-                )
-                .overlay {
-                    Image(systemName: "figure.strengthtraining.traditional")
-                        .font(.system(size: AppIconSize.exerciseArtwork, weight: .semibold))
+        Button(action: action) {
+            HStack(spacing: AppSpacing.md) {
+                RoundedRectangle(cornerRadius: AppRadius.md)
+                    .fill(AppColor.background)
+                    .frame(
+                        width: AppControlSize.exerciseArtwork,
+                        height: AppControlSize.exerciseArtwork
+                    )
+                    .overlay {
+                        Image(systemName: "figure.strengthtraining.traditional")
+                            .font(.system(size: AppIconSize.exerciseArtwork, weight: .semibold))
+                            .foregroundStyle(AppColor.textPrimary)
+                    }
+
+                VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                    Text(exercise.name)
+                        .font(.headline)
                         .foregroundStyle(AppColor.textPrimary)
+                        .lineLimit(2)
+
+                    Text("\(exercise.targetSets) x \(exercise.targetReps) reps")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(AppColor.textSecondary)
                 }
-
-            VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                Text(exercise.name)
-                    .font(.headline)
-                    .foregroundStyle(AppColor.textPrimary)
-                    .lineLimit(2)
-
-                Text("\(exercise.targetSets) x \(exercise.targetReps) reps")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(AppColor.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(AppSpacing.md)
+            .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppRadius.lg))
+            .overlay {
+                RoundedRectangle(cornerRadius: AppRadius.lg)
+                    .stroke(AppColor.border, lineWidth: 1)
+            }
         }
-        .padding(AppSpacing.md)
-        .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppRadius.lg))
-        .overlay {
-            RoundedRectangle(cornerRadius: AppRadius.lg)
-                .stroke(AppColor.border, lineWidth: 1)
-        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Opens exercise details")
     }
 }

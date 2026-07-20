@@ -5,6 +5,7 @@ struct WorkoutExerciseDetailViewData: Identifiable, Equatable, Sendable {
     let name: String
     let position: Int
     let totalCount: Int
+    let targetSummary: String
     let sets: [WorkoutSetTargetViewData]
     let canGoBack: Bool
     let canGoForward: Bool

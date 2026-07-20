@@ -16,5 +16,7 @@ enum AppControlSize {
     static let largeButtonHeight: CGFloat = 56
     static let programInfoButton: CGFloat = 32
     static let exerciseArtwork: CGFloat = 52
+    static let exerciseDetailArtwork: CGFloat = 164
+    static let exerciseNavigationButton: CGFloat = 44
     static let statusIndicator: CGFloat = 10
 }

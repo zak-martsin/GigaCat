@@ -28,57 +28,57 @@ struct AppShellView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            TabView(selection: $selectedTab) {
-                HomeView(
-                    viewModel: homeViewModel,
-                    onOpenWorkout: openWorkoutTab,
-                    onHeaderAction: handleHeaderAction
-                )
-                    .tag(AppTab.home)
-                    .tabItem {
-                        Label(AppTab.home.title, systemImage: AppTab.home.systemImage)
-                    }
 
-                ProgressView(onHeaderAction: handleHeaderAction)
-                    .tag(AppTab.progress)
-                    .tabItem {
-                        Label(AppTab.progress.title, systemImage: AppTab.progress.systemImage)
-                    }
-
-                WorkoutView(
-                    viewModel: workoutViewModel,
-                    onHeaderAction: handleHeaderAction
-                )
-                    .tag(AppTab.workout)
-                    .tabItem {
-                        Label(AppTab.workout.title, systemImage: AppTab.workout.systemImage)
-                    }
-
-                NutritionView(onHeaderAction: handleHeaderAction)
-                    .tag(AppTab.nutrition)
-                    .tabItem {
-                        Label(AppTab.nutrition.title, systemImage: AppTab.nutrition.systemImage)
-                    }
-
-                LibraryView(onHeaderAction: handleHeaderAction)
-                    .tag(AppTab.library)
-                    .tabItem {
-                        Label(AppTab.library.title, systemImage: AppTab.library.systemImage)
-                    }
+        TabView(selection: $selectedTab) {
+            HomeView(
+                viewModel: homeViewModel,
+                onOpenWorkout: openWorkoutTab,
+                onHeaderAction: handleHeaderAction
+            )
+            .tag(AppTab.home)
+            .tabItem {
+                Label(AppTab.home.title, systemImage: AppTab.home.systemImage)
             }
-            .tabViewBottomAccessory(isEnabled: selectedTab != .workout) {
-                ProgramMiniPlayerView(
-                    state: homeViewModel.miniPlayerState,
-                    onTap: openMiniPlayerProgramDetail,
-                    onPrimaryAction: handleMiniPlayerAction
-                )
-                .padding(.horizontal, AppSpacing.lg)
-                .padding(.bottom, AppSpacing.sm)
+
+            ProgressView(onHeaderAction: handleHeaderAction)
+                .tag(AppTab.progress)
+                .tabItem {
+                    Label(AppTab.progress.title, systemImage: AppTab.progress.systemImage)
+                }
+
+            WorkoutView(
+                viewModel: workoutViewModel,
+                onHeaderAction: handleHeaderAction
+            )
+            .tag(AppTab.workout)
+            .tabItem {
+                Label(AppTab.workout.title, systemImage: AppTab.workout.systemImage)
             }
-            .toolbar(.hidden, for: .navigationBar)
-            .background(AppColor.background.ignoresSafeArea())
+
+            NutritionView(onHeaderAction: handleHeaderAction)
+                .tag(AppTab.nutrition)
+                .tabItem {
+                    Label(AppTab.nutrition.title, systemImage: AppTab.nutrition.systemImage)
+                }
+
+            LibraryView(onHeaderAction: handleHeaderAction)
+                .tag(AppTab.library)
+                .tabItem {
+                    Label(AppTab.library.title, systemImage: AppTab.library.systemImage)
+                }
         }
+        .tabViewBottomAccessory(isEnabled: selectedTab != .workout) {
+            ProgramMiniPlayerView(
+                state: homeViewModel.miniPlayerState,
+                onTap: openMiniPlayerProgramDetail,
+                onPrimaryAction: handleMiniPlayerAction
+            )
+            .padding(.horizontal, AppSpacing.lg)
+            .padding(.bottom, AppSpacing.sm)
+        }
+        .toolbar(.hidden, for: .navigationBar)
+        .background(AppColor.background.ignoresSafeArea())
+
         .alert(
             homeViewModel.expiredSessionAlert?.title ?? "",
             isPresented: expiredSessionAlertIsPresented,
@@ -114,6 +114,10 @@ struct AppShellView: View {
         }
         .task {
             await homeViewModel.loadIfNeeded()
+        }
+        .task(id: selectedTab) {
+            guard selectedTab == .workout else { return }
+            await workoutViewModel.load()
         }
     }
 
@@ -286,8 +290,8 @@ private struct ProgramMiniPlayerView: View {
                 .font(.subheadline.weight(.semibold))
                 .padding(.horizontal, AppSpacing.lg)
         }
-        .frame(height: AppControlSize.fieldHeight)
-        .buttonStyle(.glassProminent)
+            .frame(height: AppControlSize.fieldHeight)
+            .buttonStyle(.glassProminent)
 
         if state.action == .start {
             button.tint(.green)

@@ -24,6 +24,7 @@ struct WorkoutExerciseDetailViewDataMapperTests {
         #expect(viewData.name == content.exercise.name)
         #expect(viewData.position == 2)
         #expect(viewData.totalCount == 4)
+        #expect(viewData.targetSummary == "3 sets · 8 reps · 60 kg")
         #expect(viewData.canGoBack)
         #expect(viewData.canGoForward)
     }
@@ -72,6 +73,7 @@ struct WorkoutExerciseDetailViewDataMapperTests {
         #expect(viewData.sets == [
             WorkoutSetTargetViewData(setNumber: 1, targetReps: 12, targetWeight: nil)
         ])
+        #expect(viewData.targetSummary == "1 set · 12 reps")
     }
 }
 

@@ -14,6 +14,7 @@ struct WorkoutExerciseDetailViewDataMapper {
             name: selectedExercise.exercise.name,
             position: selectedExerciseIndex + 1,
             totalCount: totalCount,
+            targetSummary: makeTargetSummary(from: selectedExercise.dayExercise),
             sets: makeSetTargets(from: selectedExercise.dayExercise),
             canGoBack: canGoBack,
             canGoForward: canGoForward
@@ -30,5 +31,24 @@ struct WorkoutExerciseDetailViewDataMapper {
                 targetWeight: dayExercise.targetWeight
             )
         }
+    }
+
+    private func makeTargetSummary(from dayExercise: WorkoutDayExercise) -> String {
+        let setUnit = dayExercise.targetSets == 1 ? "set" : "sets"
+        let repUnit = dayExercise.targetReps == 1 ? "rep" : "reps"
+        var components = [
+            "\(dayExercise.targetSets) \(setUnit)",
+            "\(dayExercise.targetReps) \(repUnit)"
+        ]
+
+        if let targetWeight = dayExercise.targetWeight {
+            components.append("\(formattedWeight(targetWeight)) kg")
+        }
+
+        return components.joined(separator: " · ")
+    }
+
+    private func formattedWeight(_ weight: Double) -> String {
+        weight.formatted(.number.precision(.fractionLength(0...2)))
     }
 }

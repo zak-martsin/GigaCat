@@ -1,26 +1,30 @@
 import SwiftUI
 
 struct WorkoutView: View {
+    @State private var selectedDayExerciseID: UUID?
+
     let viewModel: WorkoutViewModel
     let onHeaderAction: (HeaderAction) -> Void
     private let mapper = WorkoutViewDataMapper()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            AppHeaderView(
-                title: "Workout",
-                actions: [.profile],
-                onAction: onHeaderAction
-            )
-            .padding(.horizontal, AppSpacing.lg)
-            .padding(.top, AppSpacing.lg)
-            .padding(.bottom, AppSpacing.md)
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 0) {
+                AppHeaderView(
+                    title: "Workout",
+                    actions: [.profile],
+                    onAction: onHeaderAction
+                )
+                .padding(.horizontal, AppSpacing.lg)
+                .padding(.top, AppSpacing.lg)
+                .padding(.bottom, AppSpacing.md)
 
-            content
-        }
-        .background(AppColor.background.ignoresSafeArea())
-        .task {
-            await viewModel.load()
+                content
+            }
+            .background(AppColor.background.ignoresSafeArea())
+            .navigationDestination(item: $selectedDayExerciseID) { dayExerciseID in
+                exerciseDestination(for: dayExerciseID)
+            }
         }
     }
 
@@ -44,6 +48,7 @@ struct WorkoutView: View {
             WorkoutContentView(
                 viewData: viewData,
                 onSelectDay: viewModel.selectDay,
+                onSelectExercise: { selectedDayExerciseID = $0 },
                 onProgramInfo: {}
             )
         } else {
@@ -84,6 +89,24 @@ struct WorkoutView: View {
             }
             .padding(.horizontal, AppSpacing.lg)
             .padding(.top, AppSpacing.md)
+        }
+    }
+
+    @ViewBuilder
+    private func exerciseDestination(for dayExerciseID: UUID) -> some View {
+        if let dayContent = viewModel.selectedDayContent,
+           dayContent.exercises.contains(where: { $0.dayExercise.id == dayExerciseID }) {
+            WorkoutExerciseView(
+                dayContent: dayContent,
+                initialDayExerciseID: dayExerciseID
+            )
+        } else {
+            AppMessageCard(
+                title: "Exercise unavailable",
+                message: "This exercise is no longer part of the selected workout day."
+            )
+            .padding(AppSpacing.lg)
+            .background(AppColor.background.ignoresSafeArea())
         }
     }
 }
