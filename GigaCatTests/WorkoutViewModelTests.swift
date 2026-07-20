@@ -8,7 +8,8 @@ struct WorkoutViewModelTests {
     @Test
     func initialStateIsLoadingWithoutWorkoutData() {
         let viewModel = WorkoutViewModel(
-            contextService: WorkoutContextServiceStub(results: [])
+            contextService: WorkoutContextServiceStub(results: []),
+            workoutRepository: makeWorkoutRepository()
         )
 
         #expect(viewModel.loadState == .loading)
@@ -20,7 +21,8 @@ struct WorkoutViewModelTests {
     func loadStoresContextAndSelectsItsInitialDay() async throws {
         let context = try makeContext()
         let viewModel = WorkoutViewModel(
-            contextService: WorkoutContextServiceStub(results: [.success(context)])
+            contextService: WorkoutContextServiceStub(results: [.success(context)]),
+            workoutRepository: makeWorkoutRepository()
         )
 
         await viewModel.load()
@@ -39,7 +41,8 @@ struct WorkoutViewModelTests {
     func selectDayChangesOnlyTheInspectedDay() async throws {
         let context = try makeContext(hasActiveSession: true)
         let viewModel = WorkoutViewModel(
-            contextService: WorkoutContextServiceStub(results: [.success(context)])
+            contextService: WorkoutContextServiceStub(results: [.success(context)]),
+            workoutRepository: makeWorkoutRepository()
         )
         await viewModel.load()
 
@@ -55,7 +58,8 @@ struct WorkoutViewModelTests {
     func selectDayIgnoresDayOutsideCurrentContext() async throws {
         let context = try makeContext()
         let viewModel = WorkoutViewModel(
-            contextService: WorkoutContextServiceStub(results: [.success(context)])
+            contextService: WorkoutContextServiceStub(results: [.success(context)]),
+            workoutRepository: makeWorkoutRepository()
         )
         await viewModel.load()
 
@@ -73,7 +77,10 @@ struct WorkoutViewModelTests {
                 .failure(.loadFailed)
             ]
         )
-        let viewModel = WorkoutViewModel(contextService: service)
+        let viewModel = WorkoutViewModel(
+            contextService: service,
+            workoutRepository: makeWorkoutRepository()
+        )
 
         await viewModel.load()
         await viewModel.load()
@@ -141,11 +148,16 @@ private extension WorkoutViewModelTests {
         }
 
         return WorkoutContext(
+            userID: userID,
             program: program,
             dayContents: dayContents,
             initialDayID: firstDayID,
             activeSession: activeSession
         )
+    }
+
+    func makeWorkoutRepository() -> WorkoutRepository {
+        MockWorkoutRepository(store: MockDataStore())
     }
 }
 

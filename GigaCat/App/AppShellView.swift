@@ -15,7 +15,10 @@ struct AppShellView: View {
         )
 
         _workoutViewModel = State(
-            initialValue: WorkoutViewModel(contextService: workoutContextService)
+            initialValue: WorkoutViewModel(
+                contextService: workoutContextService,
+                workoutRepository: repositoryFactory.workoutRepository
+            )
         )
         _homeViewModel = StateObject(
             wrappedValue: HomeViewModel(

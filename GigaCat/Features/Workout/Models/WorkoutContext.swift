@@ -2,6 +2,7 @@ import Foundation
 
 /// Repository-backed workout data resolved for the first presentation of the Workout screen.
 struct WorkoutContext: Equatable, Sendable {
+    let userID: UUID
     let program: WorkoutProgram
     let dayContents: [WorkoutDayContent]
     let initialDayID: UUID

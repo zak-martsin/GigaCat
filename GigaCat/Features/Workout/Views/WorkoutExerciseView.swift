@@ -8,16 +8,10 @@ struct WorkoutExerciseView: View {
     private let onExerciseInfo: () -> Void
 
     init(
-        dayContent: WorkoutDayContent,
-        initialDayExerciseID: UUID,
+        viewModel: WorkoutExerciseViewModel,
         onExerciseInfo: @escaping () -> Void = {}
     ) {
-        _viewModel = State(
-            initialValue: WorkoutExerciseViewModel(
-                dayContent: dayContent,
-                initialDayExerciseID: initialDayExerciseID
-            )
-        )
+        _viewModel = State(initialValue: viewModel)
         self.onExerciseInfo = onExerciseInfo
     }
 
@@ -53,6 +47,9 @@ struct WorkoutExerciseView: View {
                 }
                 .accessibilityLabel("Exercise information")
             }
+        }
+        .task {
+            await viewModel.loadLogs()
         }
     }
 

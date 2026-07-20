@@ -95,11 +95,11 @@ struct WorkoutView: View {
     @ViewBuilder
     private func exerciseDestination(for dayExerciseID: UUID) -> some View {
         if let dayContent = viewModel.selectedDayContent,
-           dayContent.exercises.contains(where: { $0.dayExercise.id == dayExerciseID }) {
-            WorkoutExerciseView(
-                dayContent: dayContent,
-                initialDayExerciseID: dayExerciseID
-            )
+           let exerciseViewModel = viewModel.makeExerciseViewModel(
+               dayContent: dayContent,
+               initialDayExerciseID: dayExerciseID
+           ) {
+            WorkoutExerciseView(viewModel: exerciseViewModel)
         } else {
             AppMessageCard(
                 title: "Exercise unavailable",

@@ -42,6 +42,7 @@ struct WorkoutViewDataMapperTests {
     func mapsReadyStatusWhenSessionIsNotActive() throws {
         let fixture = try Fixture()
         let context = WorkoutContext(
+            userID: fixture.context.userID,
             program: fixture.context.program,
             dayContents: fixture.context.dayContents,
             initialDayID: fixture.context.initialDayID,
@@ -136,6 +137,7 @@ private extension WorkoutViewDataMapperTests {
                 workoutDayId: secondDay.id
             )
             context = WorkoutContext(
+                userID: activeSession.userId,
                 program: program,
                 dayContents: [
                     WorkoutDayContent(

@@ -8,8 +8,7 @@ struct WorkoutExerciseViewModelTests {
     @Test
     func selectsRequestedExerciseAfterOrderingDayContent() throws {
         let fixture = try Fixture()
-        let viewModel = WorkoutExerciseViewModel(
-            dayContent: fixture.dayContent,
+        let viewModel = fixture.makeViewModel(
             initialDayExerciseID: fixture.second.dayExercise.id
         )
 
@@ -25,8 +24,7 @@ struct WorkoutExerciseViewModelTests {
     @Test
     func selectsPreviousAndNextExercisesWithinDayBounds() throws {
         let fixture = try Fixture()
-        let viewModel = WorkoutExerciseViewModel(
-            dayContent: fixture.dayContent,
+        let viewModel = fixture.makeViewModel(
             initialDayExerciseID: fixture.first.dayExercise.id
         )
 
@@ -49,10 +47,7 @@ struct WorkoutExerciseViewModelTests {
     @Test
     func fallsBackToFirstExerciseWhenInitialIDIsOutsideDay() throws {
         let fixture = try Fixture()
-        let viewModel = WorkoutExerciseViewModel(
-            dayContent: fixture.dayContent,
-            initialDayExerciseID: UUID()
-        )
+        let viewModel = fixture.makeViewModel(initialDayExerciseID: UUID())
 
         #expect(viewModel.selectedDayExerciseID == fixture.first.dayExercise.id)
         #expect(viewModel.selectedExerciseIndex == 0)
@@ -62,8 +57,11 @@ struct WorkoutExerciseViewModelTests {
     func emptyDayHasNoExerciseSelection() throws {
         let fixture = try Fixture()
         let viewModel = WorkoutExerciseViewModel(
+            userID: fixture.user.id,
+            activeSession: nil,
             dayContent: WorkoutDayContent(day: fixture.dayContent.day, exercises: []),
-            initialDayExerciseID: UUID()
+            initialDayExerciseID: UUID(),
+            workoutRepository: fixture.repository
         )
 
         #expect(viewModel.selectedDayExerciseID == nil)
@@ -72,16 +70,81 @@ struct WorkoutExerciseViewModelTests {
         #expect(!viewModel.canSelectPreviousExercise)
         #expect(!viewModel.canSelectNextExercise)
     }
+
+    @Test
+    func loadLogsIndexesSavedSetsByExerciseAndSetNumber() async throws {
+        let fixture = try Fixture(hasSavedLog: true)
+        let viewModel = fixture.makeViewModel(
+            initialDayExerciseID: fixture.first.dayExercise.id
+        )
+
+        await viewModel.loadLogs()
+
+        #expect(viewModel.logsLoadState == .loaded)
+        #expect(
+            viewModel.savedLog(
+                dayExerciseID: fixture.first.dayExercise.id,
+                setNumber: 1
+            ) == fixture.savedLog
+        )
+    }
+
+    @Test
+    func firstSavedSetStartsSessionAndNotifiesParent() async throws {
+        let fixture = try Fixture()
+        var changedSession: WorkoutSession?
+        let viewModel = fixture.makeViewModel(
+            initialDayExerciseID: fixture.first.dayExercise.id,
+            onSessionChanged: { changedSession = $0 }
+        )
+        let performedAt = Date(timeIntervalSince1970: 2_000)
+
+        await viewModel.saveSet(
+            weight: 62.5,
+            reps: 8,
+            setNumber: 1,
+            performedAt: performedAt
+        )
+
+        let savedLog = viewModel.savedLog(
+            dayExerciseID: fixture.first.dayExercise.id,
+            setNumber: 1
+        )
+        #expect(viewModel.activeSession?.startedAt == performedAt)
+        #expect(savedLog?.weight == 62.5)
+        #expect(savedLog?.reps == 8)
+        #expect(viewModel.setSaveState == .saved(setNumber: 1, didStartSession: true))
+        #expect(changedSession == viewModel.activeSession)
+    }
+
+    @Test
+    func failedSaveDoesNotAddLog() async throws {
+        let fixture = try Fixture()
+        let viewModel = fixture.makeViewModel(
+            initialDayExerciseID: fixture.first.dayExercise.id
+        )
+
+        await viewModel.saveSet(weight: 60, reps: 0, setNumber: 1)
+
+        #expect(viewModel.setSaveState == .failed(setNumber: 1))
+        #expect(viewModel.logsByDayExerciseID.isEmpty)
+        #expect(viewModel.activeSession == nil)
+    }
 }
 
 private extension WorkoutExerciseViewModelTests {
     struct Fixture {
+        let user: User
         let first: WorkoutExerciseContent
         let second: WorkoutExerciseContent
         let third: WorkoutExerciseContent
         let dayContent: WorkoutDayContent
+        let activeSession: WorkoutSession?
+        let savedLog: ExerciseLog?
+        let repository: MockWorkoutRepository
 
-        init() throws {
+        init(hasSavedLog: Bool = false) throws {
+            user = try User(appleUserId: "workout-exercise-view-model-user")
             let programID = UUID()
             let day = try WorkoutDay(
                 programId: programID,
@@ -110,6 +173,51 @@ private extension WorkoutExerciseViewModelTests {
             dayContent = WorkoutDayContent(
                 day: day,
                 exercises: [third, first, second]
+            )
+
+            if hasSavedLog {
+                let session = try WorkoutSession(
+                    userId: user.id,
+                    workoutDayId: day.id
+                )
+                let log = try ExerciseLog(
+                    sessionId: session.id,
+                    workoutDayExerciseId: first.dayExercise.id,
+                    weight: 60,
+                    reps: 8,
+                    setNumber: 1
+                )
+                activeSession = session
+                savedLog = log
+            } else {
+                activeSession = nil
+                savedLog = nil
+            }
+
+            let store = MockDataStore(
+                users: [user],
+                workoutDays: [day],
+                dayExercises: [first, second, third].map(\.dayExercise),
+                exercises: [first, second, third].map(\.exercise),
+                sessions: activeSession.map { [$0] } ?? [],
+                exerciseLogs: savedLog.map { [$0] } ?? [],
+                currentUserID: user.id
+            )
+            repository = MockWorkoutRepository(store: store)
+        }
+
+        @MainActor
+        func makeViewModel(
+            initialDayExerciseID: UUID,
+            onSessionChanged: @escaping (WorkoutSession) -> Void = { _ in }
+        ) -> WorkoutExerciseViewModel {
+            WorkoutExerciseViewModel(
+                userID: user.id,
+                activeSession: activeSession,
+                dayContent: dayContent,
+                initialDayExerciseID: initialDayExerciseID,
+                workoutRepository: repository,
+                onSessionChanged: onSessionChanged
             )
         }
 

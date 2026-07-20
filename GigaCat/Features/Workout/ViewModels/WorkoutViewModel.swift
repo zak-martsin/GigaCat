@@ -17,8 +17,15 @@ final class WorkoutViewModel {
     @ObservationIgnored
     private let contextService: WorkoutContextServicing
 
-    init(contextService: WorkoutContextServicing) {
+    @ObservationIgnored
+    private let workoutRepository: WorkoutRepository
+
+    init(
+        contextService: WorkoutContextServicing,
+        workoutRepository: WorkoutRepository
+    ) {
         self.contextService = contextService
+        self.workoutRepository = workoutRepository
     }
 
     var program: WorkoutProgram? {
@@ -62,5 +69,36 @@ final class WorkoutViewModel {
     func selectDay(id: UUID) {
         guard days.contains(where: { $0.id == id }) else { return }
         selectedDayID = id
+    }
+
+    func makeExerciseViewModel(
+        dayContent: WorkoutDayContent,
+        initialDayExerciseID: UUID
+    ) -> WorkoutExerciseViewModel? {
+        guard let context,
+              context.dayContents.contains(where: { $0.day.id == dayContent.day.id }) else {
+            return nil
+        }
+
+        return WorkoutExerciseViewModel(
+            userID: context.userID,
+            activeSession: context.activeSession,
+            dayContent: dayContent,
+            initialDayExerciseID: initialDayExerciseID,
+            workoutRepository: workoutRepository,
+            onSessionChanged: updateActiveSession
+        )
+    }
+
+    private func updateActiveSession(_ session: WorkoutSession) {
+        guard let context else { return }
+
+        self.context = WorkoutContext(
+            userID: context.userID,
+            program: context.program,
+            dayContents: context.dayContents,
+            initialDayID: context.initialDayID,
+            activeSession: session
+        )
     }
 }

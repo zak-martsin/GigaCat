@@ -37,7 +37,10 @@ struct WorkoutContextService: WorkoutContextServicing {
         }
 
         if let activeSession = try await workoutRepository.activeSession(for: user.id) {
-            return try await makeActiveSessionContext(for: activeSession)
+            return try await makeActiveSessionContext(
+                for: activeSession,
+                userID: user.id
+            )
         }
 
         let completedSessions = try await workoutRepository.fetchSessions(for: user.id)
@@ -57,6 +60,7 @@ struct WorkoutContextService: WorkoutContextServicing {
         let dayContents = try await makeDayContents(from: days)
 
         return WorkoutContext(
+            userID: user.id,
             program: program,
             dayContents: dayContents,
             initialDayID: initialDay.id,
@@ -64,7 +68,10 @@ struct WorkoutContextService: WorkoutContextServicing {
         )
     }
 
-    private func makeActiveSessionContext(for activeSession: WorkoutSession) async throws -> WorkoutContext {
+    private func makeActiveSessionContext(
+        for activeSession: WorkoutSession,
+        userID: UUID
+    ) async throws -> WorkoutContext {
         guard let activeWorkoutDay = try await workoutProgramRepository.fetchWorkoutDay(
             id: activeSession.workoutDayId
         ) else {
@@ -82,6 +89,7 @@ struct WorkoutContextService: WorkoutContextServicing {
         let dayContents = try await makeDayContents(from: days)
 
         return WorkoutContext(
+            userID: userID,
             program: program,
             dayContents: dayContents,
             initialDayID: activeWorkoutDay.id,
