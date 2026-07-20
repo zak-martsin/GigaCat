@@ -50,8 +50,8 @@ struct MockWorkoutRepository: WorkoutRepository {
         )
     }
 
-    func saveExerciseLog(_ log: ExerciseLog) async throws -> ExerciseLog {
-        try await store.saveExerciseLog(log)
+    func saveSet(_ input: WorkoutSetInput) async throws -> WorkoutSetSaveResult {
+        try await store.saveSet(input)
     }
 
     func fetchSessions(for userId: UUID) async throws -> [WorkoutSession] {

@@ -40,3 +40,21 @@ struct ExerciseLog: Identifiable, Codable, Equatable, Sendable {
         self.performedAt = performedAt
     }
 }
+
+/// Values entered for one performed set before a workout session has been resolved.
+struct WorkoutSetInput: Equatable, Sendable {
+    let userId: UUID
+    let workoutDayId: UUID
+    let workoutDayExerciseId: UUID
+    let weight: Double
+    let reps: Int
+    let setNumber: Int
+    let performedAt: Date
+}
+
+/// Persisted set together with the session state produced by the save operation.
+struct WorkoutSetSaveResult: Equatable, Sendable {
+    let session: WorkoutSession
+    let log: ExerciseLog
+    let didStartSession: Bool
+}

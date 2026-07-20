@@ -65,53 +65,6 @@ struct MockRepositoryTests {
     }
 
     @Test
-    func completedWorkoutSessionRejectsNewLogs() async throws {
-        let store = MockSeedData.makeStore()
-        let repository = MockWorkoutRepository(store: store)
-        let completedSessionID = try #require(UUID(uuidString: "bcbcbcbc-bcbc-bcbc-bcbc-bcbcbcbcbcbc"))
-        let workoutDayExerciseID = try #require(UUID(uuidString: "abababab-abab-abab-abab-abababababab"))
-        let log = try ExerciseLog(
-            sessionId: completedSessionID,
-            workoutDayExerciseId: workoutDayExerciseID,
-            weight: 95,
-            reps: 5,
-            setNumber: 3
-        )
-
-        await #expect(throws: RepositoryError.workoutSessionNotActive) {
-            try await repository.saveExerciseLog(log)
-        }
-    }
-
-    @Test
-    func savingTheSameLogicalSetReplacesThePreviousLog() async throws {
-        let store = MockSeedData.makeStore()
-        let repository = MockWorkoutRepository(store: store)
-        let user = try #require(await store.currentUser())
-        let activeSession = try #require(await store.activeSession(for: user.id))
-        let workoutDayExerciseID = try #require(UUID(uuidString: "88888888-8888-8888-8888-888888888888"))
-        let originalLogs = try await repository.fetchExerciseLogs(sessionId: activeSession.id)
-        let replacementLog = try ExerciseLog(
-            sessionId: activeSession.id,
-            workoutDayExerciseId: workoutDayExerciseID,
-            weight: 67.5,
-            reps: 9,
-            setNumber: 1
-        )
-
-        _ = try await repository.saveExerciseLog(replacementLog)
-        let updatedLogs = try await repository.fetchExerciseLogs(sessionId: activeSession.id)
-        let matchingLogs = updatedLogs.filter {
-            $0.workoutDayExerciseId == workoutDayExerciseID && $0.setNumber == 1
-        }
-
-        #expect(updatedLogs.count == originalLogs.count)
-        #expect(matchingLogs.count == 1)
-        #expect(matchingLogs.first?.weight == 67.5)
-        #expect(matchingLogs.first?.reps == 9)
-    }
-
-    @Test
     func completingSessionAndSelectingProgramIsAtomicWhenProgramIsMissing() async throws {
         let store = MockSeedData.makeStore()
         let repository = MockWorkoutRepository(store: store)

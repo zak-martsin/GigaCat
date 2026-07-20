@@ -17,7 +17,7 @@ protocol WorkoutRepository: Sendable {
         userId: UUID,
         programId: UUID
     ) async throws -> User
-    func saveExerciseLog(_ log: ExerciseLog) async throws -> ExerciseLog
+    func saveSet(_ input: WorkoutSetInput) async throws -> WorkoutSetSaveResult
     func fetchSessions(for userId: UUID) async throws -> [WorkoutSession]
     func fetchExerciseLogs(sessionId: UUID) async throws -> [ExerciseLog]
     func fetchRecentExerciseLogs(

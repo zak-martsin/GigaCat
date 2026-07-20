@@ -202,33 +202,69 @@ actor MockDataStore {
         return updatedUser
     }
 
-    func saveExerciseLog(_ log: ExerciseLog) throws -> ExerciseLog {
-        guard let session = sessionsByID[log.sessionId] else {
-            throw RepositoryError.workoutSessionNotFound
+    /// Creates the first session and saves its first set as one actor-isolated mutation.
+    func saveSet(_ input: WorkoutSetInput) throws -> WorkoutSetSaveResult {
+        guard usersByID[input.userId] != nil else {
+            throw RepositoryError.userNotFound
         }
 
-        guard let workoutDayExercise = dayExercisesByID[log.workoutDayExerciseId] else {
+        guard workoutDaysByID[input.workoutDayId] != nil else {
+            throw RepositoryError.workoutDayNotFound
+        }
+
+        guard let workoutDayExercise = dayExercisesByID[input.workoutDayExerciseId],
+              workoutDayExercise.workoutDayId == input.workoutDayId else {
             throw RepositoryError.exerciseNotFound
         }
 
-        guard workoutDayExercise.workoutDayId == session.workoutDayId else {
-            throw RepositoryError.exerciseNotFound
+        let existingSession = activeSession(for: input.userId)
+        if let existingSession,
+           existingSession.workoutDayId != input.workoutDayId {
+            throw RepositoryError.activeSessionWorkoutDayConflict
         }
 
-        guard session.status == .inProgress else {
-            throw RepositoryError.workoutSessionNotActive
-        }
+        let session = try existingSession ?? WorkoutSession(
+            userId: input.userId,
+            workoutDayId: input.workoutDayId,
+            startedAt: input.performedAt
+        )
+        let existingLog = matchingExerciseLog(
+            sessionId: session.id,
+            workoutDayExerciseId: input.workoutDayExerciseId,
+            setNumber: input.setNumber
+        )
+        let log = try ExerciseLog(
+            id: existingLog?.id ?? UUID(),
+            sessionId: session.id,
+            workoutDayExerciseId: input.workoutDayExerciseId,
+            weight: input.weight,
+            reps: input.reps,
+            setNumber: input.setNumber,
+            performedAt: input.performedAt
+        )
 
-        if let existingLogID = exerciseLogsByID.values.first(where: {
-            $0.sessionId == log.sessionId &&
-                $0.workoutDayExerciseId == log.workoutDayExerciseId &&
-                $0.setNumber == log.setNumber
-        })?.id {
-            exerciseLogsByID.removeValue(forKey: existingLogID)
+        if existingSession == nil {
+            sessionsByID[session.id] = session
         }
-
         exerciseLogsByID[log.id] = log
-        return log
+
+        return WorkoutSetSaveResult(
+            session: session,
+            log: log,
+            didStartSession: existingSession == nil
+        )
+    }
+
+    private func matchingExerciseLog(
+        sessionId: UUID,
+        workoutDayExerciseId: UUID,
+        setNumber: Int
+    ) -> ExerciseLog? {
+        exerciseLogsByID.values.first {
+            $0.sessionId == sessionId &&
+                $0.workoutDayExerciseId == workoutDayExerciseId &&
+                $0.setNumber == setNumber
+        }
     }
 
     /// Returns newest sessions first to match history-style screens.

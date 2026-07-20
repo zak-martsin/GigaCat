@@ -199,7 +199,7 @@ User enters reps/weight/set in SwiftUI screen
     ↓
 WorkoutSessionViewModel validates input
     ↓
-WorkoutRepository.saveExerciseLog(...)
+WorkoutRepository.saveSet(...)
     ↓
 Save to local source of truth first
     ↓
@@ -245,11 +245,12 @@ For MVP, the minimum practical flow is:
 ```text
 No active session
     ↓
-User starts workout day
+User saves the first performed set
     ↓
-WorkoutSession created with status = inProgress and startedAt
+WorkoutSession and ExerciseLog saved together
+with status = inProgress and startedAt = performedAt
     ↓
-User saves one or more ExerciseLog entries
+User saves more ExerciseLog entries
     ↓
 User completes workout
     ↓
@@ -259,6 +260,8 @@ WorkoutSession updated with status = completed and completedAt
 ### Lifecycle Rules
 
 - Only one active `inProgress` session per workout flow unless a future feature requires otherwise.
+- Opening Workout does not create a session; the first successfully saved set does.
+- Creating the first session and saving its first log must be one local atomic operation.
 
 ## 6. PreviewSupport and Mock Data
 
@@ -325,7 +328,7 @@ Responsibilities:
 
 - Fetch workout days for a program
 - Fetch exercises for a workout day
-- Start a workout session
+- Start a workout session when its first set is saved
 - Load active session
 - Update session status
 - Complete a session
