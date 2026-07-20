@@ -15,6 +15,12 @@ struct WorkoutViewDataMapperTests {
 
         #expect(viewData?.programTitle == fixture.context.program.title)
         #expect(
+            viewData?.sessionStatus == WorkoutSessionStatusViewData(
+                title: "Workout in progress",
+                isInProgress: true
+            )
+        )
+        #expect(
             viewData?.days == [
                 WorkoutDayItemViewData(
                     id: fixture.firstDay.id,
@@ -29,6 +35,29 @@ struct WorkoutViewDataMapperTests {
                     hasActiveSession: true
                 )
             ]
+        )
+    }
+
+    @Test
+    func mapsReadyStatusWhenSessionIsNotActive() throws {
+        let fixture = try Fixture()
+        let context = WorkoutContext(
+            program: fixture.context.program,
+            dayContents: fixture.context.dayContents,
+            initialDayID: fixture.context.initialDayID,
+            activeSession: nil
+        )
+
+        let viewData = WorkoutViewDataMapper().map(
+            context: context,
+            selectedDayID: fixture.firstDay.id
+        )
+
+        #expect(
+            viewData?.sessionStatus == WorkoutSessionStatusViewData(
+                title: "Ready to start",
+                isInProgress: false
+            )
         )
     }
 

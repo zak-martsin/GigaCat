@@ -21,10 +21,25 @@ struct WorkoutContentView: View {
 
     private var programCard: some View {
         HStack(spacing: AppSpacing.md) {
-            Text(viewData.programTitle)
-                .font(.system(.title2, design: .rounded, weight: .bold))
-                .foregroundStyle(AppColor.textPrimary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                Text(viewData.programTitle)
+                    .font(.system(.title2, design: .rounded, weight: .bold))
+                    .foregroundStyle(AppColor.textPrimary)
+
+                HStack(spacing: AppSpacing.sm) {
+                    Circle()
+                        .fill(sessionStatusColor)
+                        .frame(
+                            width: AppControlSize.statusIndicator,
+                            height: AppControlSize.statusIndicator
+                        )
+
+                    Text(viewData.sessionStatus.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(sessionStatusColor)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             Button(action: onProgramInfo) {
                 Image(systemName: "info")
@@ -45,6 +60,10 @@ struct WorkoutContentView: View {
             RoundedRectangle(cornerRadius: AppRadius.lg)
                 .stroke(AppColor.border, lineWidth: 1)
         }
+    }
+
+    private var sessionStatusColor: Color {
+        viewData.sessionStatus.isInProgress ? AppColor.success : AppColor.textSecondary
     }
 
     private var daySelector: some View {

@@ -14,6 +14,7 @@ struct WorkoutViewDataMapper {
 
         return WorkoutViewData(
             programTitle: context.program.title,
+            sessionStatus: mapSessionStatus(activeSession: context.activeSession),
             days: context.dayContents.map { content in
                 WorkoutDayItemViewData(
                     id: content.day.id,
@@ -26,6 +27,22 @@ struct WorkoutViewDataMapper {
                 id: selectedDayContent.day.id,
                 exercises: selectedDayContent.exercises.map(mapExercise)
             )
+        )
+    }
+
+    private func mapSessionStatus(
+        activeSession: WorkoutSession?
+    ) -> WorkoutSessionStatusViewData {
+        guard activeSession != nil else {
+            return WorkoutSessionStatusViewData(
+                title: "Ready to start",
+                isInProgress: false
+            )
+        }
+
+        return WorkoutSessionStatusViewData(
+            title: "Workout in progress",
+            isInProgress: true
         )
     }
 

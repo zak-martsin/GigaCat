@@ -2,8 +2,14 @@ import Foundation
 
 struct WorkoutViewData: Equatable, Sendable {
     let programTitle: String
+    let sessionStatus: WorkoutSessionStatusViewData
     let days: [WorkoutDayItemViewData]
     let selectedDay: SelectedWorkoutDayViewData
+}
+
+struct WorkoutSessionStatusViewData: Equatable, Sendable {
+    let title: String
+    let isInProgress: Bool
 }
 
 struct WorkoutDayItemViewData: Identifiable, Equatable, Sendable {
