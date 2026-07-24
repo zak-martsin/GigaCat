@@ -57,6 +57,11 @@ struct WorkoutView: View {
             } message: {
                 Text("All logged sets from this workout will be deleted.")
             }
+            .onChange(of: viewModel.loadState) { _, loadState in
+                if loadState == .loading {
+                    selectedDayExerciseID = nil
+                }
+            }
         }
     }
 

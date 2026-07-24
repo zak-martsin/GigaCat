@@ -17,6 +17,7 @@ struct WorkoutContentView: View {
             .padding(.top, AppSpacing.md)
             .padding(.bottom, AppSpacing.xxl)
         }
+        .accessibilityIdentifier("workout.exerciseList")
     }
 
     private var programCard: some View {
@@ -174,5 +175,6 @@ private struct WorkoutExerciseRow: View {
         }
         .buttonStyle(.plain)
         .accessibilityHint("Opens exercise details")
+        .accessibilityIdentifier("workout.exercise.\(exercise.id)")
     }
 }

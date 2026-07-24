@@ -34,6 +34,32 @@ final class GigaCatUITests: XCTestCase {
     }
 
     @MainActor
+    func testReturningToWorkoutClosesExerciseDetail() throws {
+        let app = XCUIApplication()
+        app.launch()
+
+        app.tabBars.buttons["Workout"].tap()
+
+        let exerciseList = app.scrollViews["workout.exerciseList"]
+        XCTAssertTrue(exerciseList.waitForExistence(timeout: 5))
+
+        let exercise = app.buttons
+            .matching(NSPredicate(format: "identifier BEGINSWITH 'workout.exercise.'"))
+            .firstMatch
+        XCTAssertTrue(exercise.waitForExistence(timeout: 5))
+        exercise.tap()
+
+        let exerciseDetail = app.scrollViews["workout.exerciseDetail"]
+        XCTAssertTrue(exerciseDetail.waitForExistence(timeout: 5))
+
+        app.tabBars.buttons["Home"].tap()
+        app.tabBars.buttons["Workout"].tap()
+
+        XCTAssertTrue(exerciseList.waitForExistence(timeout: 5))
+        XCTAssertFalse(exerciseDetail.exists)
+    }
+
+    @MainActor
     func testLaunchPerformance() throws {
         // This measures how long it takes to launch your application.
         measure(metrics: [XCTApplicationLaunchMetric()]) {

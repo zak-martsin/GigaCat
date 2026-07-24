@@ -19,6 +19,7 @@ struct WorkoutExerciseContentView: View {
             .padding(.top, AppSpacing.md)
             .padding(.bottom, AppSpacing.xxl)
         }
+        .accessibilityIdentifier("workout.exerciseDetail")
     }
 
     private var positionLabel: some View {
