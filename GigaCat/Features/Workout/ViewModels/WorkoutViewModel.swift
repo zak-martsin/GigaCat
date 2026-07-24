@@ -27,12 +27,17 @@ final class WorkoutViewModel {
     @ObservationIgnored
     private let workoutRepository: WorkoutRepository
 
+    @ObservationIgnored
+    private let onWorkoutDataChanged: @MainActor () -> Void
+
     init(
         contextService: WorkoutContextServicing,
-        workoutRepository: WorkoutRepository
+        workoutRepository: WorkoutRepository,
+        onWorkoutDataChanged: @escaping @MainActor () -> Void = {}
     ) {
         self.contextService = contextService
         self.workoutRepository = workoutRepository
+        self.onWorkoutDataChanged = onWorkoutDataChanged
     }
 
     var program: WorkoutProgram? {
@@ -101,6 +106,7 @@ final class WorkoutViewModel {
                 sessionId: activeSession.id,
                 completedAt: completedAt
             )
+            onWorkoutDataChanged()
             sessionActionState = .idle
             await load()
         } catch {
@@ -119,6 +125,7 @@ final class WorkoutViewModel {
 
         do {
             try await workoutRepository.deleteSession(sessionId: activeSession.id)
+            onWorkoutDataChanged()
             sessionActionState = .idle
             await load()
         } catch {
@@ -141,7 +148,8 @@ final class WorkoutViewModel {
             dayContent: dayContent,
             initialDayExerciseID: initialDayExerciseID,
             workoutRepository: workoutRepository,
-            onSessionChanged: updateActiveSession
+            onSessionChanged: updateActiveSession,
+            onWorkoutDataChanged: onWorkoutDataChanged
         )
     }
 

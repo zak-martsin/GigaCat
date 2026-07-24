@@ -51,6 +51,15 @@ GigaCat/
 - WorkoutSession
 - ExerciseLog
 
+## Project Documentation
+
+- [Architecture](Docs/ARCHITECTURE.md)
+- [Domain Model](Docs/DOMAIN_MODEL.md)
+- [Home Feature](Docs/HOME.md)
+- [Workout Feature](Docs/WORKOUT.md)
+- [Code Review Guide](Docs/CODE_REVIEW.md)
+- [Product Requirements](Docs/PRD.md)
+
 ## Getting Started
 
 1. Open `GigaCat.xcodeproj` in Xcode

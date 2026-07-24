@@ -89,6 +89,11 @@ final class HomeViewModel: ObservableObject {
         await load()
     }
 
+    /// Marks cached Home presentation as stale so the next entry reloads repository state.
+    func invalidate() {
+        hasLoaded = false
+    }
+
     /// Reloads all Home content, selected program presentation, and mini player state from repositories.
     func load() async {
         guard !isLoading else { return }

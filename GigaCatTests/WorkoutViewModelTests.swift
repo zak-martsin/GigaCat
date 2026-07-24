@@ -101,11 +101,15 @@ struct WorkoutViewModelTests {
         )
         let activeSession = try #require(activeContext.activeSession)
         let repository = makeWorkoutRepository(sessions: [activeSession])
+        var invalidationCount = 0
         let viewModel = WorkoutViewModel(
             contextService: WorkoutContextServiceStub(
                 results: [.success(activeContext), .success(nextContext)]
             ),
-            workoutRepository: repository
+            workoutRepository: repository,
+            onWorkoutDataChanged: {
+                invalidationCount += 1
+            }
         )
         let completedAt = activeSession.startedAt.addingTimeInterval(600)
 
@@ -120,6 +124,7 @@ struct WorkoutViewModelTests {
         #expect(viewModel.context == nextContext)
         #expect(viewModel.selectedDayID == nextDayID)
         #expect(viewModel.sessionActionState == .idle)
+        #expect(invalidationCount == 1)
     }
 
     @Test
@@ -131,11 +136,15 @@ struct WorkoutViewModelTests {
         )
         let activeSession = try #require(activeContext.activeSession)
         let repository = makeWorkoutRepository(sessions: [activeSession])
+        var invalidationCount = 0
         let viewModel = WorkoutViewModel(
             contextService: WorkoutContextServiceStub(
                 results: [.success(activeContext), .success(readyContext)]
             ),
-            workoutRepository: repository
+            workoutRepository: repository,
+            onWorkoutDataChanged: {
+                invalidationCount += 1
+            }
         )
 
         await viewModel.load()
@@ -146,6 +155,7 @@ struct WorkoutViewModelTests {
         #expect(viewModel.context == readyContext)
         #expect(viewModel.activeSession == nil)
         #expect(viewModel.sessionActionState == .idle)
+        #expect(invalidationCount == 1)
     }
 }
 

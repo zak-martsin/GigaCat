@@ -60,6 +60,39 @@ struct HomeViewModelTests {
         #expect(viewModel.miniPlayerState.action == .continueWorkout)
     }
 
+    @Test
+    func invalidationReloadsChangedSessionStateOnNextLoadIfNeeded() async throws {
+        let store = try makeStoreWithRecentExerciseActivity(now: Date())
+        let factory = MockRepositoryFactory(store: store)
+        let viewModel = makeViewModel(factory: factory)
+
+        await viewModel.loadIfNeeded()
+        #expect(viewModel.miniPlayerState.action == MiniPlayerState.Action.continueWorkout)
+
+        let currentUser = try await factory.userRepository.currentUser()
+        let user = try #require(currentUser)
+        let activeSession = try await factory.workoutRepository.activeSession(for: user.id)
+        let session = try #require(activeSession)
+        _ = try await factory.workoutRepository.completeSession(
+            sessionId: session.id,
+            completedAt: Date()
+        )
+
+        viewModel.invalidate()
+        await viewModel.loadIfNeeded()
+
+        #expect(viewModel.miniPlayerState.action == MiniPlayerState.Action.start)
+    }
+
+    private func makeViewModel(factory: MockRepositoryFactory) -> HomeViewModel {
+        HomeViewModel(
+            userRepository: factory.userRepository,
+            programCatalogRepository: factory.programCatalogRepository,
+            workoutProgramRepository: factory.workoutProgramRepository,
+            workoutRepository: factory.workoutRepository
+        )
+    }
+
     /// Builds a HomeViewModel wired to a scenario where the active session started long ago but has recent log activity.
     private func makeViewModelWithRecentExerciseActivity(
         now: Date = Date()

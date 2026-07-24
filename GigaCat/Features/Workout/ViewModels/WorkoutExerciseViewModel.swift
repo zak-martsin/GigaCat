@@ -36,13 +36,17 @@ final class WorkoutExerciseViewModel {
     @ObservationIgnored
     private let onSessionChanged: (WorkoutSession) -> Void
 
+    @ObservationIgnored
+    private let onWorkoutDataChanged: @MainActor () -> Void
+
     init(
         userID: UUID,
         activeSession: WorkoutSession?,
         dayContent: WorkoutDayContent,
         initialDayExerciseID: UUID,
         workoutRepository: WorkoutRepository,
-        onSessionChanged: @escaping (WorkoutSession) -> Void = { _ in }
+        onSessionChanged: @escaping (WorkoutSession) -> Void = { _ in },
+        onWorkoutDataChanged: @escaping @MainActor () -> Void = {}
     ) {
         let orderedExercises = dayContent.exercises.sorted {
             $0.dayExercise.orderIndex < $1.dayExercise.orderIndex
@@ -54,6 +58,7 @@ final class WorkoutExerciseViewModel {
         self.activeSession = activeSession
         self.workoutRepository = workoutRepository
         self.onSessionChanged = onSessionChanged
+        self.onWorkoutDataChanged = onWorkoutDataChanged
         setCountByDayExerciseID = Dictionary(
             uniqueKeysWithValues: orderedExercises.map {
                 ($0.dayExercise.id, $0.dayExercise.targetSets)
@@ -191,6 +196,7 @@ final class WorkoutExerciseViewModel {
                 didStartSession: result.didStartSession
             )
             onSessionChanged(result.session)
+            onWorkoutDataChanged()
         } catch {
             setSaveState = .failed(setNumber: setNumber)
         }

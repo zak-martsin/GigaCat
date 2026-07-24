@@ -104,7 +104,7 @@ Used for:
 
 When `Home` loads:
 
-1. `HomeView` triggers `loadIfNeeded()`.
+1. `HomeView` or the selected Home tab triggers `loadIfNeeded()`.
 2. `HomeViewModel` loads the current user from `UserRepository`.
 3. `HomeViewModel` fetches the curated catalog from `ProgramCatalogRepository`.
 4. `HomePresentationService` maps catalog entries into `ProgramSectionItem`.
@@ -118,6 +118,20 @@ When `Home` loads:
    - search results
 
 The view renders only prepared screen state. It does not compute business rules by itself.
+
+### Workout Invalidation
+
+Home keeps loaded presentation state until it is explicitly invalidated.
+
+After Workout successfully saves a set, finishes a session, or cancels a session:
+
+1. Workout emits `onWorkoutDataChanged`.
+2. `AppShellView` calls `HomeViewModel.invalidate()`.
+3. `invalidate()` marks the Home cache as stale without loading immediately.
+4. Returning to the Home tab calls `loadIfNeeded()`.
+5. Home rebuilds the mini player and progress from current repository data.
+
+Workout ViewModels do not reference `HomeViewModel` directly. `AppShellView` owns this cross-feature connection.
 
 ## 5. Screen Composition
 

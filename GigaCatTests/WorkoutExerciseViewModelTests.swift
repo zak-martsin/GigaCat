@@ -121,9 +121,11 @@ struct WorkoutExerciseViewModelTests {
     func firstSavedSetStartsSessionAndNotifiesParent() async throws {
         let fixture = try Fixture()
         var changedSession: WorkoutSession?
+        var workoutDataChangeCount = 0
         let viewModel = fixture.makeViewModel(
             initialDayExerciseID: fixture.first.dayExercise.id,
-            onSessionChanged: { changedSession = $0 }
+            onSessionChanged: { changedSession = $0 },
+            onWorkoutDataChanged: { workoutDataChangeCount += 1 }
         )
         let performedAt = Date(timeIntervalSince1970: 2_000)
 
@@ -142,13 +144,16 @@ struct WorkoutExerciseViewModelTests {
         #expect(savedLog?.reps == 8)
         #expect(viewModel.setSaveState == .saved(setNumber: 1, didStartSession: true))
         #expect(changedSession == viewModel.activeSession)
+        #expect(workoutDataChangeCount == 1)
     }
 
     @Test
     func failedSaveDoesNotAddLog() async throws {
         let fixture = try Fixture()
+        var workoutDataChangeCount = 0
         let viewModel = fixture.makeViewModel(
-            initialDayExerciseID: fixture.first.dayExercise.id
+            initialDayExerciseID: fixture.first.dayExercise.id,
+            onWorkoutDataChanged: { workoutDataChangeCount += 1 }
         )
 
         await viewModel.saveSet(weight: 60, reps: 0, setNumber: 1)
@@ -156,6 +161,7 @@ struct WorkoutExerciseViewModelTests {
         #expect(viewModel.setSaveState == .failed(setNumber: 1))
         #expect(viewModel.logsByDayExerciseID.isEmpty)
         #expect(viewModel.activeSession == nil)
+        #expect(workoutDataChangeCount == 0)
     }
 
     @Test
@@ -303,7 +309,8 @@ private extension WorkoutExerciseViewModelTests {
         @MainActor
         func makeViewModel(
             initialDayExerciseID: UUID,
-            onSessionChanged: @escaping (WorkoutSession) -> Void = { _ in }
+            onSessionChanged: @escaping (WorkoutSession) -> Void = { _ in },
+            onWorkoutDataChanged: @escaping @MainActor () -> Void = {}
         ) -> WorkoutExerciseViewModel {
             WorkoutExerciseViewModel(
                 userID: user.id,
@@ -311,7 +318,8 @@ private extension WorkoutExerciseViewModelTests {
                 dayContent: dayContent,
                 initialDayExerciseID: initialDayExerciseID,
                 workoutRepository: repository,
-                onSessionChanged: onSessionChanged
+                onSessionChanged: onSessionChanged,
+                onWorkoutDataChanged: onWorkoutDataChanged
             )
         }
 

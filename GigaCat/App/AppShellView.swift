@@ -7,6 +7,12 @@ struct AppShellView: View {
     @StateObject private var homeViewModel: HomeViewModel
 
     init(repositoryFactory: MockRepositoryFactory = MockRepositoryFactory()) {
+        let homeViewModel = HomeViewModel(
+            userRepository: repositoryFactory.userRepository,
+            programCatalogRepository: repositoryFactory.programCatalogRepository,
+            workoutProgramRepository: repositoryFactory.workoutProgramRepository,
+            workoutRepository: repositoryFactory.workoutRepository
+        )
         let workoutContextService = WorkoutContextService(
             userRepository: repositoryFactory.userRepository,
             programCatalogRepository: repositoryFactory.programCatalogRepository,
@@ -17,16 +23,14 @@ struct AppShellView: View {
         _workoutViewModel = State(
             initialValue: WorkoutViewModel(
                 contextService: workoutContextService,
-                workoutRepository: repositoryFactory.workoutRepository
+                workoutRepository: repositoryFactory.workoutRepository,
+                onWorkoutDataChanged: {
+                    homeViewModel.invalidate()
+                }
             )
         )
         _homeViewModel = StateObject(
-            wrappedValue: HomeViewModel(
-                userRepository: repositoryFactory.userRepository,
-                programCatalogRepository: repositoryFactory.programCatalogRepository,
-                workoutProgramRepository: repositoryFactory.workoutProgramRepository,
-                workoutRepository: repositoryFactory.workoutRepository
-            )
+            wrappedValue: homeViewModel
         )
     }
 
@@ -115,12 +119,15 @@ struct AppShellView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        .task {
-            await homeViewModel.loadIfNeeded()
-        }
         .task(id: selectedTab) {
-            guard selectedTab == .workout else { return }
-            await workoutViewModel.load()
+            switch selectedTab {
+            case .home:
+                await homeViewModel.loadIfNeeded()
+            case .workout:
+                await workoutViewModel.load()
+            case .progress, .nutrition, .library:
+                break
+            }
         }
     }
 
