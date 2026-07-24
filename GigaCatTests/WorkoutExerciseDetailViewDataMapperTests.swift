@@ -8,70 +8,168 @@ struct WorkoutExerciseDetailViewDataMapperTests {
     func mapsSelectedExerciseAndNavigationState() throws {
         let content = try makeExerciseContent(
             targetSets: 3,
-            targetReps: 8,
-            targetWeight: 60
+            targetReps: 8
         )
 
         let viewData = WorkoutExerciseDetailViewDataMapper().map(
             selectedExercise: content,
             selectedExerciseIndex: 1,
             totalCount: 4,
-            canGoBack: true,
-            canGoForward: true
+            logContext: WorkoutExerciseLogContext(
+                savedLogsBySetNumber: [:],
+                previousExerciseLog: nil,
+                displayedSetCount: 3,
+                setSaveState: .ready
+            )
         )
 
         #expect(viewData.id == content.dayExercise.id)
         #expect(viewData.name == content.exercise.name)
         #expect(viewData.position == 2)
         #expect(viewData.totalCount == 4)
-        #expect(viewData.targetSummary == "3 sets · 8 reps · 60 kg")
+        #expect(viewData.targetSummary == "3 sets · 8 reps")
         #expect(viewData.canGoBack)
         #expect(viewData.canGoForward)
     }
 
     @Test
-    func createsOneTargetRowForEachPlannedSet() throws {
+    func previousExerciseLogSuggestsWeightWhileProgramSuggestsReps() throws {
         let content = try makeExerciseContent(
             targetSets: 3,
-            targetReps: 8,
-            targetWeight: 60
+            targetReps: 8
+        )
+        let previousLog = try ExerciseLog(
+            sessionId: UUID(),
+            workoutDayExerciseId: UUID(),
+            weight: 60,
+            reps: 5,
+            setNumber: 3
         )
 
         let viewData = WorkoutExerciseDetailViewDataMapper().map(
             selectedExercise: content,
             selectedExerciseIndex: 0,
             totalCount: 1,
-            canGoBack: false,
-            canGoForward: false
+            logContext: WorkoutExerciseLogContext(
+                savedLogsBySetNumber: [:],
+                previousExerciseLog: previousLog,
+                displayedSetCount: 3,
+                setSaveState: .ready
+            )
         )
 
         #expect(
             viewData.sets == [
-                WorkoutSetTargetViewData(setNumber: 1, targetReps: 8, targetWeight: 60),
-                WorkoutSetTargetViewData(setNumber: 2, targetReps: 8, targetWeight: 60),
-                WorkoutSetTargetViewData(setNumber: 3, targetReps: 8, targetWeight: 60)
+                WorkoutSetRowViewData(
+                    setNumber: 1,
+                    savedRepsText: nil,
+                    savedWeightText: nil,
+                    suggestedRepsPlaceholder: "8",
+                    suggestedWeightPlaceholder: "60",
+                    isSaved: false,
+                    isSaving: false
+                ),
+                WorkoutSetRowViewData(
+                    setNumber: 2,
+                    savedRepsText: nil,
+                    savedWeightText: nil,
+                    suggestedRepsPlaceholder: "8",
+                    suggestedWeightPlaceholder: "60",
+                    isSaved: false,
+                    isSaving: false
+                ),
+                WorkoutSetRowViewData(
+                    setNumber: 3,
+                    savedRepsText: nil,
+                    savedWeightText: nil,
+                    suggestedRepsPlaceholder: "8",
+                    suggestedWeightPlaceholder: "60",
+                    isSaved: false,
+                    isSaving: false
+                )
             ]
         )
     }
 
     @Test
-    func preservesMissingTargetWeight() throws {
+    func savedSetBecomesSuggestionForFollowingSets() throws {
         let content = try makeExerciseContent(
-            targetSets: 1,
-            targetReps: 12,
-            targetWeight: nil
+            targetSets: 2,
+            targetReps: 8
+        )
+        let savedLog = try ExerciseLog(
+            sessionId: UUID(),
+            workoutDayExerciseId: content.dayExercise.id,
+            weight: 62.5,
+            reps: 7,
+            setNumber: 1
         )
 
         let viewData = WorkoutExerciseDetailViewDataMapper().map(
             selectedExercise: content,
             selectedExerciseIndex: 0,
             totalCount: 1,
-            canGoBack: false,
-            canGoForward: false
+            logContext: WorkoutExerciseLogContext(
+                savedLogsBySetNumber: [1: savedLog],
+                previousExerciseLog: nil,
+                displayedSetCount: 2,
+                setSaveState: .saving(setNumber: 2)
+            )
+        )
+
+        #expect(
+            viewData.sets == [
+                WorkoutSetRowViewData(
+                    setNumber: 1,
+                    savedRepsText: "7",
+                    savedWeightText: "62.5",
+                    suggestedRepsPlaceholder: "8",
+                    suggestedWeightPlaceholder: nil,
+                    isSaved: true,
+                    isSaving: false
+                ),
+                WorkoutSetRowViewData(
+                    setNumber: 2,
+                    savedRepsText: nil,
+                    savedWeightText: nil,
+                    suggestedRepsPlaceholder: "7",
+                    suggestedWeightPlaceholder: "62.5",
+                    isSaved: false,
+                    isSaving: true
+                )
+            ]
+        )
+    }
+
+    @Test
+    func hasNoWeightSuggestionWithoutExerciseHistory() throws {
+        let content = try makeExerciseContent(
+            targetSets: 1,
+            targetReps: 12
+        )
+
+        let viewData = WorkoutExerciseDetailViewDataMapper().map(
+            selectedExercise: content,
+            selectedExerciseIndex: 0,
+            totalCount: 1,
+            logContext: WorkoutExerciseLogContext(
+                savedLogsBySetNumber: [:],
+                previousExerciseLog: nil,
+                displayedSetCount: 1,
+                setSaveState: .ready
+            )
         )
 
         #expect(viewData.sets == [
-            WorkoutSetTargetViewData(setNumber: 1, targetReps: 12, targetWeight: nil)
+            WorkoutSetRowViewData(
+                setNumber: 1,
+                savedRepsText: nil,
+                savedWeightText: nil,
+                suggestedRepsPlaceholder: "12",
+                suggestedWeightPlaceholder: nil,
+                isSaved: false,
+                isSaving: false
+            )
         ])
         #expect(viewData.targetSummary == "1 set · 12 reps")
     }
@@ -80,8 +178,7 @@ struct WorkoutExerciseDetailViewDataMapperTests {
 private extension WorkoutExerciseDetailViewDataMapperTests {
     func makeExerciseContent(
         targetSets: Int,
-        targetReps: Int,
-        targetWeight: Double?
+        targetReps: Int
     ) throws -> WorkoutExerciseContent {
         let dayID = UUID()
         let exercise = try Exercise(name: "Bench Press", muscleGroup: .chest)
@@ -90,7 +187,6 @@ private extension WorkoutExerciseDetailViewDataMapperTests {
             exerciseId: exercise.id,
             targetSets: targetSets,
             targetReps: targetReps,
-            targetWeight: targetWeight,
             orderIndex: 0
         )
 

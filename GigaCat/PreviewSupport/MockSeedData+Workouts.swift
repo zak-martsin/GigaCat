@@ -19,7 +19,6 @@ extension MockSeedData {
                 exerciseId: context.benchExerciseID,
                 targetSets: 4,
                 targetReps: 8,
-                targetWeight: 60,
                 orderIndex: 0
             ),
             try? WorkoutDayExercise(
@@ -28,7 +27,6 @@ extension MockSeedData {
                 exerciseId: context.pressExerciseID,
                 targetSets: 3,
                 targetReps: 10,
-                targetWeight: 35,
                 orderIndex: 1
             ),
             try? WorkoutDayExercise(
@@ -37,7 +35,6 @@ extension MockSeedData {
                 exerciseId: context.inclinePressExerciseID,
                 targetSets: 3,
                 targetReps: 12,
-                targetWeight: 22,
                 orderIndex: 2
             ),
             try? WorkoutDayExercise(
@@ -46,7 +43,6 @@ extension MockSeedData {
                 exerciseId: context.rowExerciseID,
                 targetSets: 4,
                 targetReps: 10,
-                targetWeight: 50,
                 orderIndex: 0
             ),
             try? WorkoutDayExercise(
@@ -55,7 +51,6 @@ extension MockSeedData {
                 exerciseId: context.pullUpExerciseID,
                 targetSets: 4,
                 targetReps: 8,
-                targetWeight: nil,
                 orderIndex: 1
             ),
             try? WorkoutDayExercise(
@@ -64,7 +59,6 @@ extension MockSeedData {
                 exerciseId: context.lateralRaiseExerciseID,
                 targetSets: 4,
                 targetReps: 15,
-                targetWeight: 8,
                 orderIndex: 0
             )
         ])
@@ -79,7 +73,6 @@ extension MockSeedData {
                 exerciseId: context.squatExerciseID,
                 targetSets: 5,
                 targetReps: 5,
-                targetWeight: 90,
                 orderIndex: 0
             ),
             try? WorkoutDayExercise(
@@ -88,7 +81,6 @@ extension MockSeedData {
                 exerciseId: context.benchExerciseID,
                 targetSets: 4,
                 targetReps: 6,
-                targetWeight: 70,
                 orderIndex: 0
             ),
             try? WorkoutDayExercise(
@@ -97,7 +89,6 @@ extension MockSeedData {
                 exerciseId: context.rowExerciseID,
                 targetSets: 4,
                 targetReps: 8,
-                targetWeight: 60,
                 orderIndex: 1
             ),
             try? WorkoutDayExercise(
@@ -106,7 +97,6 @@ extension MockSeedData {
                 exerciseId: context.deadliftExerciseID,
                 targetSets: 4,
                 targetReps: 5,
-                targetWeight: 110,
                 orderIndex: 0
             )
         ])
@@ -121,7 +111,6 @@ extension MockSeedData {
                 exerciseId: context.runExerciseID,
                 targetSets: 6,
                 targetReps: 1,
-                targetWeight: nil,
                 orderIndex: 0
             ),
             try? WorkoutDayExercise(
@@ -130,7 +119,6 @@ extension MockSeedData {
                 exerciseId: context.lungeExerciseID,
                 targetSets: 4,
                 targetReps: 12,
-                targetWeight: 20,
                 orderIndex: 0
             ),
             try? WorkoutDayExercise(
@@ -139,7 +127,6 @@ extension MockSeedData {
                 exerciseId: context.burpeeExerciseID,
                 targetSets: 4,
                 targetReps: 10,
-                targetWeight: nil,
                 orderIndex: 1
             ),
             try? WorkoutDayExercise(
@@ -148,7 +135,6 @@ extension MockSeedData {
                 exerciseId: context.plankExerciseID,
                 targetSets: 5,
                 targetReps: 1,
-                targetWeight: nil,
                 orderIndex: 0
             )
         ])
@@ -163,7 +149,6 @@ extension MockSeedData {
                 exerciseId: context.catCowExerciseID,
                 targetSets: 3,
                 targetReps: 12,
-                targetWeight: nil,
                 orderIndex: 0
             ),
             try? WorkoutDayExercise(
@@ -172,7 +157,6 @@ extension MockSeedData {
                 exerciseId: context.hipBridgeExerciseID,
                 targetSets: 3,
                 targetReps: 15,
-                targetWeight: nil,
                 orderIndex: 0
             )
         ])

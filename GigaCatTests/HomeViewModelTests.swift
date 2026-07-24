@@ -126,7 +126,6 @@ struct HomeViewModelTests {
                     exerciseId: exerciseID,
                     targetSets: 3,
                     targetReps: 5,
-                    targetWeight: 100,
                     orderIndex: 0
                 )
             ],

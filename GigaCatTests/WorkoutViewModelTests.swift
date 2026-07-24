@@ -52,6 +52,7 @@ struct WorkoutViewModelTests {
         #expect(viewModel.selectedDayID == secondDay.id)
         #expect(viewModel.selectedDayContent == context.dayContents[1])
         #expect(viewModel.activeSession?.workoutDayId == context.initialDayID)
+        #expect(!viewModel.hasActiveSessionForSelectedDay)
     }
 
     @Test
@@ -89,6 +90,63 @@ struct WorkoutViewModelTests {
         #expect(viewModel.context == nil)
         #expect(viewModel.selectedDayID == nil)
     }
+
+    @Test
+    func finishActiveSessionCompletesItAndLoadsNextContext() async throws {
+        let activeContext = try makeContext(hasActiveSession: true)
+        let nextDayID = activeContext.dayContents[1].day.id
+        let nextContext = context(
+            replacing: activeContext,
+            initialDayID: nextDayID
+        )
+        let activeSession = try #require(activeContext.activeSession)
+        let repository = makeWorkoutRepository(sessions: [activeSession])
+        let viewModel = WorkoutViewModel(
+            contextService: WorkoutContextServiceStub(
+                results: [.success(activeContext), .success(nextContext)]
+            ),
+            workoutRepository: repository
+        )
+        let completedAt = activeSession.startedAt.addingTimeInterval(600)
+
+        await viewModel.load()
+        #expect(viewModel.hasActiveSessionForSelectedDay)
+
+        await viewModel.finishActiveSession(completedAt: completedAt)
+
+        let sessions = try await repository.fetchSessions(for: activeContext.userID)
+        #expect(sessions.first?.status == .completed)
+        #expect(sessions.first?.completedAt == completedAt)
+        #expect(viewModel.context == nextContext)
+        #expect(viewModel.selectedDayID == nextDayID)
+        #expect(viewModel.sessionActionState == .idle)
+    }
+
+    @Test
+    func cancelActiveSessionDeletesItAndLoadsReadyContext() async throws {
+        let activeContext = try makeContext(hasActiveSession: true)
+        let readyContext = context(
+            replacing: activeContext,
+            initialDayID: activeContext.initialDayID
+        )
+        let activeSession = try #require(activeContext.activeSession)
+        let repository = makeWorkoutRepository(sessions: [activeSession])
+        let viewModel = WorkoutViewModel(
+            contextService: WorkoutContextServiceStub(
+                results: [.success(activeContext), .success(readyContext)]
+            ),
+            workoutRepository: repository
+        )
+
+        await viewModel.load()
+        await viewModel.cancelActiveSession()
+
+        let sessions = try await repository.fetchSessions(for: activeContext.userID)
+        #expect(sessions.isEmpty)
+        #expect(viewModel.context == readyContext)
+        #expect(viewModel.activeSession == nil)
+        #expect(viewModel.sessionActionState == .idle)
+    }
 }
 
 private extension WorkoutViewModelTests {
@@ -123,7 +181,6 @@ private extension WorkoutViewModelTests {
             exerciseId: exercise.id,
             targetSets: 3,
             targetReps: 8,
-            targetWeight: 60,
             orderIndex: 0
         )
         let dayContents = [
@@ -156,8 +213,25 @@ private extension WorkoutViewModelTests {
         )
     }
 
-    func makeWorkoutRepository() -> WorkoutRepository {
-        MockWorkoutRepository(store: MockDataStore())
+    func context(
+        replacing context: WorkoutContext,
+        initialDayID: UUID
+    ) -> WorkoutContext {
+        WorkoutContext(
+            userID: context.userID,
+            program: context.program,
+            dayContents: context.dayContents,
+            initialDayID: initialDayID,
+            activeSession: nil
+        )
+    }
+
+    func makeWorkoutRepository(
+        sessions: [WorkoutSession] = []
+    ) -> MockWorkoutRepository {
+        MockWorkoutRepository(
+            store: MockDataStore(sessions: sessions)
+        )
     }
 }
 

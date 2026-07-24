@@ -7,12 +7,19 @@ enum WorkoutLoadState: Equatable {
     case failed
 }
 
+enum WorkoutSessionActionState: Equatable {
+    case idle
+    case finishing
+    case cancelling
+}
+
 @MainActor
 @Observable
 final class WorkoutViewModel {
     private(set) var context: WorkoutContext?
     private(set) var loadState: WorkoutLoadState = .loading
     private(set) var selectedDayID: UUID?
+    private(set) var sessionActionState: WorkoutSessionActionState = .idle
 
     @ObservationIgnored
     private let contextService: WorkoutContextServicing
@@ -49,6 +56,15 @@ final class WorkoutViewModel {
         context?.activeSession
     }
 
+    var hasActiveSessionForSelectedDay: Bool {
+        guard let activeSession, let selectedDayID else { return false }
+        return activeSession.workoutDayId == selectedDayID
+    }
+
+    var isSessionActionInProgress: Bool {
+        sessionActionState != .idle
+    }
+
     /// Reloads the workout entry context whenever the user enters the Workout flow.
     func load() async {
         loadState = .loading
@@ -69,6 +85,45 @@ final class WorkoutViewModel {
     func selectDay(id: UUID) {
         guard days.contains(where: { $0.id == id }) else { return }
         selectedDayID = id
+    }
+
+    func finishActiveSession(completedAt: Date = Date()) async {
+        guard let activeSession,
+              activeSession.workoutDayId == selectedDayID,
+              !isSessionActionInProgress else {
+            return
+        }
+
+        sessionActionState = .finishing
+
+        do {
+            _ = try await workoutRepository.completeSession(
+                sessionId: activeSession.id,
+                completedAt: completedAt
+            )
+            sessionActionState = .idle
+            await load()
+        } catch {
+            sessionActionState = .idle
+        }
+    }
+
+    func cancelActiveSession() async {
+        guard let activeSession,
+              activeSession.workoutDayId == selectedDayID,
+              !isSessionActionInProgress else {
+            return
+        }
+
+        sessionActionState = .cancelling
+
+        do {
+            try await workoutRepository.deleteSession(sessionId: activeSession.id)
+            sessionActionState = .idle
+            await load()
+        } catch {
+            sessionActionState = .idle
+        }
     }
 
     func makeExerciseViewModel(

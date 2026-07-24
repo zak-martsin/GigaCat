@@ -17,12 +17,16 @@ enum WorkoutSetSaveState: Equatable {
 @MainActor
 @Observable
 final class WorkoutExerciseViewModel {
+    private static let maximumSetCount = 10
+
     let userID: UUID
     let day: WorkoutDay
     let exercises: [WorkoutExerciseContent]
     private(set) var selectedDayExerciseID: UUID?
     private(set) var activeSession: WorkoutSession?
     private(set) var logsByDayExerciseID: [UUID: [Int: ExerciseLog]] = [:]
+    private(set) var previousLogByExerciseID: [UUID: ExerciseLog] = [:]
+    private(set) var setCountByDayExerciseID: [UUID: Int]
     private(set) var logsLoadState: WorkoutExerciseLogsLoadState = .loading
     private(set) var setSaveState: WorkoutSetSaveState = .ready
 
@@ -50,6 +54,11 @@ final class WorkoutExerciseViewModel {
         self.activeSession = activeSession
         self.workoutRepository = workoutRepository
         self.onSessionChanged = onSessionChanged
+        setCountByDayExerciseID = Dictionary(
+            uniqueKeysWithValues: orderedExercises.map {
+                ($0.dayExercise.id, $0.dayExercise.targetSets)
+            }
+        )
         selectedDayExerciseID = orderedExercises.contains {
             $0.dayExercise.id == initialDayExerciseID
         } ? initialDayExerciseID : orderedExercises.first?.dayExercise.id
@@ -88,30 +97,65 @@ final class WorkoutExerciseViewModel {
     func loadLogs() async {
         logsLoadState = .loading
 
-        guard let activeSession,
-              activeSession.workoutDayId == day.id else {
-            logsByDayExerciseID = [:]
-            logsLoadState = .loaded
-            return
-        }
-
         do {
-            let logs = try await workoutRepository.fetchExerciseLogs(
-                sessionId: activeSession.id
-            )
-            logsByDayExerciseID = makeLogsByDayExerciseID(from: logs)
+            logsByDayExerciseID = try await loadCurrentSessionLogs()
+            previousLogByExerciseID = try await loadPreviousExerciseLogs()
             logsLoadState = .loaded
         } catch {
             logsByDayExerciseID = [:]
+            previousLogByExerciseID = [:]
             logsLoadState = .failed
         }
     }
 
-    func savedLog(
-        dayExerciseID: UUID,
-        setNumber: Int
-    ) -> ExerciseLog? {
-        logsByDayExerciseID[dayExerciseID]?[setNumber]
+    func savedLogs(dayExerciseID: UUID) -> [Int: ExerciseLog] {
+        logsByDayExerciseID[dayExerciseID] ?? [:]
+    }
+
+    func previousLog(exerciseID: UUID) -> ExerciseLog? {
+        previousLogByExerciseID[exerciseID]
+    }
+
+    func setCount(dayExerciseID: UUID) -> Int {
+        setCountByDayExerciseID[dayExerciseID] ?? 0
+    }
+
+    func addSet() {
+        guard let selectedExercise else { return }
+
+        let dayExercise = selectedExercise.dayExercise
+        let currentCount = setCountByDayExerciseID[dayExercise.id]
+            ?? dayExercise.targetSets
+        guard currentCount < Self.maximumSetCount else { return }
+
+        setCountByDayExerciseID[dayExercise.id] = currentCount + 1
+    }
+
+    func saveSet(
+        weightText: String,
+        repsText: String,
+        setNumber: Int,
+        performedAt: Date = Date()
+    ) async {
+        guard canLogSelectedDay else { return }
+
+        let normalizedWeight = weightText
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: ",", with: ".")
+        let normalizedReps = repsText.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard let weight = Double(normalizedWeight),
+              let reps = Int(normalizedReps) else {
+            setSaveState = .failed(setNumber: setNumber)
+            return
+        }
+
+        await saveSet(
+            weight: weight,
+            reps: reps,
+            setNumber: setNumber,
+            performedAt: performedAt
+        )
     }
 
     func saveSet(
@@ -120,7 +164,7 @@ final class WorkoutExerciseViewModel {
         setNumber: Int,
         performedAt: Date = Date()
     ) async {
-        guard let selectedExercise else { return }
+        guard canLogSelectedDay, let selectedExercise else { return }
 
         setSaveState = .saving(setNumber: setNumber)
 
@@ -141,6 +185,7 @@ final class WorkoutExerciseViewModel {
             var exerciseLogs = logsByDayExerciseID[result.log.workoutDayExerciseId] ?? [:]
             exerciseLogs[result.log.setNumber] = result.log
             logsByDayExerciseID[result.log.workoutDayExerciseId] = exerciseLogs
+            updateSetCount(for: result.log.workoutDayExerciseId, logs: exerciseLogs)
             setSaveState = .saved(
                 setNumber: result.log.setNumber,
                 didStartSession: result.didStartSession
@@ -164,5 +209,57 @@ final class WorkoutExerciseViewModel {
         }
 
         return result
+    }
+
+    private func loadCurrentSessionLogs() async throws -> [UUID: [Int: ExerciseLog]] {
+        guard let activeSession,
+              activeSession.workoutDayId == day.id else {
+            return [:]
+        }
+
+        let logs = try await workoutRepository.fetchExerciseLogs(
+            sessionId: activeSession.id
+        )
+        let groupedLogs = makeLogsByDayExerciseID(from: logs)
+
+        for (dayExerciseID, exerciseLogs) in groupedLogs {
+            updateSetCount(for: dayExerciseID, logs: exerciseLogs)
+        }
+
+        return groupedLogs
+    }
+
+    private func loadPreviousExerciseLogs() async throws -> [UUID: ExerciseLog] {
+        var result: [UUID: ExerciseLog] = [:]
+
+        for content in exercises {
+            let logs = try await workoutRepository.fetchRecentExerciseLogs(
+                userId: userID,
+                exerciseId: content.exercise.id,
+                limit: content.dayExercise.targetSets + 1
+            )
+
+            if let previousLog = logs.first(where: { $0.sessionId != activeSession?.id }) {
+                result[content.exercise.id] = previousLog
+            }
+        }
+
+        return result
+    }
+
+    private func updateSetCount(
+        for dayExerciseID: UUID,
+        logs: [Int: ExerciseLog]
+    ) {
+        guard let highestSavedSetNumber = logs.keys.max() else { return }
+        let currentCount = setCountByDayExerciseID[dayExerciseID] ?? 0
+        setCountByDayExerciseID[dayExerciseID] = max(
+            currentCount,
+            highestSavedSetNumber
+        )
+    }
+
+    private var canLogSelectedDay: Bool {
+        activeSession == nil || activeSession?.workoutDayId == day.id
     }
 }

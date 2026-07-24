@@ -222,7 +222,6 @@ private extension WorkoutContextServiceTests {
                 exerciseId: exercise.id,
                 targetSets: 3,
                 targetReps: 8,
-                targetWeight: 60,
                 orderIndex: 0
             )
             return (dayExercise, exercise)

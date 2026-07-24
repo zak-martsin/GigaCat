@@ -78,7 +78,6 @@ Represents an exercise assignment within a planned workout day. This entity exis
 - `exerciseId`: Identifier of the referenced `Exercise`.
 - `targetSets`: Planned number of sets for the exercise on that workout day.
 - `targetReps`: Planned repetition target for the exercise on that workout day.
-- `targetWeight`: Planned weight target for the exercise on that workout day.
 - `orderIndex`: Position of the exercise within the workout day.
 
 ### Relationships

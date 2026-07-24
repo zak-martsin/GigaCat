@@ -21,7 +21,9 @@ struct WorkoutExerciseView: View {
                 WorkoutExerciseContentView(
                     viewData: viewData,
                     onPreviousExercise: selectPreviousExercise,
-                    onNextExercise: selectNextExercise
+                    onNextExercise: selectNextExercise,
+                    onAddSet: addSet,
+                    onSaveSet: saveSet
                 )
                 .id(viewData.id)
                 .transition(contentTransition)
@@ -63,8 +65,18 @@ struct WorkoutExerciseView: View {
             selectedExercise: selectedExercise,
             selectedExerciseIndex: selectedExerciseIndex,
             totalCount: viewModel.exercises.count,
-            canGoBack: viewModel.canSelectPreviousExercise,
-            canGoForward: viewModel.canSelectNextExercise
+            logContext: WorkoutExerciseLogContext(
+                savedLogsBySetNumber: viewModel.savedLogs(
+                    dayExerciseID: selectedExercise.dayExercise.id
+                ),
+                previousExerciseLog: viewModel.previousLog(
+                    exerciseID: selectedExercise.exercise.id
+                ),
+                displayedSetCount: viewModel.setCount(
+                    dayExerciseID: selectedExercise.dayExercise.id
+                ),
+                setSaveState: viewModel.setSaveState
+            )
         )
     }
 
@@ -94,6 +106,26 @@ struct WorkoutExerciseView: View {
         transitionDirection = .forward
         withAnimation(.snappy(duration: 0.3)) {
             viewModel.selectNextExercise()
+        }
+    }
+
+    private func addSet() {
+        withAnimation(.snappy) {
+            viewModel.addSet()
+        }
+    }
+
+    private func saveSet(
+        setNumber: Int,
+        weightText: String,
+        repsText: String
+    ) {
+        Task {
+            await viewModel.saveSet(
+                weightText: weightText,
+                repsText: repsText,
+                setNumber: setNumber
+            )
         }
     }
 }

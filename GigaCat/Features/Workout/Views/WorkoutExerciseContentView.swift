@@ -4,6 +4,8 @@ struct WorkoutExerciseContentView: View {
     let viewData: WorkoutExerciseDetailViewData
     let onPreviousExercise: () -> Void
     let onNextExercise: () -> Void
+    let onAddSet: () -> Void
+    let onSaveSet: (Int, String, String) -> Void
 
     var body: some View {
         ScrollView {
@@ -72,8 +74,22 @@ struct WorkoutExerciseContentView: View {
     private var targetSetList: some View {
         VStack(spacing: AppSpacing.sm) {
             ForEach(viewData.sets) { set in
-                WorkoutSetTargetRow(viewData: set)
+                WorkoutSetRow(
+                    viewData: set,
+                    onSave: onSaveSet
+                )
             }
+
+            Button(action: onAddSet) {
+                Label("Add set", systemImage: "plus")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppColor.textSecondary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: AppControlSize.fieldHeight)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Add set")
         }
     }
 
@@ -99,30 +115,63 @@ struct WorkoutExerciseContentView: View {
     }
 }
 
-private struct WorkoutSetTargetRow: View {
-    let viewData: WorkoutSetTargetViewData
+private struct WorkoutSetRow: View {
+    let viewData: WorkoutSetRowViewData
+    let onSave: (Int, String, String) -> Void
+
+    @State private var weightText: String
+    @State private var repsText: String
+
+    init(
+        viewData: WorkoutSetRowViewData,
+        onSave: @escaping (Int, String, String) -> Void
+    ) {
+        self.viewData = viewData
+        self.onSave = onSave
+        _weightText = State(initialValue: viewData.savedWeightText ?? "")
+        _repsText = State(initialValue: viewData.savedRepsText ?? "")
+    }
 
     var body: some View {
-        HStack(spacing: AppSpacing.md) {
-            Text("Set \(viewData.setNumber)")
+        HStack(spacing: AppSpacing.sm) {
+            setValues
+            saveButton
+        }
+        .frame(height: AppControlSize.fieldHeight)
+        .onChange(of: viewData) { oldValue, newValue in
+            synchronizeDraftIfNeeded(from: oldValue, to: newValue)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Set \(viewData.setNumber)")
+    }
+
+    private var setValues: some View {
+        HStack(spacing: AppSpacing.sm) {
+            Text("\(viewData.setNumber)")
                 .font(.headline)
                 .foregroundStyle(AppColor.textPrimary)
-
-            Spacer()
-
-            Text("\(viewData.targetReps) reps")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(AppColor.textSecondary)
                 .monospacedDigit()
+                .frame(minWidth: AppControlSize.headerActionButton)
 
-            if let targetWeight = viewData.targetWeight {
-                Text("\(formattedWeight(targetWeight)) kg")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(AppColor.textSecondary)
-                    .monospacedDigit()
-            }
+            Divider()
+                .frame(height: AppSpacing.xl)
+
+            valueField(
+                text: $weightText,
+                placeholder: viewData.suggestedWeightPlaceholder ?? "Weight",
+                unit: "kg",
+                keyboardType: .decimalPad
+            )
+
+            valueField(
+                text: $repsText,
+                placeholder: viewData.suggestedRepsPlaceholder,
+                unit: "rep",
+                keyboardType: .numberPad
+            )
         }
-        .padding(AppSpacing.lg)
+        .padding(.horizontal, AppSpacing.md)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppRadius.lg))
         .overlay {
             RoundedRectangle(cornerRadius: AppRadius.lg)
@@ -130,7 +179,98 @@ private struct WorkoutSetTargetRow: View {
         }
     }
 
-    private func formattedWeight(_ weight: Double) -> String {
-        weight.formatted(.number.precision(.fractionLength(0...2)))
+    private var saveButton: some View {
+        Button {
+            guard canSave else { return }
+            onSave(
+                viewData.setNumber,
+                effectiveWeightText,
+                effectiveRepsText
+            )
+        } label: {
+            ZStack {
+                if showsSavedState {
+                    Image(systemName: "checkmark")
+                        .transition(.blurReplace)
+                } else {
+                    Image(systemName: "plus")
+                        .symbolEffect(.rotate, isActive: viewData.isSaving)
+                        .transition(.blurReplace)
+                }
+            }
+                .animation(.snappy, value: showsSavedState)
+                .frame(
+                    width: AppControlSize.headerActionButton,
+                    height: AppControlSize.headerActionButton
+                )
+                .foregroundStyle(AppColor.surface)
+                .background(AppColor.accent, in: Circle())
+        }
+        .buttonStyle(.plain)
+        .allowsHitTesting(canSave)
+        .accessibilityLabel(showsSavedState ? "Set saved" : "Save set")
+    }
+
+    private var showsSavedState: Bool {
+        viewData.isSaved && !isDirty && !viewData.isSaving
+    }
+
+    private var isDirty: Bool {
+        weightText != (viewData.savedWeightText ?? "") ||
+            repsText != (viewData.savedRepsText ?? "")
+    }
+
+    private var canSave: Bool {
+        !viewData.isSaving &&
+            !effectiveWeightText.isEmpty &&
+            !effectiveRepsText.isEmpty &&
+            (!viewData.isSaved || isDirty)
+    }
+
+    private var effectiveWeightText: String {
+        let enteredWeight = weightText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return enteredWeight.isEmpty
+            ? viewData.suggestedWeightPlaceholder ?? ""
+            : enteredWeight
+    }
+
+    private var effectiveRepsText: String {
+        let enteredReps = repsText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return enteredReps.isEmpty
+            ? viewData.suggestedRepsPlaceholder
+            : enteredReps
+    }
+
+    private func synchronizeDraftIfNeeded(
+        from oldValue: WorkoutSetRowViewData,
+        to newValue: WorkoutSetRowViewData
+    ) {
+        let didLoadSavedLog = !oldValue.isSaved && newValue.isSaved
+        let didFinishSaving = oldValue.isSaving && !newValue.isSaving && newValue.isSaved
+
+        if didLoadSavedLog || didFinishSaving {
+            weightText = newValue.savedWeightText ?? ""
+            repsText = newValue.savedRepsText ?? ""
+        }
+    }
+
+    private func valueField(
+        text: Binding<String>,
+        placeholder: String,
+        unit: String,
+        keyboardType: UIKeyboardType
+    ) -> some View {
+        HStack(spacing: AppSpacing.xs) {
+            TextField(placeholder, text: text)
+                .keyboardType(keyboardType)
+                .multilineTextAlignment(.trailing)
+                .font(.headline)
+                .monospacedDigit()
+
+            Text(unit)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(AppColor.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
     }
 }

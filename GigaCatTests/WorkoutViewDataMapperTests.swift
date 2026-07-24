@@ -129,7 +129,6 @@ private extension WorkoutViewDataMapperTests {
                 exerciseId: exercise.id,
                 targetSets: 4,
                 targetReps: 6,
-                targetWeight: 80,
                 orderIndex: 0
             )
             let activeSession = try WorkoutSession(

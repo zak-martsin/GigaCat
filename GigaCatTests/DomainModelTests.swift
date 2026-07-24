@@ -51,7 +51,7 @@ struct DomainModelTests {
     }
 
     @Test
-    func workoutDayExerciseAllowsOptionalTargetWeight() throws {
+    func workoutDayExercisePreservesPlannedVolume() throws {
         let assignment = try WorkoutDayExercise(
             workoutDayId: UUID(),
             exerciseId: UUID(),
@@ -60,7 +60,9 @@ struct DomainModelTests {
             orderIndex: 1
         )
 
-        #expect(assignment.targetWeight == nil)
+        #expect(assignment.targetSets == 4)
+        #expect(assignment.targetReps == 10)
+        #expect(assignment.orderIndex == 1)
     }
 
     @Test
