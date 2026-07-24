@@ -173,6 +173,8 @@ The placeholder weight comes from:
 
 The lookup is scoped by user and reusable exercise identity, not by a specific workout day assignment. This lets the user repeat the latest result by saving the prefilled values without typing them again.
 
+Current-session logs and previous-performance suggestions load independently. If history loading fails, saved sets remain visible and the screen enters a partially loaded state with history suggestions cleared. Current sets are cleared only when their own request fails.
+
 ## 8. State Ownership
 
 `WorkoutViewModel` owns:
@@ -240,6 +242,8 @@ Current tests cover:
 - day selection
 - exercise ordering and navigation
 - loading current and previous logs
+- preserving current logs when previous-performance loading fails
+- clearing current logs when their own request fails
 - session creation on the first saved set
 - set saving and updating
 - additional set restoration and the 10-set limit

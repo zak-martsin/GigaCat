@@ -4,6 +4,7 @@ import Observation
 enum WorkoutExerciseLogsLoadState: Equatable {
     case loading
     case loaded
+    case partiallyLoaded
     case failed
 }
 
@@ -104,12 +105,19 @@ final class WorkoutExerciseViewModel {
 
         do {
             logsByDayExerciseID = try await loadCurrentSessionLogs()
-            latestLogByExerciseID = try await loadLatestExerciseLogs()
-            logsLoadState = .loaded
         } catch {
             logsByDayExerciseID = [:]
             latestLogByExerciseID = [:]
             logsLoadState = .failed
+            return
+        }
+
+        do {
+            latestLogByExerciseID = try await loadLatestExerciseLogs()
+            logsLoadState = .loaded
+        } catch {
+            latestLogByExerciseID = [:]
+            logsLoadState = .partiallyLoaded
         }
     }
 

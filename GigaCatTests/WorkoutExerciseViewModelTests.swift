@@ -122,6 +122,48 @@ struct WorkoutExerciseViewModelTests {
     }
 
     @Test
+    func latestLogFailurePreservesCurrentSessionLogs() async throws {
+        let fixture = try Fixture(savedSetNumber: 1, hasPreviousLog: true)
+        let repository = ControlledWorkoutRepository(
+            base: fixture.repository,
+            failure: .latestExerciseLog
+        )
+        let viewModel = fixture.makeViewModel(
+            initialDayExerciseID: fixture.first.dayExercise.id,
+            workoutRepository: repository
+        )
+
+        await viewModel.loadLogs()
+
+        #expect(viewModel.logsLoadState == .partiallyLoaded)
+        #expect(
+            viewModel.savedLogs(
+                dayExerciseID: fixture.first.dayExercise.id
+            )[1] == fixture.savedLog
+        )
+        #expect(viewModel.latestLogByExerciseID.isEmpty)
+    }
+
+    @Test
+    func currentLogFailureClearsCurrentAndLatestLogs() async throws {
+        let fixture = try Fixture(savedSetNumber: 1, hasPreviousLog: true)
+        let repository = ControlledWorkoutRepository(
+            base: fixture.repository,
+            failure: .currentSessionLogs
+        )
+        let viewModel = fixture.makeViewModel(
+            initialDayExerciseID: fixture.first.dayExercise.id,
+            workoutRepository: repository
+        )
+
+        await viewModel.loadLogs()
+
+        #expect(viewModel.logsLoadState == .failed)
+        #expect(viewModel.logsByDayExerciseID.isEmpty)
+        #expect(viewModel.latestLogByExerciseID.isEmpty)
+    }
+
+    @Test
     func loadLogsRestoresSavedSetsBeyondProgramTarget() async throws {
         let fixture = try Fixture(savedSetNumber: 5)
         let viewModel = fixture.makeViewModel(
@@ -326,6 +368,7 @@ private extension WorkoutExerciseViewModelTests {
         @MainActor
         func makeViewModel(
             initialDayExerciseID: UUID,
+            workoutRepository: WorkoutRepository? = nil,
             onSessionChanged: @escaping (WorkoutSession) -> Void = { _ in },
             onWorkoutDataChanged: @escaping @MainActor () -> Void = {}
         ) -> WorkoutExerciseViewModel {
@@ -334,7 +377,7 @@ private extension WorkoutExerciseViewModelTests {
                 activeSession: activeSession,
                 dayContent: dayContent,
                 initialDayExerciseID: initialDayExerciseID,
-                workoutRepository: repository,
+                workoutRepository: workoutRepository ?? repository,
                 onSessionChanged: onSessionChanged,
                 onWorkoutDataChanged: onWorkoutDataChanged
             )
@@ -417,4 +460,5 @@ private extension WorkoutExerciseViewModelTests {
             )
         }
     }
+
 }
