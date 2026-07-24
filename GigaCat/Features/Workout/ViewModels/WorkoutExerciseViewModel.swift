@@ -150,7 +150,7 @@ final class WorkoutExerciseViewModel {
         setNumber: Int,
         performedAt: Date = Date()
     ) async {
-        guard canLogSelectedDay else { return }
+        guard canLogSelectedDay, !isSavingSet else { return }
 
         let normalizedWeight = weightText
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -177,7 +177,11 @@ final class WorkoutExerciseViewModel {
         setNumber: Int,
         performedAt: Date = Date()
     ) async {
-        guard canLogSelectedDay, let selectedExercise else { return }
+        guard canLogSelectedDay,
+              !isSavingSet,
+              let selectedExercise else {
+            return
+        }
 
         setSaveState = .saving(setNumber: setNumber)
 
@@ -275,5 +279,13 @@ final class WorkoutExerciseViewModel {
 
     private var canLogSelectedDay: Bool {
         activeSession == nil || activeSession?.workoutDayId == day.id
+    }
+
+    private var isSavingSet: Bool {
+        if case .saving = setSaveState {
+            return true
+        }
+
+        return false
     }
 }

@@ -152,6 +152,8 @@ Each `ExerciseLog` represents one performed set and is identified within a sessi
 
 Saving the same planned exercise and set number again updates the existing logical set instead of creating duplicate progress.
 
+Only one set save can run at a time. While a save is in progress, every set action is blocked, but the loading animation remains attached only to the set being saved.
+
 The input flow supports:
 
 - integer repetitions
@@ -246,6 +248,7 @@ Current tests cover:
 - clearing current logs when their own request fails
 - session creation on the first saved set
 - set saving and updating
+- serializing set saves so only one repository write runs at a time
 - additional set restoration and the 10-set limit
 - blocking logs for another active day
 - finishing and cancelling sessions

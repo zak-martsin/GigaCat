@@ -34,7 +34,9 @@ struct WorkoutExerciseDetailViewDataMapper {
         from dayExercise: WorkoutDayExercise,
         logContext: WorkoutExerciseLogContext
     ) -> [WorkoutSetRowViewData] {
-        (0..<logContext.displayedSetCount).map { index in
+        let isSaveBlocked = logContext.setSaveState.isSaving
+
+        return (0..<logContext.displayedSetCount).map { index in
             let setNumber = index + 1
             let savedLog = logContext.savedLogsBySetNumber[setNumber]
             let latestPriorLog = logContext.savedLogsBySetNumber
@@ -53,7 +55,8 @@ struct WorkoutExerciseDetailViewDataMapper {
                 suggestedRepsPlaceholder: String(suggestedReps),
                 suggestedWeightPlaceholder: suggestedWeight.map(formattedWeight),
                 isSaved: savedLog != nil,
-                isSaving: logContext.setSaveState == .saving(setNumber: setNumber)
+                isSaving: logContext.setSaveState == .saving(setNumber: setNumber),
+                isSaveBlocked: isSaveBlocked
             )
         }
     }
@@ -79,5 +82,15 @@ struct WorkoutExerciseDetailViewDataMapper {
         }
 
         return lhs.performedAt < rhs.performedAt
+    }
+}
+
+private extension WorkoutSetSaveState {
+    var isSaving: Bool {
+        if case .saving = self {
+            return true
+        }
+
+        return false
     }
 }

@@ -218,7 +218,7 @@ private struct WorkoutSetRow: View {
     }
 
     private var canSave: Bool {
-        !viewData.isSaving &&
+        !viewData.isSaveBlocked &&
             !effectiveWeightText.isEmpty &&
             !effectiveRepsText.isEmpty &&
             (!viewData.isSaved || isDirty)

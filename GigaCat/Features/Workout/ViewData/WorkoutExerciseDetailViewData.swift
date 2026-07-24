@@ -21,4 +21,5 @@ struct WorkoutSetRowViewData: Identifiable, Equatable, Sendable {
     let suggestedWeightPlaceholder: String?
     let isSaved: Bool
     let isSaving: Bool
+    let isSaveBlocked: Bool
 }

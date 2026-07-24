@@ -124,7 +124,7 @@ struct WorkoutExerciseViewModelTests {
     @Test
     func latestLogFailurePreservesCurrentSessionLogs() async throws {
         let fixture = try Fixture(savedSetNumber: 1, hasPreviousLog: true)
-        let repository = ControlledWorkoutRepository(
+        let repository = WorkoutRepositoryTestDouble(
             base: fixture.repository,
             failure: .latestExerciseLog
         )
@@ -147,7 +147,7 @@ struct WorkoutExerciseViewModelTests {
     @Test
     func currentLogFailureClearsCurrentAndLatestLogs() async throws {
         let fixture = try Fixture(savedSetNumber: 1, hasPreviousLog: true)
-        let repository = ControlledWorkoutRepository(
+        let repository = WorkoutRepositoryTestDouble(
             base: fixture.repository,
             failure: .currentSessionLogs
         )
@@ -204,6 +204,31 @@ struct WorkoutExerciseViewModelTests {
         #expect(changedSession == viewModel.activeSession)
         #expect(workoutDataChangeCount == 1)
         #expect(viewModel.latestLog(exerciseID: fixture.first.exercise.id) == savedLog)
+    }
+
+    @Test
+    func secondSetSaveIsIgnoredWhileFirstSaveIsInProgress() async throws {
+        let fixture = try Fixture()
+        let repository = WorkoutRepositoryTestDouble(
+            base: fixture.repository,
+            blocksSave: true
+        )
+        let viewModel = fixture.makeViewModel(
+            initialDayExerciseID: fixture.first.dayExercise.id,
+            workoutRepository: repository
+        )
+
+        let firstSave = Task {
+            await viewModel.saveSet(weight: 60, reps: 8, setNumber: 1)
+        }
+        await repository.waitUntilSaveStarts()
+
+        await viewModel.saveSet(weight: 65, reps: 6, setNumber: 2)
+
+        #expect(await repository.saveInputs().map(\.setNumber) == [1])
+
+        await repository.releaseSave()
+        await firstSave.value
     }
 
     @Test

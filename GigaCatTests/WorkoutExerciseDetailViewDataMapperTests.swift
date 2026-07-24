@@ -67,7 +67,8 @@ struct WorkoutExerciseDetailViewDataMapperTests {
                     suggestedRepsPlaceholder: "8",
                     suggestedWeightPlaceholder: "60",
                     isSaved: false,
-                    isSaving: false
+                    isSaving: false,
+                    isSaveBlocked: false
                 ),
                 WorkoutSetRowViewData(
                     setNumber: 2,
@@ -76,7 +77,8 @@ struct WorkoutExerciseDetailViewDataMapperTests {
                     suggestedRepsPlaceholder: "8",
                     suggestedWeightPlaceholder: "60",
                     isSaved: false,
-                    isSaving: false
+                    isSaving: false,
+                    isSaveBlocked: false
                 ),
                 WorkoutSetRowViewData(
                     setNumber: 3,
@@ -85,7 +87,8 @@ struct WorkoutExerciseDetailViewDataMapperTests {
                     suggestedRepsPlaceholder: "8",
                     suggestedWeightPlaceholder: "60",
                     isSaved: false,
-                    isSaving: false
+                    isSaving: false,
+                    isSaveBlocked: false
                 )
             ]
         )
@@ -126,7 +129,8 @@ struct WorkoutExerciseDetailViewDataMapperTests {
                     suggestedRepsPlaceholder: "8",
                     suggestedWeightPlaceholder: nil,
                     isSaved: true,
-                    isSaving: false
+                    isSaving: false,
+                    isSaveBlocked: true
                 ),
                 WorkoutSetRowViewData(
                     setNumber: 2,
@@ -135,7 +139,8 @@ struct WorkoutExerciseDetailViewDataMapperTests {
                     suggestedRepsPlaceholder: "7",
                     suggestedWeightPlaceholder: formattedWeight(62.5),
                     isSaved: false,
-                    isSaving: true
+                    isSaving: true,
+                    isSaveBlocked: true
                 )
             ]
         )
@@ -168,7 +173,8 @@ struct WorkoutExerciseDetailViewDataMapperTests {
                 suggestedRepsPlaceholder: "12",
                 suggestedWeightPlaceholder: nil,
                 isSaved: false,
-                isSaving: false
+                isSaving: false,
+                isSaveBlocked: false
             )
         ])
         #expect(viewData.targetSummary == "1 set · 12 reps")

@@ -1,14 +1,30 @@
 import Foundation
 @testable import GigaCat
 
-struct ControlledWorkoutRepository: WorkoutRepository {
+actor WorkoutRepositoryTestDouble: WorkoutRepository {
     enum Failure: Equatable, Sendable {
         case currentSessionLogs
         case latestExerciseLog
     }
 
     let base: WorkoutRepository
-    let failure: Failure
+    let failure: Failure?
+    private let blocksSave: Bool
+    private var receivedSaveInputs: [WorkoutSetInput] = []
+    private var saveStarted = false
+    private var saveReleased = false
+    private var saveStartedContinuation: CheckedContinuation<Void, Never>?
+    private var saveContinuation: CheckedContinuation<Void, Never>?
+
+    init(
+        base: WorkoutRepository,
+        failure: Failure? = nil,
+        blocksSave: Bool = false
+    ) {
+        self.base = base
+        self.failure = failure
+        self.blocksSave = blocksSave
+    }
 
     func activeSession(for userId: UUID) async throws -> WorkoutSession? {
         try await base.activeSession(for: userId)
@@ -67,7 +83,41 @@ struct ControlledWorkoutRepository: WorkoutRepository {
     }
 
     func saveSet(_ input: WorkoutSetInput) async throws -> WorkoutSetSaveResult {
-        try await base.saveSet(input)
+        receivedSaveInputs.append(input)
+
+        if blocksSave {
+            saveStarted = true
+            saveStartedContinuation?.resume()
+            saveStartedContinuation = nil
+
+            await withCheckedContinuation { continuation in
+                if saveReleased {
+                    continuation.resume()
+                } else {
+                    saveContinuation = continuation
+                }
+            }
+        }
+
+        return try await base.saveSet(input)
+    }
+
+    func waitUntilSaveStarts() async {
+        guard !saveStarted else { return }
+
+        await withCheckedContinuation { continuation in
+            saveStartedContinuation = continuation
+        }
+    }
+
+    func releaseSave() {
+        saveReleased = true
+        saveContinuation?.resume()
+        saveContinuation = nil
+    }
+
+    func saveInputs() -> [WorkoutSetInput] {
+        receivedSaveInputs
     }
 
     func fetchSessions(for userId: UUID) async throws -> [WorkoutSession] {
