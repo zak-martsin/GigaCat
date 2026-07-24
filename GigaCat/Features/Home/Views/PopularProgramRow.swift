@@ -43,11 +43,7 @@ struct PopularProgramRow: View {
                 }
             }
             .padding(AppSpacing.md)
-            .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppRadius.lg))
-            .overlay {
-                RoundedRectangle(cornerRadius: AppRadius.lg)
-                    .stroke(item.isSelected ? AppColor.textPrimary : AppColor.border, lineWidth: 1)
-            }
+            .appCardStyle(item.isSelected ? .selected : .standard)
         }
         .buttonStyle(.plain)
     }

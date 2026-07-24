@@ -98,11 +98,7 @@ struct ProgramDetailSheet: View {
                                     Spacer()
                                 }
                                 .padding(AppSpacing.md)
-                                .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppRadius.md))
-                                .overlay {
-                                    RoundedRectangle(cornerRadius: AppRadius.md)
-                                        .stroke(AppColor.border, lineWidth: 1)
-                                }
+                                .appCardStyle(cornerRadius: AppRadius.md)
                             }
                         }
                     }

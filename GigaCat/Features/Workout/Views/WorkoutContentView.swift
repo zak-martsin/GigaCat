@@ -55,11 +55,7 @@ struct WorkoutContentView: View {
             .accessibilityLabel("Program information")
         }
         .padding(AppSpacing.lg)
-        .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppRadius.lg))
-        .overlay {
-            RoundedRectangle(cornerRadius: AppRadius.lg)
-                .stroke(AppColor.border, lineWidth: 1)
-        }
+        .appCardStyle()
     }
 
     private var sessionStatusColor: Color {
@@ -174,11 +170,7 @@ private struct WorkoutExerciseRow: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(AppSpacing.md)
-            .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppRadius.lg))
-            .overlay {
-                RoundedRectangle(cornerRadius: AppRadius.lg)
-                    .stroke(AppColor.border, lineWidth: 1)
-            }
+            .appCardStyle()
         }
         .buttonStyle(.plain)
         .accessibilityHint("Opens exercise details")

@@ -28,22 +28,14 @@ struct PlaceholderFeatureView: View {
                             .font(.system(size: 28, weight: .medium))
                             .foregroundStyle(AppColor.textPrimary)
                             .frame(width: 56, height: 56)
-                            .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppRadius.md))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: AppRadius.md)
-                                    .stroke(AppColor.border, lineWidth: 1)
-                            }
+                            .appCardStyle(cornerRadius: AppRadius.md)
 
                         Text("Native iOS 26 shell first, feature-specific data and actions next.")
                             .font(.subheadline)
                             .foregroundStyle(AppColor.textSecondary)
                     }
                     .padding(AppSpacing.lg)
-                    .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppRadius.lg))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: AppRadius.lg)
-                            .stroke(AppColor.border, lineWidth: 1)
-                    }
+                    .appCardStyle()
                 }
                 .padding(.horizontal, AppSpacing.lg)
                 .padding(.top, AppSpacing.md)

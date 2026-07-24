@@ -196,11 +196,7 @@ private struct ProfileSheetView: View {
                         .foregroundStyle(AppColor.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(AppSpacing.lg)
-                        .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppRadius.lg))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: AppRadius.lg)
-                                .stroke(AppColor.border, lineWidth: 1)
-                        }
+                        .appCardStyle()
                 }
             }
             .padding(.horizontal, AppSpacing.lg)
@@ -222,11 +218,7 @@ private struct ProfileSheetView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(AppSpacing.lg)
-        .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppRadius.lg))
-        .overlay {
-            RoundedRectangle(cornerRadius: AppRadius.lg)
-                .stroke(AppColor.border, lineWidth: 1)
-        }
+        .appCardStyle()
     }
 
     private func formatted(_ date: Date) -> String {

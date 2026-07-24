@@ -47,6 +47,7 @@ Design Rules
 
 * Use a small internal DesignSystem.
 * Do not hardcode random spacing, colors, or corner radii in feature views.
+* Use established 4-point or 8-point scales for visual sizing and elevation instead of one-off values.
 * Prefer reusable components for cards, buttons, and input rows.
 * UI should be simple, clean, and native iOS-like.
 * Do not overdesign screens before core flows work.

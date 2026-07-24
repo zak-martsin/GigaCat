@@ -29,10 +29,6 @@ struct AppMessageCard<Accessory: View>: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(AppSpacing.lg)
-        .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppRadius.lg))
-        .overlay {
-            RoundedRectangle(cornerRadius: AppRadius.lg)
-                .stroke(AppColor.border, lineWidth: 1)
-        }
+        .appCardStyle()
     }
 }

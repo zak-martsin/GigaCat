@@ -56,11 +56,7 @@ struct SessionConflictDialog: View {
                 .foregroundStyle(AppColor.textSecondary)
             }
             .padding(AppSpacing.xl)
-            .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppRadius.lg))
-            .overlay {
-                RoundedRectangle(cornerRadius: AppRadius.lg)
-                    .stroke(AppColor.border, lineWidth: 1)
-            }
+            .appCardStyle(.elevated)
             .padding(.horizontal, AppSpacing.xl)
         }
         .transition(.opacity)

@@ -21,17 +21,6 @@ struct FeatureHeroCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(AppSpacing.xl)
-        .background(
-            LinearGradient(
-                colors: [AppColor.surface, AppColor.background],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            ),
-            in: RoundedRectangle(cornerRadius: AppRadius.lg)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: AppRadius.lg)
-                .stroke(AppColor.border, lineWidth: 1)
-        }
+        .appCardStyle(.tinted)
     }
 }

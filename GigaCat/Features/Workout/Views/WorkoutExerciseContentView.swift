@@ -172,11 +172,7 @@ private struct WorkoutSetRow: View {
         }
         .padding(.horizontal, AppSpacing.md)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppRadius.lg))
-        .overlay {
-            RoundedRectangle(cornerRadius: AppRadius.lg)
-                .stroke(AppColor.border, lineWidth: 1)
-        }
+        .appCardStyle()
     }
 
     private var saveButton: some View {

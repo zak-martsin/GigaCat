@@ -10,18 +10,10 @@ struct ProgramCardView: View {
                 imagePlaceholder
 
                 VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                    HStack(alignment: .center, spacing: AppSpacing.sm) {
-                        Text(item.title)
-                            .font(.title3.weight(.bold))
-                            .foregroundStyle(AppColor.textPrimary)
-                            .lineLimit(1)
-
-                        Spacer(minLength: AppSpacing.sm)
-
-                        if item.isSelected {
-                            statusBadge("Selected")
-                        }
-                    }
+                    Text(item.title)
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(AppColor.textPrimary)
+                        .lineLimit(1)
 
                     HStack(spacing: AppSpacing.sm) {
                         Text("\(item.dayCount) days")
@@ -39,25 +31,9 @@ struct ProgramCardView: View {
             }
             .frame(width: 258, alignment: .leading)
             .padding(AppSpacing.md)
-            .background(cardBackground, in: RoundedRectangle(cornerRadius: AppRadius.lg))
-            .overlay {
-                RoundedRectangle(cornerRadius: AppRadius.lg)
-                    .stroke(item.isSelected ? AppColor.textPrimary : AppColor.border, lineWidth: 1)
-            }
+            .appCardStyle(item.isSelected ? .selected : .standard)
         }
         .buttonStyle(.plain)
-    }
-
-    private var cardBackground: some ShapeStyle {
-        item.isSelected
-            ? AnyShapeStyle(
-                LinearGradient(
-                    colors: [AppColor.surface, AppColor.background],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            : AnyShapeStyle(AppColor.surface)
     }
 
     private var imagePlaceholder: some View {
