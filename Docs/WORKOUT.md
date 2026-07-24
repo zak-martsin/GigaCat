@@ -164,14 +164,14 @@ Program data provides target repetitions and target set count. It does not provi
 
 ## 7. Previous Performance
 
-`WorkoutExerciseViewModel` loads recent logs for the reusable `Exercise`.
+`WorkoutExerciseViewModel` loads the latest log for the reusable `Exercise`.
 
 The placeholder weight comes from:
 
-1. The latest entered value from a preceding set in the current workout.
-2. The latest log from a previous session containing the same exercise.
+1. The latest saved value for that exercise in the current workout.
+2. The user's latest log for that exercise across every workout day and session.
 
-This lets the user repeat a previous result by saving the prefilled values without typing them again.
+The lookup is scoped by user and reusable exercise identity, not by a specific workout day assignment. This lets the user repeat the latest result by saving the prefilled values without typing them again.
 
 ## 8. State Ownership
 

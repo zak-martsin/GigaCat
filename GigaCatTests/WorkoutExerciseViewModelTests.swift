@@ -89,7 +89,7 @@ struct WorkoutExerciseViewModelTests {
     }
 
     @Test
-    func loadLogsFindsLatestLogFromPreviousExerciseSession() async throws {
+    func loadLogsFindsLatestExerciseLog() async throws {
         let fixture = try Fixture(hasPreviousLog: true)
         let viewModel = fixture.makeViewModel(
             initialDayExerciseID: fixture.first.dayExercise.id
@@ -99,9 +99,25 @@ struct WorkoutExerciseViewModelTests {
 
         #expect(viewModel.logsLoadState == .loaded)
         #expect(
-            viewModel.previousLog(
+            viewModel.latestLog(
                 exerciseID: fixture.first.exercise.id
             ) == fixture.previousLog
+        )
+    }
+
+    @Test
+    func loadLogsUsesCurrentSessionLogWhenItIsNewest() async throws {
+        let fixture = try Fixture(savedSetNumber: 1, hasPreviousLog: true)
+        let viewModel = fixture.makeViewModel(
+            initialDayExerciseID: fixture.first.dayExercise.id
+        )
+
+        await viewModel.loadLogs()
+
+        #expect(
+            viewModel.latestLog(
+                exerciseID: fixture.first.exercise.id
+            ) == fixture.savedLog
         )
     }
 
@@ -145,6 +161,7 @@ struct WorkoutExerciseViewModelTests {
         #expect(viewModel.setSaveState == .saved(setNumber: 1, didStartSession: true))
         #expect(changedSession == viewModel.activeSession)
         #expect(workoutDataChangeCount == 1)
+        #expect(viewModel.latestLog(exerciseID: fixture.first.exercise.id) == savedLog)
     }
 
     @Test

@@ -2,7 +2,7 @@ import Foundation
 
 struct WorkoutExerciseLogContext {
     let savedLogsBySetNumber: [Int: ExerciseLog]
-    let previousExerciseLog: ExerciseLog?
+    let latestExerciseLog: ExerciseLog?
     let displayedSetCount: Int
     let setSaveState: WorkoutSetSaveState
 }
@@ -37,12 +37,13 @@ struct WorkoutExerciseDetailViewDataMapper {
         (0..<logContext.displayedSetCount).map { index in
             let setNumber = index + 1
             let savedLog = logContext.savedLogsBySetNumber[setNumber]
-            let previousCurrentLog = logContext.savedLogsBySetNumber.values
-                .filter { $0.setNumber < setNumber }
-                .max { $0.setNumber < $1.setNumber }
-            let suggestedWeight = previousCurrentLog?.weight
-                ?? logContext.previousExerciseLog?.weight
-            let suggestedReps = previousCurrentLog?.reps
+            let latestPriorLog = logContext.savedLogsBySetNumber
+                .filter { $0.key < setNumber }
+                .values
+                .max(by: Self.isOlder)
+            let suggestedWeight = latestPriorLog?.weight
+                ?? logContext.latestExerciseLog?.weight
+            let suggestedReps = latestPriorLog?.reps
                 ?? dayExercise.targetReps
 
             return WorkoutSetRowViewData(
@@ -70,5 +71,13 @@ struct WorkoutExerciseDetailViewDataMapper {
 
     private func formattedWeight(_ weight: Double) -> String {
         weight.formatted(.number.precision(.fractionLength(0...2)))
+    }
+
+    private static func isOlder(_ lhs: ExerciseLog, _ rhs: ExerciseLog) -> Bool {
+        if lhs.performedAt == rhs.performedAt {
+            return lhs.setNumber < rhs.setNumber
+        }
+
+        return lhs.performedAt < rhs.performedAt
     }
 }

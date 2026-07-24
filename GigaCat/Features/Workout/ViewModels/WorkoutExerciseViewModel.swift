@@ -25,7 +25,7 @@ final class WorkoutExerciseViewModel {
     private(set) var selectedDayExerciseID: UUID?
     private(set) var activeSession: WorkoutSession?
     private(set) var logsByDayExerciseID: [UUID: [Int: ExerciseLog]] = [:]
-    private(set) var previousLogByExerciseID: [UUID: ExerciseLog] = [:]
+    private(set) var latestLogByExerciseID: [UUID: ExerciseLog] = [:]
     private(set) var setCountByDayExerciseID: [UUID: Int]
     private(set) var logsLoadState: WorkoutExerciseLogsLoadState = .loading
     private(set) var setSaveState: WorkoutSetSaveState = .ready
@@ -104,11 +104,11 @@ final class WorkoutExerciseViewModel {
 
         do {
             logsByDayExerciseID = try await loadCurrentSessionLogs()
-            previousLogByExerciseID = try await loadPreviousExerciseLogs()
+            latestLogByExerciseID = try await loadLatestExerciseLogs()
             logsLoadState = .loaded
         } catch {
             logsByDayExerciseID = [:]
-            previousLogByExerciseID = [:]
+            latestLogByExerciseID = [:]
             logsLoadState = .failed
         }
     }
@@ -117,8 +117,8 @@ final class WorkoutExerciseViewModel {
         logsByDayExerciseID[dayExerciseID] ?? [:]
     }
 
-    func previousLog(exerciseID: UUID) -> ExerciseLog? {
-        previousLogByExerciseID[exerciseID]
+    func latestLog(exerciseID: UUID) -> ExerciseLog? {
+        latestLogByExerciseID[exerciseID]
     }
 
     func setCount(dayExerciseID: UUID) -> Int {
@@ -190,6 +190,7 @@ final class WorkoutExerciseViewModel {
             var exerciseLogs = logsByDayExerciseID[result.log.workoutDayExerciseId] ?? [:]
             exerciseLogs[result.log.setNumber] = result.log
             logsByDayExerciseID[result.log.workoutDayExerciseId] = exerciseLogs
+            latestLogByExerciseID[selectedExercise.exercise.id] = result.log
             updateSetCount(for: result.log.workoutDayExerciseId, logs: exerciseLogs)
             setSaveState = .saved(
                 setNumber: result.log.setNumber,
@@ -235,18 +236,17 @@ final class WorkoutExerciseViewModel {
         return groupedLogs
     }
 
-    private func loadPreviousExerciseLogs() async throws -> [UUID: ExerciseLog] {
+    private func loadLatestExerciseLogs() async throws -> [UUID: ExerciseLog] {
         var result: [UUID: ExerciseLog] = [:]
 
         for content in exercises {
-            let logs = try await workoutRepository.fetchRecentExerciseLogs(
+            let latestLog = try await workoutRepository.fetchLatestExerciseLog(
                 userId: userID,
-                exerciseId: content.exercise.id,
-                limit: content.dayExercise.targetSets + 1
+                exerciseId: content.exercise.id
             )
 
-            if let previousLog = logs.first(where: { $0.sessionId != activeSession?.id }) {
-                result[content.exercise.id] = previousLog
+            if let latestLog {
+                result[content.exercise.id] = latestLog
             }
         }
 

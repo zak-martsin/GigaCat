@@ -47,21 +47,16 @@ struct MockRepositoryTests {
     }
 
     @Test
-    func recentExerciseLogsAreScopedToUserAndOrderedNewestFirst() async throws {
-        let store = MockSeedData.makeStore()
-        let repository = MockWorkoutRepository(store: store)
-        let user = try #require(await store.currentUser())
-        let exerciseID = try #require(UUID(uuidString: "55555555-5555-5555-5555-555555555555"))
-        let exercise = try #require(await store.exercise(id: exerciseID))
+    func latestExerciseLogUsesNewestUserLogAcrossWorkoutDays() async throws {
+        let fixture = try LatestExerciseLogFixture()
+        let repository = MockWorkoutRepository(store: fixture.store)
 
-        let logs = try await repository.fetchRecentExerciseLogs(
-            userId: user.id,
-            exerciseId: exercise.id,
-            limit: 10
+        let latestLog = try await repository.fetchLatestExerciseLog(
+            userId: fixture.user.id,
+            exerciseId: fixture.exercise.id
         )
 
-        #expect(logs.count == 2)
-        #expect(logs.map(\.setNumber) == [2, 1])
+        #expect(latestLog == fixture.expectedLog)
     }
 
     @Test
@@ -215,5 +210,118 @@ struct MockRepositoryTests {
         )
 
         #expect(nextDay?.id == secondDayID)
+    }
+}
+
+private extension MockRepositoryTests {
+    struct LatestExerciseLogFixture {
+        let store: MockDataStore
+        let user: User
+        let exercise: Exercise
+        let expectedLog: ExerciseLog
+
+        init() throws {
+            let content = try LatestExerciseContent()
+            let history = try LatestExerciseHistory(content: content)
+
+            store = MockDataStore(
+                users: [history.user, history.otherUser],
+                workoutDays: [content.firstDay, content.secondDay],
+                dayExercises: [content.firstDayExercise, content.secondDayExercise],
+                exercises: [content.exercise],
+                sessions: [history.previousSession, history.currentSession, history.otherUserSession],
+                exerciseLogs: [history.previousLog, history.expectedLog, history.otherUserLog],
+                currentUserID: history.user.id
+            )
+            user = history.user
+            exercise = content.exercise
+            expectedLog = history.expectedLog
+        }
+    }
+
+    struct LatestExerciseContent {
+        let firstDay: WorkoutDay
+        let secondDay: WorkoutDay
+        let exercise: Exercise
+        let firstDayExercise: WorkoutDayExercise
+        let secondDayExercise: WorkoutDayExercise
+
+        init() throws {
+            let programID = UUID()
+            firstDay = try WorkoutDay(programId: programID, title: "First Day", orderIndex: 0)
+            secondDay = try WorkoutDay(programId: programID, title: "Second Day", orderIndex: 1)
+            exercise = try Exercise(name: "Bench Press", muscleGroup: .chest)
+            firstDayExercise = try WorkoutDayExercise(
+                workoutDayId: firstDay.id,
+                exerciseId: exercise.id,
+                targetSets: 3,
+                targetReps: 8,
+                orderIndex: 0
+            )
+            secondDayExercise = try WorkoutDayExercise(
+                workoutDayId: secondDay.id,
+                exerciseId: exercise.id,
+                targetSets: 4,
+                targetReps: 6,
+                orderIndex: 0
+            )
+        }
+    }
+
+    struct LatestExerciseHistory {
+        let user: User
+        let otherUser: User
+        let previousSession: WorkoutSession
+        let currentSession: WorkoutSession
+        let otherUserSession: WorkoutSession
+        let previousLog: ExerciseLog
+        let expectedLog: ExerciseLog
+        let otherUserLog: ExerciseLog
+
+        init(content: LatestExerciseContent) throws {
+            user = try User(appleUserId: "latest-log-user")
+            otherUser = try User(appleUserId: "other-latest-log-user")
+            previousSession = try WorkoutSession(
+                userId: user.id,
+                workoutDayId: content.firstDay.id,
+                status: .completed,
+                startedAt: Date(timeIntervalSince1970: 500),
+                completedAt: Date(timeIntervalSince1970: 1_000)
+            )
+            currentSession = try WorkoutSession(
+                userId: user.id,
+                workoutDayId: content.secondDay.id,
+                startedAt: Date(timeIntervalSince1970: 1_500)
+            )
+            otherUserSession = try WorkoutSession(
+                userId: otherUser.id,
+                workoutDayId: content.secondDay.id,
+                startedAt: Date(timeIntervalSince1970: 2_500)
+            )
+            previousLog = try ExerciseLog(
+                sessionId: previousSession.id,
+                workoutDayExerciseId: content.firstDayExercise.id,
+                weight: 55,
+                reps: 8,
+                setNumber: 1,
+                performedAt: Date(timeIntervalSince1970: 900)
+            )
+            expectedLog = try ExerciseLog(
+                sessionId: currentSession.id,
+                workoutDayExerciseId: content.secondDayExercise.id,
+                weight: 62.5,
+                reps: 6,
+                setNumber: 1,
+                performedAt: Date(timeIntervalSince1970: 2_000)
+            )
+            otherUserLog = try ExerciseLog(
+                sessionId: otherUserSession.id,
+                workoutDayExerciseId: content.secondDayExercise.id,
+                weight: 100,
+                reps: 3,
+                setNumber: 1,
+                performedAt: Date(timeIntervalSince1970: 3_000)
+            )
+        }
     }
 }

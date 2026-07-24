@@ -20,9 +20,8 @@ protocol WorkoutRepository: Sendable {
     func saveSet(_ input: WorkoutSetInput) async throws -> WorkoutSetSaveResult
     func fetchSessions(for userId: UUID) async throws -> [WorkoutSession]
     func fetchExerciseLogs(sessionId: UUID) async throws -> [ExerciseLog]
-    func fetchRecentExerciseLogs(
+    func fetchLatestExerciseLog(
         userId: UUID,
-        exerciseId: UUID,
-        limit: Int
-    ) async throws -> [ExerciseLog]
+        exerciseId: UUID
+    ) async throws -> ExerciseLog?
 }

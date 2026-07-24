@@ -297,8 +297,8 @@ actor MockDataStore {
             }
     }
 
-    /// Filters logs to one user and one exercise, then orders from newest performance backward.
-    func recentExerciseLogs(userId: UUID, exerciseId: UUID, limit: Int) -> [ExerciseLog] {
+    /// Returns the user's newest performance for a reusable exercise across every workout day.
+    func latestExerciseLog(userId: UUID, exerciseId: UUID) -> ExerciseLog? {
         let userSessionIDs = Set(sessionsByID.values.filter { $0.userId == userId }.map(\.id))
         let matchingWorkoutDayExerciseIDs = Set(
             dayExercisesByID.values
@@ -321,8 +321,7 @@ actor MockDataStore {
 
                 return lhsDate > rhsDate
             }
-            .prefix(limit)
-            .map { $0 }
+            .first
     }
 
     private func updatedUserSelectingProgram(for userId: UUID, programId: UUID) throws -> User {

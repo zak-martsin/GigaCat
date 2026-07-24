@@ -69,7 +69,7 @@ struct WorkoutExerciseView: View {
                 savedLogsBySetNumber: viewModel.savedLogs(
                     dayExerciseID: selectedExercise.dayExercise.id
                 ),
-                previousExerciseLog: viewModel.previousLog(
+                latestExerciseLog: viewModel.latestLog(
                     exerciseID: selectedExercise.exercise.id
                 ),
                 displayedSetCount: viewModel.setCount(

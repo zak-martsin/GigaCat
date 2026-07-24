@@ -17,7 +17,7 @@ struct WorkoutExerciseDetailViewDataMapperTests {
             totalCount: 4,
             logContext: WorkoutExerciseLogContext(
                 savedLogsBySetNumber: [:],
-                previousExerciseLog: nil,
+                latestExerciseLog: nil,
                 displayedSetCount: 3,
                 setSaveState: .ready
             )
@@ -33,7 +33,7 @@ struct WorkoutExerciseDetailViewDataMapperTests {
     }
 
     @Test
-    func previousExerciseLogSuggestsWeightWhileProgramSuggestsReps() throws {
+    func latestExerciseLogSuggestsWeightWhileProgramSuggestsReps() throws {
         let content = try makeExerciseContent(
             targetSets: 3,
             targetReps: 8
@@ -52,7 +52,7 @@ struct WorkoutExerciseDetailViewDataMapperTests {
             totalCount: 1,
             logContext: WorkoutExerciseLogContext(
                 savedLogsBySetNumber: [:],
-                previousExerciseLog: previousLog,
+                latestExerciseLog: previousLog,
                 displayedSetCount: 3,
                 setSaveState: .ready
             )
@@ -111,7 +111,7 @@ struct WorkoutExerciseDetailViewDataMapperTests {
             totalCount: 1,
             logContext: WorkoutExerciseLogContext(
                 savedLogsBySetNumber: [1: savedLog],
-                previousExerciseLog: nil,
+                latestExerciseLog: nil,
                 displayedSetCount: 2,
                 setSaveState: .saving(setNumber: 2)
             )
@@ -122,7 +122,7 @@ struct WorkoutExerciseDetailViewDataMapperTests {
                 WorkoutSetRowViewData(
                     setNumber: 1,
                     savedRepsText: "7",
-                    savedWeightText: "62.5",
+                    savedWeightText: formattedWeight(62.5),
                     suggestedRepsPlaceholder: "8",
                     suggestedWeightPlaceholder: nil,
                     isSaved: true,
@@ -133,7 +133,7 @@ struct WorkoutExerciseDetailViewDataMapperTests {
                     savedRepsText: nil,
                     savedWeightText: nil,
                     suggestedRepsPlaceholder: "7",
-                    suggestedWeightPlaceholder: "62.5",
+                    suggestedWeightPlaceholder: formattedWeight(62.5),
                     isSaved: false,
                     isSaving: true
                 )
@@ -154,7 +154,7 @@ struct WorkoutExerciseDetailViewDataMapperTests {
             totalCount: 1,
             logContext: WorkoutExerciseLogContext(
                 savedLogsBySetNumber: [:],
-                previousExerciseLog: nil,
+                latestExerciseLog: nil,
                 displayedSetCount: 1,
                 setSaveState: .ready
             )
@@ -176,6 +176,10 @@ struct WorkoutExerciseDetailViewDataMapperTests {
 }
 
 private extension WorkoutExerciseDetailViewDataMapperTests {
+    func formattedWeight(_ weight: Double) -> String {
+        weight.formatted(.number.precision(.fractionLength(0...2)))
+    }
+
     func makeExerciseContent(
         targetSets: Int,
         targetReps: Int

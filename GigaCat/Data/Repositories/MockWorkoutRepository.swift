@@ -62,11 +62,10 @@ struct MockWorkoutRepository: WorkoutRepository {
         await store.exerciseLogs(sessionId: sessionId)
     }
 
-    func fetchRecentExerciseLogs(
+    func fetchLatestExerciseLog(
         userId: UUID,
-        exerciseId: UUID,
-        limit: Int
-    ) async throws -> [ExerciseLog] {
-        await store.recentExerciseLogs(userId: userId, exerciseId: exerciseId, limit: limit)
+        exerciseId: UUID
+    ) async throws -> ExerciseLog? {
+        await store.latestExerciseLog(userId: userId, exerciseId: exerciseId)
     }
 }
