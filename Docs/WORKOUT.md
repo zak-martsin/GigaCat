@@ -104,6 +104,8 @@ The detail screen shows:
 
 Additional sets are local UI state until they are saved. A maximum of 10 sets can be displayed for one exercise.
 
+Unsaved weight and repetition drafts survive previous and next exercise navigation. They are keyed by planned exercise and set number, synchronized after a successful save, and discarded when the detail screen closes.
+
 ## 5. Session Lifecycle
 
 Opening Workout does not create a session.
@@ -197,6 +199,8 @@ Current-session logs and previous-performance suggestions load independently. If
 
 View data remains outside the ViewModels. Views map current ViewModel state through feature mappers.
 
+`WorkoutExerciseView` owns transient set drafts because they are unsaved text-field state. `WorkoutSetRow` receives a binding instead of owning isolated local state.
+
 ## 9. Cross-Feature Invalidation
 
 Home caches presentation state such as the mini player and workout progress. Successful Workout mutations therefore mark Home as stale.
@@ -249,6 +253,7 @@ Current tests cover:
 - session creation on the first saved set
 - set saving and updating
 - serializing set saves so only one repository write runs at a time
+- preserving unsaved set drafts while switching exercises
 - additional set restoration and the 10-set limit
 - blocking logs for another active day
 - finishing and cancelling sessions

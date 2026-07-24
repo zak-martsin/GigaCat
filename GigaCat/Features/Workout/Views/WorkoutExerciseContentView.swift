@@ -2,6 +2,7 @@ import SwiftUI
 
 struct WorkoutExerciseContentView: View {
     let viewData: WorkoutExerciseDetailViewData
+    @Binding var drafts: WorkoutSetDraftCollection
     let onPreviousExercise: () -> Void
     let onNextExercise: () -> Void
     let onAddSet: () -> Void
@@ -77,6 +78,7 @@ struct WorkoutExerciseContentView: View {
             ForEach(viewData.sets) { set in
                 WorkoutSetRow(
                     viewData: set,
+                    draft: draftBinding(for: set),
                     onSave: onSaveSet
                 )
             }
@@ -92,6 +94,28 @@ struct WorkoutExerciseContentView: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Add set")
         }
+    }
+
+    private func draftBinding(
+        for set: WorkoutSetRowViewData
+    ) -> Binding<WorkoutSetDraft> {
+        let key = WorkoutSetDraftKey(
+            dayExerciseID: viewData.id,
+            setNumber: set.setNumber
+        )
+        let fallback = WorkoutSetDraft(
+            weightText: set.savedWeightText ?? "",
+            repsText: set.savedRepsText ?? ""
+        )
+
+        return Binding(
+            get: {
+                drafts.draft(for: key, fallback: fallback)
+            },
+            set: {
+                drafts.update($0, for: key)
+            }
+        )
     }
 
     private func navigationButton(
@@ -120,17 +144,16 @@ private struct WorkoutSetRow: View {
     let viewData: WorkoutSetRowViewData
     let onSave: (Int, String, String) -> Void
 
-    @State private var weightText: String
-    @State private var repsText: String
+    @Binding private var draft: WorkoutSetDraft
 
     init(
         viewData: WorkoutSetRowViewData,
+        draft: Binding<WorkoutSetDraft>,
         onSave: @escaping (Int, String, String) -> Void
     ) {
         self.viewData = viewData
         self.onSave = onSave
-        _weightText = State(initialValue: viewData.savedWeightText ?? "")
-        _repsText = State(initialValue: viewData.savedRepsText ?? "")
+        _draft = draft
     }
 
     var body: some View {
@@ -158,14 +181,14 @@ private struct WorkoutSetRow: View {
                 .frame(height: AppSpacing.xl)
 
             valueField(
-                text: $weightText,
+                text: $draft.weightText,
                 placeholder: viewData.suggestedWeightPlaceholder ?? "Weight",
                 unit: "kg",
                 keyboardType: .decimalPad
             )
 
             valueField(
-                text: $repsText,
+                text: $draft.repsText,
                 placeholder: viewData.suggestedRepsPlaceholder,
                 unit: "rep",
                 keyboardType: .numberPad
@@ -213,8 +236,8 @@ private struct WorkoutSetRow: View {
     }
 
     private var isDirty: Bool {
-        weightText != (viewData.savedWeightText ?? "") ||
-            repsText != (viewData.savedRepsText ?? "")
+        draft.weightText != (viewData.savedWeightText ?? "") ||
+            draft.repsText != (viewData.savedRepsText ?? "")
     }
 
     private var canSave: Bool {
@@ -225,14 +248,14 @@ private struct WorkoutSetRow: View {
     }
 
     private var effectiveWeightText: String {
-        let enteredWeight = weightText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let enteredWeight = draft.weightText.trimmingCharacters(in: .whitespacesAndNewlines)
         return enteredWeight.isEmpty
             ? viewData.suggestedWeightPlaceholder ?? ""
             : enteredWeight
     }
 
     private var effectiveRepsText: String {
-        let enteredReps = repsText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let enteredReps = draft.repsText.trimmingCharacters(in: .whitespacesAndNewlines)
         return enteredReps.isEmpty
             ? viewData.suggestedRepsPlaceholder
             : enteredReps
@@ -246,8 +269,10 @@ private struct WorkoutSetRow: View {
         let didFinishSaving = oldValue.isSaving && !newValue.isSaving && newValue.isSaved
 
         if didLoadSavedLog || didFinishSaving {
-            weightText = newValue.savedWeightText ?? ""
-            repsText = newValue.savedRepsText ?? ""
+            draft = WorkoutSetDraft(
+                weightText: newValue.savedWeightText ?? "",
+                repsText: newValue.savedRepsText ?? ""
+            )
         }
     }
 
