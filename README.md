@@ -57,6 +57,7 @@ GigaCat/
 - [Domain Model](Docs/DOMAIN_MODEL.md)
 - [Home Feature](Docs/HOME.md)
 - [Workout Feature](Docs/WORKOUT.md)
+- [Progress Feature](Docs/PROGRESS.md)
 - [Code Review Guide](Docs/CODE_REVIEW.md)
 - [Product Requirements](Docs/PRD.md)
 
