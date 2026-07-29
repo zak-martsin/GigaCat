@@ -28,16 +28,16 @@ final class WorkoutViewModel {
     private let workoutRepository: WorkoutRepository
 
     @ObservationIgnored
-    private let onWorkoutDataChanged: @MainActor () -> Void
+    private let onDataChanged: AppDataChangeHandler
 
     init(
         contextService: WorkoutContextServicing,
         workoutRepository: WorkoutRepository,
-        onWorkoutDataChanged: @escaping @MainActor () -> Void = {}
+        onDataChanged: @escaping AppDataChangeHandler = { _ in }
     ) {
         self.contextService = contextService
         self.workoutRepository = workoutRepository
-        self.onWorkoutDataChanged = onWorkoutDataChanged
+        self.onDataChanged = onDataChanged
     }
 
     // MARK: - Presentation State
@@ -112,7 +112,7 @@ final class WorkoutViewModel {
                 sessionId: activeSession.id,
                 completedAt: completedAt
             )
-            onWorkoutDataChanged()
+            await onDataChanged(.workoutSession)
             sessionActionState = .idle
             await load()
         } catch {
@@ -131,7 +131,7 @@ final class WorkoutViewModel {
 
         do {
             try await workoutRepository.deleteSession(sessionId: activeSession.id)
-            onWorkoutDataChanged()
+            await onDataChanged(.workoutSession)
             sessionActionState = .idle
             await load()
         } catch {
@@ -157,7 +157,7 @@ final class WorkoutViewModel {
             initialDayExerciseID: initialDayExerciseID,
             workoutRepository: workoutRepository,
             onSessionChanged: updateActiveSession,
-            onWorkoutDataChanged: onWorkoutDataChanged
+            onDataChanged: onDataChanged
         )
     }
 

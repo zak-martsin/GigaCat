@@ -7,8 +7,11 @@ final class AppContainer {
     let libraryViewModel: LibraryViewModel
     let progressViewModel: ProgressViewModel
     let workoutViewModel: WorkoutViewModel
+    private let dataChangeCoordinator: AppDataChangeCoordinator
+    private let dataChangeDispatcher: AppDataChangeDispatcher
 
     init(repositoryFactory: MockRepositoryFactory) {
+        let dataChangeDispatcher = AppDataChangeDispatcher()
         let programDetailService = ProgramDetailService(
             userRepository: repositoryFactory.userRepository,
             programCatalogRepository: repositoryFactory.programCatalogRepository,
@@ -36,25 +39,36 @@ final class AppContainer {
             workoutProgramRepository: repositoryFactory.workoutProgramRepository,
             workoutRepository: repositoryFactory.workoutRepository
         )
-
-        self.homeViewModel = homeViewModel
-        self.progressViewModel = progressViewModel
-        libraryViewModel = LibraryViewModel(
+        let libraryViewModel = LibraryViewModel(
             userRepository: repositoryFactory.userRepository,
             libraryRepository: repositoryFactory.workoutProgramLibraryRepository,
             programDetailService: programDetailService,
-            onProgramDataChanged: {
-                homeViewModel.invalidate()
-                progressViewModel.invalidate()
-            }
+            onDataChanged: dataChangeDispatcher.send
         )
-        workoutViewModel = WorkoutViewModel(
+        let workoutViewModel = WorkoutViewModel(
             contextService: workoutContextService,
             workoutRepository: repositoryFactory.workoutRepository,
-            onWorkoutDataChanged: {
-                homeViewModel.invalidate()
-                progressViewModel.invalidate()
+            onDataChanged: dataChangeDispatcher.send
+        )
+        let dataChangeCoordinator = AppDataChangeCoordinator(
+            invalidateHome: { [weak homeViewModel] in
+                homeViewModel?.invalidate()
+            },
+            invalidateLibrary: { [weak libraryViewModel] in
+                libraryViewModel?.invalidate()
+            },
+            invalidateProgress: { [weak progressViewModel] in
+                progressViewModel?.invalidate()
             }
         )
+
+        self.homeViewModel = homeViewModel
+        self.progressViewModel = progressViewModel
+        self.libraryViewModel = libraryViewModel
+        self.workoutViewModel = workoutViewModel
+        self.dataChangeCoordinator = dataChangeCoordinator
+        self.dataChangeDispatcher = dataChangeDispatcher
+
+        dataChangeDispatcher.install(handler: dataChangeCoordinator.handle)
     }
 }

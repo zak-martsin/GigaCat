@@ -183,7 +183,10 @@ struct WorkoutExerciseViewModelTests {
         let viewModel = fixture.makeViewModel(
             initialDayExerciseID: fixture.first.dayExercise.id,
             onSessionChanged: { changedSession = $0 },
-            onWorkoutDataChanged: { workoutDataChangeCount += 1 }
+            onDataChanged: { change in
+                #expect(change == .workoutSession)
+                workoutDataChangeCount += 1
+            }
         )
         let performedAt = Date(timeIntervalSince1970: 2_000)
 
@@ -237,7 +240,7 @@ struct WorkoutExerciseViewModelTests {
         var workoutDataChangeCount = 0
         let viewModel = fixture.makeViewModel(
             initialDayExerciseID: fixture.first.dayExercise.id,
-            onWorkoutDataChanged: { workoutDataChangeCount += 1 }
+            onDataChanged: { _ in workoutDataChangeCount += 1 }
         )
 
         await viewModel.saveSet(weight: 60, reps: 0, setNumber: 1)
@@ -395,7 +398,7 @@ private extension WorkoutExerciseViewModelTests {
             initialDayExerciseID: UUID,
             workoutRepository: WorkoutRepository? = nil,
             onSessionChanged: @escaping (WorkoutSession) -> Void = { _ in },
-            onWorkoutDataChanged: @escaping @MainActor () -> Void = {}
+            onDataChanged: @escaping AppDataChangeHandler = { _ in }
         ) -> WorkoutExerciseViewModel {
             WorkoutExerciseViewModel(
                 userID: user.id,
@@ -404,7 +407,7 @@ private extension WorkoutExerciseViewModelTests {
                 initialDayExerciseID: initialDayExerciseID,
                 workoutRepository: workoutRepository ?? repository,
                 onSessionChanged: onSessionChanged,
-                onWorkoutDataChanged: onWorkoutDataChanged
+                onDataChanged: onDataChanged
             )
         }
 

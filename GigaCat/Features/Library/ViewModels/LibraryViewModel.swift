@@ -32,7 +32,7 @@ final class LibraryViewModel {
     private let programDetailService: ProgramDetailServicing
 
     @ObservationIgnored
-    private let onProgramDataChanged: @MainActor () -> Void
+    private let onDataChanged: AppDataChangeHandler
 
     @ObservationIgnored
     private var currentUser: User?
@@ -55,12 +55,12 @@ final class LibraryViewModel {
         userRepository: UserRepository,
         libraryRepository: WorkoutProgramLibraryRepository,
         programDetailService: ProgramDetailServicing,
-        onProgramDataChanged: @escaping @MainActor () -> Void = {}
+        onDataChanged: @escaping AppDataChangeHandler = { _ in }
     ) {
         self.userRepository = userRepository
         self.libraryRepository = libraryRepository
         self.programDetailService = programDetailService
-        self.onProgramDataChanged = onProgramDataChanged
+        self.onDataChanged = onDataChanged
     }
 
     // MARK: - Loading
@@ -68,6 +68,11 @@ final class LibraryViewModel {
     func loadIfNeeded() async {
         guard !hasLoaded else { return }
         await load()
+    }
+
+    /// Marks the saved-program cache stale so the next Library load reads the source of truth.
+    func invalidate() {
+        hasLoaded = false
     }
 
     func load() async {
@@ -114,6 +119,7 @@ final class LibraryViewModel {
             try await libraryRepository.removeProgram(programID, for: currentUser.id)
             programs.removeAll { $0.id == programID }
             loadState = programs.isEmpty ? .empty : .loaded
+            await onDataChanged(.library)
         } catch {
             removalErrorMessage = error.localizedDescription
         }
@@ -162,7 +168,7 @@ final class LibraryViewModel {
             case let .switched(updatedUser):
                 self.currentUser = updatedUser
                 dismissProgramDetail()
-                onProgramDataChanged()
+                await onDataChanged(.selectedProgram)
             case let .blocked(pendingProgramID, alert):
                 pendingProgramSelectionID = pendingProgramID
                 programSelectionConflictAlert = alert
@@ -200,7 +206,7 @@ final class LibraryViewModel {
             guard didComplete else { return }
 
             dismissProgramDetail()
-            onProgramDataChanged()
+            await onDataChanged(.workoutSession)
         } catch {
             programDetailErrorMessage = error.localizedDescription
         }
@@ -220,7 +226,7 @@ final class LibraryViewModel {
             guard didCancel else { return }
 
             dismissProgramDetail()
-            onProgramDataChanged()
+            await onDataChanged(.workoutSession)
         } catch {
             programDetailErrorMessage = error.localizedDescription
         }
@@ -246,7 +252,7 @@ final class LibraryViewModel {
             )
             self.currentUser = updatedUser
             cancelProgramSelectionConflict()
-            onProgramDataChanged()
+            await onDataChanged(.selectedProgram)
         } catch {
             programDetailErrorMessage = error.localizedDescription
         }

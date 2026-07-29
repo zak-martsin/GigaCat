@@ -23,7 +23,10 @@ struct LibraryViewModelTests {
     @Test
     func removingProgramOnlyRemovesItsLibraryMembership() async throws {
         let factory = MockRepositoryFactory()
-        let viewModel = makeViewModel(factory: factory)
+        var changes: [AppDataChange] = []
+        let viewModel = makeViewModel(factory: factory) { change in
+            changes.append(change)
+        }
         let user = try #require(try await factory.userRepository.currentUser())
         let originalSelectedProgramID = user.selectedProgramId
 
@@ -40,6 +43,7 @@ struct LibraryViewModelTests {
         #expect(savedPrograms.isEmpty)
         #expect(catalogProgram == savedProgram)
         #expect(reloadedUser.selectedProgramId == originalSelectedProgramID)
+        #expect(changes == [.library])
     }
 
     @Test
@@ -63,9 +67,9 @@ struct LibraryViewModelTests {
     @Test
     func choosingSavedProgramCanCancelActiveSessionAndSwitchSelection() async throws {
         let factory = MockRepositoryFactory()
-        var changeNotificationCount = 0
-        let viewModel = makeViewModel(factory: factory) {
-            changeNotificationCount += 1
+        var changes: [AppDataChange] = []
+        let viewModel = makeViewModel(factory: factory) { change in
+            changes.append(change)
         }
 
         await viewModel.load()
@@ -83,12 +87,12 @@ struct LibraryViewModelTests {
         #expect(user.selectedProgramId == savedProgram.id)
         #expect(activeSession == nil)
         #expect(viewModel.programSelectionConflictAlert == nil)
-        #expect(changeNotificationCount == 1)
+        #expect(changes == [.selectedProgram])
     }
 
     private func makeViewModel(
         factory: MockRepositoryFactory,
-        onProgramDataChanged: @escaping @MainActor () -> Void = {}
+        onDataChanged: @escaping AppDataChangeHandler = { _ in }
     ) -> LibraryViewModel {
         let detailService = ProgramDetailService(
             userRepository: factory.userRepository,
@@ -101,7 +105,7 @@ struct LibraryViewModelTests {
             userRepository: factory.userRepository,
             libraryRepository: factory.workoutProgramLibraryRepository,
             programDetailService: detailService,
-            onProgramDataChanged: onProgramDataChanged
+            onDataChanged: onDataChanged
         )
     }
 }

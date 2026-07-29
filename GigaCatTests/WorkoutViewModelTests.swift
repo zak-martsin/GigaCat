@@ -107,7 +107,8 @@ struct WorkoutViewModelTests {
                 results: [.success(activeContext), .success(nextContext)]
             ),
             workoutRepository: repository,
-            onWorkoutDataChanged: {
+            onDataChanged: { change in
+                #expect(change == .workoutSession)
                 invalidationCount += 1
             }
         )
@@ -142,7 +143,8 @@ struct WorkoutViewModelTests {
                 results: [.success(activeContext), .success(readyContext)]
             ),
             workoutRepository: repository,
-            onWorkoutDataChanged: {
+            onDataChanged: { change in
+                #expect(change == .workoutSession)
                 invalidationCount += 1
             }
         )
