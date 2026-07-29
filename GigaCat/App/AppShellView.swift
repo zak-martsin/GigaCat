@@ -11,58 +11,12 @@ struct AppShellView: View {
     // MARK: - Initialization
 
     init(repositoryFactory: MockRepositoryFactory = MockRepositoryFactory()) {
-        let programDetailService = ProgramDetailService(
-            userRepository: repositoryFactory.userRepository,
-            programCatalogRepository: repositoryFactory.programCatalogRepository,
-            workoutProgramRepository: repositoryFactory.workoutProgramRepository,
-            workoutRepository: repositoryFactory.workoutRepository
-        )
-        let homeViewModel = HomeViewModel(
-            userRepository: repositoryFactory.userRepository,
-            programCatalogRepository: repositoryFactory.programCatalogRepository,
-            workoutProgramRepository: repositoryFactory.workoutProgramRepository,
-            workoutRepository: repositoryFactory.workoutRepository,
-            programDetailService: programDetailService
-        )
-        let workoutContextService = WorkoutContextService(
-            userRepository: repositoryFactory.userRepository,
-            programCatalogRepository: repositoryFactory.programCatalogRepository,
-            workoutProgramRepository: repositoryFactory.workoutProgramRepository,
-            workoutRepository: repositoryFactory.workoutRepository
-        )
-        let progressHistoryService = ProgressHistoryService(
-            userRepository: repositoryFactory.userRepository,
-            workoutRepository: repositoryFactory.workoutRepository,
-            workoutProgramRepository: repositoryFactory.workoutProgramRepository
-        )
-        let progressViewModel = ProgressViewModel(
-            historyService: progressHistoryService
-        )
-        let libraryViewModel = LibraryViewModel(
-            userRepository: repositoryFactory.userRepository,
-            libraryRepository: repositoryFactory.workoutProgramLibraryRepository,
-            programDetailService: programDetailService,
-            onProgramDataChanged: {
-                homeViewModel.invalidate()
-                progressViewModel.invalidate()
-            }
-        )
+        let container = AppContainer(repositoryFactory: repositoryFactory)
 
-        _workoutViewModel = State(
-            initialValue: WorkoutViewModel(
-                contextService: workoutContextService,
-                workoutRepository: repositoryFactory.workoutRepository,
-                onWorkoutDataChanged: {
-                    homeViewModel.invalidate()
-                    progressViewModel.invalidate()
-                }
-            )
-        )
-        _libraryViewModel = State(initialValue: libraryViewModel)
-        _progressViewModel = State(initialValue: progressViewModel)
-        _homeViewModel = StateObject(
-            wrappedValue: homeViewModel
-        )
+        _workoutViewModel = State(initialValue: container.workoutViewModel)
+        _libraryViewModel = State(initialValue: container.libraryViewModel)
+        _progressViewModel = State(initialValue: container.progressViewModel)
+        _homeViewModel = StateObject(wrappedValue: container.homeViewModel)
     }
 
     // MARK: - Layout
