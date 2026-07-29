@@ -13,6 +13,7 @@ The goal of the feature is to give the user a single entry point for discovering
 - filtering programs by tags
 - searching programs by keywords
 - presenting program details
+- saving catalog programs to Library
 - opening profile from a reusable header action
 
 `Home` is not responsible for:
@@ -187,6 +188,10 @@ Examples:
 
 `ProgramDetail` is shared view data owned by the cross-feature `ProgramDetail` module because both
 Home and Library present the same sheet.
+
+Saving from the detail sheet calls `WorkoutProgramLibraryRepository`, then emits
+`AppDataChange.library`. The Library cache is invalidated and reloads from its repository the next
+time the tab is opened.
 
 These types exist because the Home UI needs:
 

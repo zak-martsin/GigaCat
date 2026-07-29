@@ -9,6 +9,7 @@ final class ProgramDetailViewModel: ObservableObject {
     @Published var errorMessage: String?
 
     private let userRepository: UserRepository
+    private let libraryRepository: WorkoutProgramLibraryRepository
     private let service: ProgramDetailServicing
     private let onDataChanged: AppDataChangeHandler
     private var currentUser: User?
@@ -16,10 +17,12 @@ final class ProgramDetailViewModel: ObservableObject {
 
     init(
         userRepository: UserRepository,
+        libraryRepository: WorkoutProgramLibraryRepository,
         service: ProgramDetailServicing,
         onDataChanged: @escaping AppDataChangeHandler = { _ in }
     ) {
         self.userRepository = userRepository
+        self.libraryRepository = libraryRepository
         self.service = service
         self.onDataChanged = onDataChanged
     }
@@ -62,6 +65,21 @@ final class ProgramDetailViewModel: ObservableObject {
                 selectionConflictAlert = alert
                 dismiss()
             }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func addPresentedProgramToLibrary() async {
+        guard let detail = presentedDetail,
+              let currentUser else {
+            return
+        }
+
+        do {
+            try await libraryRepository.saveProgram(detail.id, for: currentUser.id)
+            dismiss()
+            await onDataChanged(.library)
         } catch {
             errorMessage = error.localizedDescription
         }

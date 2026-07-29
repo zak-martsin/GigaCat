@@ -11,6 +11,7 @@ struct HomeViewModelTests {
         let viewModel = HomeViewModel(
             userRepository: factory.userRepository,
             programCatalogRepository: factory.programCatalogRepository,
+            libraryRepository: factory.workoutProgramLibraryRepository,
             workoutProgramRepository: factory.workoutProgramRepository,
             workoutRepository: factory.workoutRepository
         )
@@ -29,6 +30,7 @@ struct HomeViewModelTests {
         let viewModel = HomeViewModel(
             userRepository: factory.userRepository,
             programCatalogRepository: factory.programCatalogRepository,
+            libraryRepository: factory.workoutProgramLibraryRepository,
             workoutProgramRepository: factory.workoutProgramRepository,
             workoutRepository: factory.workoutRepository
         )
@@ -46,6 +48,34 @@ struct HomeViewModelTests {
 
         viewModel.searchQuery = "   "
         #expect(viewModel.searchResults.isEmpty)
+    }
+
+    @Test
+    func addingCatalogProgramSavesItAndEmitsLibraryChange() async throws {
+        let factory = MockRepositoryFactory()
+        var changes: [AppDataChange] = []
+        let viewModel = HomeViewModel(
+            userRepository: factory.userRepository,
+            programCatalogRepository: factory.programCatalogRepository,
+            libraryRepository: factory.workoutProgramLibraryRepository,
+            workoutProgramRepository: factory.workoutProgramRepository,
+            workoutRepository: factory.workoutRepository,
+            onDataChanged: { changes.append($0) }
+        )
+
+        await viewModel.load()
+        let user = try #require(viewModel.profileUser)
+        let savedPrograms = try await factory.workoutProgramLibraryRepository.fetchSavedPrograms(for: user.id)
+        let savedIDs = Set(savedPrograms.map(\.id))
+        let program = try #require(viewModel.allPrograms.first { !savedIDs.contains($0.id) })
+
+        await viewModel.presentProgramDetail(for: program)
+        await viewModel.addPresentedProgramToLibrary()
+
+        let updatedPrograms = try await factory.workoutProgramLibraryRepository.fetchSavedPrograms(for: user.id)
+        #expect(updatedPrograms.contains { $0.id == program.id })
+        #expect(changes == [.library])
+        #expect(viewModel.presentedProgramDetail == nil)
     }
 
 }

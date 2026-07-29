@@ -20,6 +20,7 @@ final class HomeViewModel: ObservableObject {
 
     private let userRepository: UserRepository
     private let programCatalogRepository: ProgramCatalogRepository
+    private let libraryRepository: WorkoutProgramLibraryRepository
     private let discoveryService: HomeProgramDiscoveryServicing
     private let presentationService: HomePresentationServicing
     private let programDetailService: ProgramDetailServicing
@@ -33,6 +34,7 @@ final class HomeViewModel: ObservableObject {
     init(
         userRepository: UserRepository,
         programCatalogRepository: ProgramCatalogRepository,
+        libraryRepository: WorkoutProgramLibraryRepository,
         workoutProgramRepository: WorkoutProgramRepository,
         workoutRepository: WorkoutRepository,
         discoveryService: HomeProgramDiscoveryServicing = HomeProgramDiscoveryService(),
@@ -42,6 +44,7 @@ final class HomeViewModel: ObservableObject {
     ) {
         self.userRepository = userRepository
         self.programCatalogRepository = programCatalogRepository
+        self.libraryRepository = libraryRepository
         self.discoveryService = discoveryService
         self.presentationService = presentationService ?? HomePresentationService(
             workoutProgramRepository: workoutProgramRepository,
@@ -211,9 +214,19 @@ final class HomeViewModel: ObservableObject {
         await resolveProgramSelectionConflict(using: .cancelSession)
     }
 
-    func addPresentedProgramToLibrary() {
-        guard let presentedProgramDetail else { return }
-        print("Add program to library: \(presentedProgramDetail.title)")
+    func addPresentedProgramToLibrary() async {
+        guard let detail = presentedProgramDetail,
+              let currentUser else {
+            return
+        }
+
+        do {
+            try await libraryRepository.saveProgram(detail.id, for: currentUser.id)
+            dismissProgramDetail()
+            await onDataChanged(.library)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     func completePresentedProgramSession() async {

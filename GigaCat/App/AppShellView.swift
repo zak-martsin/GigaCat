@@ -188,7 +188,11 @@ struct AppShellView: View {
                     await programDetailViewModel.selectPresentedProgram()
                 }
             },
-            onAddToLibrary: {},
+            onAddToLibrary: {
+                Task {
+                    await programDetailViewModel.addPresentedProgramToLibrary()
+                }
+            },
             onCompleteSession: {
                 Task {
                     await programDetailViewModel.completeActiveSession()

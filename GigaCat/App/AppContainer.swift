@@ -34,12 +34,14 @@ final class AppContainer {
         )
         let programDetailViewModel = ProgramDetailViewModel(
             userRepository: repositoryFactory.userRepository,
+            libraryRepository: repositoryFactory.workoutProgramLibraryRepository,
             service: programDetailService,
             onDataChanged: dataChangeDispatcher.send
         )
         let homeViewModel = HomeViewModel(
             userRepository: repositoryFactory.userRepository,
             programCatalogRepository: repositoryFactory.programCatalogRepository,
+            libraryRepository: repositoryFactory.workoutProgramLibraryRepository,
             workoutProgramRepository: repositoryFactory.workoutProgramRepository,
             workoutRepository: repositoryFactory.workoutRepository,
             programDetailService: programDetailService,

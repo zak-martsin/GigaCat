@@ -17,7 +17,6 @@ This document describes the first MVP implementation of the `Library` feature.
 - automatically saving the selected workout program
 - deleting programs from the shared catalog
 - changing `User.selectedProgramId`
-- adding programs from Home in the first implementation
 - building custom workout programs in MVP
 
 ## 2. Architecture
@@ -75,8 +74,8 @@ The screen uses:
 - a trailing destructive swipe action with full-swipe support
 - loading, content, empty, and failure states
 
-The header add action and the detail sheet's add-to-library action are intentionally placeholders
-for future flows.
+The header add action remains a placeholder for custom-program creation. Catalog programs can now
+be saved from the shared detail sheet opened on Home or from the global mini player.
 
 ## 5. Current Persistence
 

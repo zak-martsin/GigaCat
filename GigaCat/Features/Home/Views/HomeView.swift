@@ -111,7 +111,9 @@ struct HomeView: View {
                 }
             },
             onAddToLibrary: {
-                viewModel.addPresentedProgramToLibrary()
+                Task {
+                    await viewModel.addPresentedProgramToLibrary()
+                }
             },
             onCompleteSession: {
                 Task {
