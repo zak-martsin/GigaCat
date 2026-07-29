@@ -6,6 +6,21 @@ import Testing
 struct MockRepositoryTests {
 
     @Test
+    func savingTheSameProgramTwiceCreatesOneLibraryMembership() async throws {
+        let store = MockSeedData.makeStore()
+        let repository = MockWorkoutProgramLibraryRepository(store: store)
+        let user = try #require(await store.currentUser())
+        let program = try #require(await store.programs().first { $0.id != user.selectedProgramId })
+
+        try await repository.saveProgram(program.id, for: user.id)
+        try await repository.saveProgram(program.id, for: user.id)
+
+        let savedPrograms = try await repository.fetchSavedPrograms(for: user.id)
+
+        #expect(savedPrograms.filter { $0.id == program.id }.count == 1)
+    }
+
+    @Test
     func selectedProgramUpdatePersistsInStore() async throws {
         let store = MockSeedData.makeStore()
         let repository = MockUserRepository(store: store)

@@ -23,6 +23,8 @@ struct WorkoutExerciseContentView: View {
         .accessibilityIdentifier("workout.exerciseDetail")
     }
 
+    // MARK: - Exercise Summary
+
     private var positionLabel: some View {
         Text("\(viewData.position) of \(viewData.totalCount)")
             .font(.subheadline.weight(.semibold))
@@ -73,6 +75,8 @@ struct WorkoutExerciseContentView: View {
         }
     }
 
+    // MARK: - Set List
+
     private var targetSetList: some View {
         VStack(spacing: AppSpacing.sm) {
             ForEach(viewData.sets) { set in
@@ -96,6 +100,8 @@ struct WorkoutExerciseContentView: View {
         }
     }
 
+    // MARK: - Draft Binding
+
     private func draftBinding(
         for set: WorkoutSetRowViewData
     ) -> Binding<WorkoutSetDraft> {
@@ -118,6 +124,8 @@ struct WorkoutExerciseContentView: View {
         )
     }
 
+    // MARK: - Navigation
+
     private func navigationButton(
         systemImage: String,
         isEnabled: Bool,
@@ -139,6 +147,8 @@ struct WorkoutExerciseContentView: View {
         .accessibilityLabel(accessibilityLabel)
     }
 }
+
+// MARK: - Set Row
 
 private struct WorkoutSetRow: View {
     let viewData: WorkoutSetRowViewData
@@ -168,6 +178,8 @@ private struct WorkoutSetRow: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Set \(viewData.setNumber)")
     }
+
+    // MARK: - Row Content
 
     private var setValues: some View {
         HStack(spacing: AppSpacing.sm) {
@@ -231,6 +243,8 @@ private struct WorkoutSetRow: View {
         .accessibilityLabel(showsSavedState ? "Set saved" : "Save set")
     }
 
+    // MARK: - Save State
+
     private var showsSavedState: Bool {
         viewData.isSaved && !isDirty && !viewData.isSaving
     }
@@ -261,6 +275,8 @@ private struct WorkoutSetRow: View {
             : enteredReps
     }
 
+    // MARK: - Draft Synchronization
+
     private func synchronizeDraftIfNeeded(
         from oldValue: WorkoutSetRowViewData,
         to newValue: WorkoutSetRowViewData
@@ -275,6 +291,8 @@ private struct WorkoutSetRow: View {
             )
         }
     }
+
+    // MARK: - Input
 
     private func valueField(
         text: Binding<String>,

@@ -4,6 +4,8 @@ import Foundation
 @MainActor
 /// Screen state and user action coordinator for the Home feature.
 final class HomeViewModel: ObservableObject {
+    // MARK: - Published State
+
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published private(set) var allPrograms: [ProgramSectionItem] = []
@@ -20,16 +22,21 @@ final class HomeViewModel: ObservableObject {
     @Published var isSearchPresented = false
     @Published var searchQuery = ""
 
+    // MARK: - Dependencies
+
     private let userRepository: UserRepository
     private let programCatalogRepository: ProgramCatalogRepository
     private let discoveryService: HomeProgramDiscoveryServicing
     private let presentationService: HomePresentationServicing
+    private let programDetailService: ProgramDetailServicing
     private let sessionCoordinator: HomeSessionCoordinating
     private var hasLoaded = false
     private var currentUser: User?
     private var miniPlayerContext: MiniPlayerContext = .noProgramSelected
     private var pendingProgramSelectionID: UUID?
     private let sessionExpirationInterval: TimeInterval = 60 * 60 * 8
+
+    // MARK: - Initialization
 
     init(
         userRepository: UserRepository,
@@ -38,6 +45,7 @@ final class HomeViewModel: ObservableObject {
         workoutRepository: WorkoutRepository,
         discoveryService: HomeProgramDiscoveryServicing = HomeProgramDiscoveryService(),
         presentationService: HomePresentationServicing? = nil,
+        programDetailService: ProgramDetailServicing? = nil,
         alertBuilder: HomeAlertBuilding = HomeAlertBuilder(),
         sessionCoordinator: HomeSessionCoordinating? = nil
     ) {
@@ -48,12 +56,20 @@ final class HomeViewModel: ObservableObject {
             workoutProgramRepository: workoutProgramRepository,
             workoutRepository: workoutRepository
         )
+        self.programDetailService = programDetailService ?? ProgramDetailService(
+            userRepository: userRepository,
+            programCatalogRepository: programCatalogRepository,
+            workoutProgramRepository: workoutProgramRepository,
+            workoutRepository: workoutRepository
+        )
         self.sessionCoordinator = sessionCoordinator ?? HomeSessionCoordinator(
             userRepository: userRepository,
             workoutRepository: workoutRepository,
             alertBuilder: alertBuilder
         )
     }
+
+    // MARK: - Derived State
 
     var recommendedPrograms: [ProgramSectionItem] {
         allPrograms.filter(\.isRecommended)
@@ -82,6 +98,8 @@ final class HomeViewModel: ObservableObject {
     var searchResults: [ProgramSectionItem] {
         discoveryService.searchResults(for: searchQuery, in: allPrograms)
     }
+
+    // MARK: - Loading
 
     /// Prevents repeated first-load work when the screen is revisited within the same lifecycle.
     func loadIfNeeded() async {
@@ -140,6 +158,8 @@ final class HomeViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Program Presentation
+
     /// Tries to switch the selected program, or surfaces a conflict when an unfinished session blocks the change.
     func selectProgram(id: UUID) async {
         guard let user = currentUser else { return }
@@ -167,11 +187,12 @@ final class HomeViewModel: ObservableObject {
 
     /// Builds the detail sheet model for a program card or row selected on Home.
     func presentProgramDetail(for item: ProgramSectionItem) async {
+        guard let currentUser else { return }
+
         do {
-            presentedProgramDetail = try await presentationService.makeProgramDetail(
-                for: item,
-                selectedProgram: selectedProgram,
-                miniPlayerContext: miniPlayerContext
+            presentedProgramDetail = try await programDetailService.makeDetail(
+                for: item.id,
+                user: currentUser
             )
         } catch {
             errorMessage = error.localizedDescription
@@ -193,6 +214,8 @@ final class HomeViewModel: ObservableObject {
         await selectProgram(id: presentedProgramDetail.id)
         dismissProgramDetail()
     }
+
+    // MARK: - Mini Player
 
     /// Resolves mini player behavior, including the expired-session case that needs an alert instead of navigation.
     func handleMiniPlayerAction() async -> MiniPlayerRoute {
@@ -219,6 +242,8 @@ final class HomeViewModel: ObservableObject {
         pendingProgramSelectionID = nil
         programSelectionConflictAlert = nil
     }
+
+    // MARK: - Session Actions
 
     func completeExpiredSession() async {
         do {
@@ -299,6 +324,8 @@ final class HomeViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Search and Filters
+
     func selectTag(_ tag: ProgramFilterTag) {
         selectedTag = tag
     }
@@ -313,7 +340,7 @@ final class HomeViewModel: ObservableObject {
         searchQuery = ""
     }
 
-    // MARK: - Session Mutation Handling
+    // MARK: - Private Helpers
 
     /// Applies a session mutation result back into Home state so view logic stays simple and declarative.
     private func apply(_ result: HomeSessionMutationResult) async {

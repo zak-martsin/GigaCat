@@ -30,6 +30,8 @@ struct WorkoutExerciseDetailViewDataMapper {
         )
     }
 
+    // MARK: - Set Mapping
+
     private func makeSetRows(
         from dayExercise: WorkoutDayExercise,
         logContext: WorkoutExerciseLogContext
@@ -60,6 +62,8 @@ struct WorkoutExerciseDetailViewDataMapper {
             )
         }
     }
+
+    // MARK: - Formatting
 
     private func makeTargetSummary(from dayExercise: WorkoutDayExercise) -> String {
         let setUnit = dayExercise.targetSets == 1 ? "set" : "sets"

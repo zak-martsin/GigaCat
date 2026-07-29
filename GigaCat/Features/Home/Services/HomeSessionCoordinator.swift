@@ -52,6 +52,8 @@ struct HomeSessionCoordinator: HomeSessionCoordinating {
     private let workoutRepository: WorkoutRepository
     private let alertBuilder: HomeAlertBuilding
 
+    // MARK: - Initialization
+
     init(
         userRepository: UserRepository,
         workoutRepository: WorkoutRepository,
@@ -61,6 +63,8 @@ struct HomeSessionCoordinator: HomeSessionCoordinating {
         self.workoutRepository = workoutRepository
         self.alertBuilder = alertBuilder
     }
+
+    // MARK: - Program Selection
 
     func selectProgram(
         id: UUID,
@@ -80,6 +84,8 @@ struct HomeSessionCoordinator: HomeSessionCoordinating {
         let updatedUser = try await userRepository.updateSelectedProgram(for: currentUser.id, programId: id)
         return .switched(updatedUser)
     }
+
+    // MARK: - Mini Player Actions
 
     func handleMiniPlayerAction(
         currentUser: User?,
@@ -107,6 +113,8 @@ struct HomeSessionCoordinator: HomeSessionCoordinating {
             return HomeMiniPlayerActionResult(route: .none, expiredSessionAlert: alert)
         }
     }
+
+    // MARK: - Session Mutations
 
     func completeExpiredSession(
         miniPlayerContext: MiniPlayerContext
@@ -257,6 +265,8 @@ struct HomeSessionCoordinator: HomeSessionCoordinating {
         )
     }
 
+    // MARK: - Private Helpers
+
     /// Returns the active session only when the presented detail sheet refers to the currently selected program.
     private func activeSessionForPresentedProgram(
         presentedProgramDetail: ProgramDetail?,
@@ -273,6 +283,8 @@ struct HomeSessionCoordinator: HomeSessionCoordinating {
         return session
     }
 }
+
+// MARK: - No-Op Result
 
 private extension HomeSessionMutationResult {
     static let noChange = HomeSessionMutationResult(

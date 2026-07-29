@@ -45,6 +45,26 @@ Represents a predefined training program that organizes workouts into reusable t
 ### Relationships
 
 - One `WorkoutProgram` has many `WorkoutDay` records.
+- One `WorkoutProgram` can be saved by many users through `SavedWorkoutProgram`.
+
+## SavedWorkoutProgram
+
+### Purpose
+
+Represents a user's explicit decision to add a predefined workout program to their library.
+It is independent from the user's currently selected program.
+
+### Fields
+
+- `id`: Stable saved-program relationship identifier.
+- `userId`: Identifier of the user who saved the program.
+- `programId`: Identifier of the catalog program.
+- `savedAt`: When the program was added to the user's library.
+
+### Relationships
+
+- Each `SavedWorkoutProgram` belongs to one `User`.
+- Each `SavedWorkoutProgram` references one `WorkoutProgram`.
 
 ## WorkoutDay
 
@@ -146,6 +166,8 @@ Represents a single logged set for an exercise during a workout session. This ke
 ## Relationship Summary
 
 - `User` 1 -> many `WorkoutSession`
+- `User` 1 -> many `SavedWorkoutProgram`
+- `WorkoutProgram` 1 -> many `SavedWorkoutProgram`
 - `WorkoutProgram` 1 -> many `WorkoutDay`
 - `WorkoutDay` 1 -> many `WorkoutDayExercise`
 - `WorkoutDay` 1 -> many `WorkoutSession`

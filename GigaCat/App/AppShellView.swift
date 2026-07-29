@@ -4,15 +4,25 @@ struct AppShellView: View {
     @State private var selectedTab: AppTab = .home
     @State private var isProfilePresented = false
     @State private var workoutViewModel: WorkoutViewModel
+    @State private var libraryViewModel: LibraryViewModel
     @State private var progressViewModel: ProgressViewModel
     @StateObject private var homeViewModel: HomeViewModel
 
+    // MARK: - Initialization
+
     init(repositoryFactory: MockRepositoryFactory = MockRepositoryFactory()) {
-        let homeViewModel = HomeViewModel(
+        let programDetailService = ProgramDetailService(
             userRepository: repositoryFactory.userRepository,
             programCatalogRepository: repositoryFactory.programCatalogRepository,
             workoutProgramRepository: repositoryFactory.workoutProgramRepository,
             workoutRepository: repositoryFactory.workoutRepository
+        )
+        let homeViewModel = HomeViewModel(
+            userRepository: repositoryFactory.userRepository,
+            programCatalogRepository: repositoryFactory.programCatalogRepository,
+            workoutProgramRepository: repositoryFactory.workoutProgramRepository,
+            workoutRepository: repositoryFactory.workoutRepository,
+            programDetailService: programDetailService
         )
         let workoutContextService = WorkoutContextService(
             userRepository: repositoryFactory.userRepository,
@@ -28,6 +38,15 @@ struct AppShellView: View {
         let progressViewModel = ProgressViewModel(
             historyService: progressHistoryService
         )
+        let libraryViewModel = LibraryViewModel(
+            userRepository: repositoryFactory.userRepository,
+            libraryRepository: repositoryFactory.workoutProgramLibraryRepository,
+            programDetailService: programDetailService,
+            onProgramDataChanged: {
+                homeViewModel.invalidate()
+                progressViewModel.invalidate()
+            }
+        )
 
         _workoutViewModel = State(
             initialValue: WorkoutViewModel(
@@ -39,11 +58,14 @@ struct AppShellView: View {
                 }
             )
         )
+        _libraryViewModel = State(initialValue: libraryViewModel)
         _progressViewModel = State(initialValue: progressViewModel)
         _homeViewModel = StateObject(
             wrappedValue: homeViewModel
         )
     }
+
+    // MARK: - Layout
 
     var body: some View {
 
@@ -82,7 +104,11 @@ struct AppShellView: View {
                     Label(AppTab.nutrition.title, systemImage: AppTab.nutrition.systemImage)
                 }
 
-            LibraryView(onHeaderAction: handleHeaderAction)
+            LibraryView(
+                viewModel: libraryViewModel,
+                onOpenWorkout: openWorkoutTab,
+                onHeaderAction: handleHeaderAction
+            )
                 .tag(AppTab.library)
                 .tabItem {
                     Label(AppTab.library.title, systemImage: AppTab.library.systemImage)
@@ -147,6 +173,8 @@ struct AppShellView: View {
         }
     }
 
+    // MARK: - Navigation and Actions
+
     private func openWorkoutTab() {
         selectedTab = .workout
     }
@@ -175,6 +203,8 @@ struct AppShellView: View {
         }
     }
 
+    // MARK: - Bindings
+
     private var expiredSessionAlertIsPresented: Binding<Bool> {
         Binding(
             get: { homeViewModel.expiredSessionAlert != nil },
@@ -186,6 +216,8 @@ struct AppShellView: View {
         )
     }
 }
+
+// MARK: - Supporting Views
 
 private struct ProfileSheetView: View {
     let user: User?
@@ -250,6 +282,8 @@ private struct ProgramMiniPlayerView: View {
     let onTap: () -> Void
     let onPrimaryAction: () -> Void
 
+    // MARK: - Layout
+
     var body: some View {
         GlassEffectContainer(spacing: AppSpacing.md) {
             HStack(alignment: .center, spacing: AppSpacing.md) {
@@ -300,6 +334,8 @@ private struct ProgramMiniPlayerView: View {
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
     }
+
+    // MARK: - Helpers
 
     @ViewBuilder
     private var actionButton: some View {

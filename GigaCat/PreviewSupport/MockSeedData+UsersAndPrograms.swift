@@ -49,6 +49,16 @@ extension MockSeedData {
         ])
     }
 
+    static func makeSavedPrograms(_ context: MockSeedContext) -> [SavedWorkoutProgram] {
+        [
+            SavedWorkoutProgram(
+                userId: context.currentUserID,
+                programId: context.strengthProgramID,
+                savedAt: context.createdAt.addingTimeInterval(1_200)
+            )
+        ]
+    }
+
     static func makeProgramCatalogMetadata(
         _ context: MockSeedContext
     ) -> [UUID: ProgramCatalogMetadata] {

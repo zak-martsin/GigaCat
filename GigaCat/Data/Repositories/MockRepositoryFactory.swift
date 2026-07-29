@@ -5,12 +5,14 @@ struct MockRepositoryFactory {
     let programCatalogRepository: ProgramCatalogRepository
     let userRepository: UserRepository
     let workoutProgramRepository: WorkoutProgramRepository
+    let workoutProgramLibraryRepository: WorkoutProgramLibraryRepository
     let workoutRepository: WorkoutRepository
 
     init(store: MockDataStore = MockSeedData.makeStore()) {
         programCatalogRepository = MockProgramCatalogRepository(store: store)
         userRepository = MockUserRepository(store: store)
         workoutProgramRepository = MockWorkoutProgramRepository(store: store)
+        workoutProgramLibraryRepository = MockWorkoutProgramLibraryRepository(store: store)
         workoutRepository = MockWorkoutRepository(store: store)
     }
 }

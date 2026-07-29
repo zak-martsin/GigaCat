@@ -31,6 +31,8 @@ struct WorkoutContextService: WorkoutContextServicing {
         self.workoutRepository = workoutRepository
     }
 
+    // MARK: - Context Loading
+
     func loadContext() async throws -> WorkoutContext {
         guard let user = try await userRepository.currentUser() else {
             throw WorkoutContextError.currentUserNotFound
@@ -68,6 +70,8 @@ struct WorkoutContextService: WorkoutContextServicing {
         )
     }
 
+    // MARK: - Context Assembly
+
     private func makeActiveSessionContext(
         for activeSession: WorkoutSession,
         userID: UUID
@@ -96,6 +100,8 @@ struct WorkoutContextService: WorkoutContextServicing {
             activeSession: activeSession
         )
     }
+
+    // MARK: - Program and Day Resolution
 
     private func resolveProgram(
         selectedProgramID: UUID?,
@@ -135,6 +141,8 @@ struct WorkoutContextService: WorkoutContextServicing {
         return days
     }
 
+    // MARK: - Day Content
+
     private func makeDayContents(from days: [WorkoutDay]) async throws -> [WorkoutDayContent] {
         var dayContents: [WorkoutDayContent] = []
 
@@ -169,6 +177,8 @@ struct WorkoutContextService: WorkoutContextServicing {
 
         return dayContents
     }
+
+    // MARK: - Ordering Helpers
 
     private static func initialDay(
         in days: [WorkoutDay],

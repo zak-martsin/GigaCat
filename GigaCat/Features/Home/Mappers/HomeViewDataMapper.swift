@@ -35,13 +35,6 @@ protocol HomeViewDataMapping: Sendable {
         workoutDayTitle: String
     ) -> MiniPlayerPresentation
 
-    func mapProgramDetail(
-        item: ProgramSectionItem,
-        primaryAction: ProgramDetail.PrimaryAction,
-        progressText: String?,
-        hasActiveSession: Bool,
-        workoutDayTitles: [String]
-    ) -> ProgramDetail
 }
 
 struct HomeViewDataMapper: HomeViewDataMapping {
@@ -141,26 +134,4 @@ struct HomeViewDataMapper: HomeViewDataMapping {
         )
     }
 
-    func mapProgramDetail(
-        item: ProgramSectionItem,
-        primaryAction: ProgramDetail.PrimaryAction,
-        progressText: String?,
-        hasActiveSession: Bool,
-        workoutDayTitles: [String]
-    ) -> ProgramDetail {
-        ProgramDetail(
-            id: item.id,
-            title: item.title,
-            description: item.description,
-            dayCount: item.dayCount,
-            exerciseCount: item.exerciseCount,
-            rateScore: item.rateScore,
-            isSelected: item.isSelected,
-            primaryAction: primaryAction,
-            progressText: progressText,
-            hasActiveSession: hasActiveSession,
-            tags: item.tags,
-            workoutDayTitles: workoutDayTitles
-        )
-    }
 }

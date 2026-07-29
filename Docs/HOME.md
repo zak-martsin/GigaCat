@@ -31,8 +31,8 @@ The feature follows the project MVVM rules and keeps business logic outside Swif
 HomeView
     ↓
 HomeViewModel
-    ↓
-Home services and mappers
+    ├── Home services and mappers
+    └── shared ProgramDetailService
     ↓
 Repositories
 ```
@@ -59,6 +59,10 @@ Repositories
 
 - `Features/Home/Mappers/HomeAlertBuilder.swift`
   Builds user-facing alert content for Home session flows.
+
+- `Features/ProgramDetail/`
+  Contains the reusable detail sheet, detail presentation model, conflict dialog, and repository-backed
+  service shared with Library.
 
 ## 3. Repository Dependencies
 
@@ -175,6 +179,7 @@ The Home screen currently contains these parts:
 ### Program Detail Sheet
 
 - Shows the selected program details
+- Uses the shared `Features/ProgramDetail` flow also presented from Library
 - Exposes primary action based on current Home state:
   - choose program
   - start
@@ -193,8 +198,10 @@ Examples:
 
 - `ProgramSectionItem`
 - `SelectedProgramSummary`
-- `ProgramDetail`
 - `MiniPlayerState`
+
+`ProgramDetail` is shared view data owned by the cross-feature `ProgramDetail` module because both
+Home and Library present the same sheet.
 
 These types exist because the Home UI needs:
 

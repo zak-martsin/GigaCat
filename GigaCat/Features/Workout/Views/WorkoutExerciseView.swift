@@ -57,6 +57,8 @@ struct WorkoutExerciseView: View {
         }
     }
 
+    // MARK: - View Data
+
     private var viewData: WorkoutExerciseDetailViewData? {
         guard let selectedExercise = viewModel.selectedExercise,
               let selectedExerciseIndex = viewModel.selectedExerciseIndex else {
@@ -82,6 +84,8 @@ struct WorkoutExerciseView: View {
         )
     }
 
+    // MARK: - Exercise Transition
+
     private var contentTransition: AnyTransition {
         switch transitionDirection {
         case .forward:
@@ -96,6 +100,8 @@ struct WorkoutExerciseView: View {
             )
         }
     }
+
+    // MARK: - Actions
 
     private func selectPreviousExercise() {
         transitionDirection = .backward

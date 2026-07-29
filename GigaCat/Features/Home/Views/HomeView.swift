@@ -6,6 +6,8 @@ struct HomeView: View {
     let onHeaderAction: (HeaderAction) -> Void
     @State private var pendingSearchSelection: ProgramSectionItem?
 
+    // MARK: - Layout
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
@@ -30,6 +32,8 @@ struct HomeView: View {
             await viewModel.loadIfNeeded()
         }
     }
+
+    // MARK: - Content
 
     private var content: some View {
         ScrollView {
@@ -61,6 +65,8 @@ struct HomeView: View {
         }
     }
 
+    // MARK: - Sections
+
     private var tagResultsSection: some View {
         popularProgramsSection(
             title: "\(viewModel.selectedTag.title) Programs",
@@ -83,6 +89,8 @@ struct HomeView: View {
             )
         }
     }
+
+    // MARK: - Sheets and Overlays
 
     private var searchSheet: some View {
         SearchProgramsSheet(
@@ -146,6 +154,8 @@ struct HomeView: View {
         }
     }
 
+    // MARK: - Header
+
     private var header: some View {
         AppHeaderView(
             title: "Home",
@@ -162,6 +172,8 @@ struct HomeView: View {
             onHeaderAction(action)
         }
     }
+
+    // MARK: - Helpers
 
     private func handleSearchDismissed() {
         viewModel.searchQuery = ""

@@ -20,6 +20,8 @@ struct WorkoutContentView: View {
         .accessibilityIdentifier("workout.exerciseList")
     }
 
+    // MARK: - Program
+
     private var programCard: some View {
         HStack(spacing: AppSpacing.md) {
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
@@ -63,6 +65,8 @@ struct WorkoutContentView: View {
         viewData.sessionStatus.isInProgress ? AppColor.success : AppColor.textSecondary
     }
 
+    // MARK: - Day Selection
+
     private var daySelector: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: AppSpacing.sm) {
@@ -75,6 +79,8 @@ struct WorkoutContentView: View {
             .padding(.vertical, AppSpacing.xs)
         }
     }
+
+    // MARK: - Exercises
 
     private var exerciseSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
@@ -97,6 +103,8 @@ struct WorkoutContentView: View {
         }
     }
 }
+
+// MARK: - Day Chip
 
 private struct WorkoutDayChip: View {
     let day: WorkoutDayItemViewData
@@ -138,6 +146,8 @@ private struct WorkoutDayChip: View {
         }
     }
 }
+
+// MARK: - Exercise Row
 
 private struct WorkoutExerciseRow: View {
     let exercise: WorkoutExerciseViewData

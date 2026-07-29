@@ -1,0 +1,254 @@
+import Foundation
+import Observation
+
+enum LibraryLoadState: Equatable {
+    case loading
+    case loaded
+    case empty
+    case failed
+}
+
+@MainActor
+@Observable
+final class LibraryViewModel {
+    // MARK: - Presentation State
+
+    private(set) var loadState: LibraryLoadState = .loading
+    private(set) var programs: [WorkoutProgram] = []
+    private(set) var removalErrorMessage: String?
+    private(set) var programDetailErrorMessage: String?
+    private(set) var presentedProgramDetail: ProgramDetail?
+    private(set) var programSelectionConflictAlert: ProgramSelectionConflictAlert?
+
+    // MARK: - Dependencies
+
+    @ObservationIgnored
+    private let userRepository: UserRepository
+
+    @ObservationIgnored
+    private let libraryRepository: WorkoutProgramLibraryRepository
+
+    @ObservationIgnored
+    private let programDetailService: ProgramDetailServicing
+
+    @ObservationIgnored
+    private let onProgramDataChanged: @MainActor () -> Void
+
+    @ObservationIgnored
+    private var currentUser: User?
+
+    @ObservationIgnored
+    private var pendingProgramSelectionID: UUID?
+
+    @ObservationIgnored
+    private var hasLoaded = false
+
+    @ObservationIgnored
+    private var isLoading = false
+
+    @ObservationIgnored
+    private var programIDsBeingRemoved: Set<UUID> = []
+
+    // MARK: - Initialization
+
+    init(
+        userRepository: UserRepository,
+        libraryRepository: WorkoutProgramLibraryRepository,
+        programDetailService: ProgramDetailServicing,
+        onProgramDataChanged: @escaping @MainActor () -> Void = {}
+    ) {
+        self.userRepository = userRepository
+        self.libraryRepository = libraryRepository
+        self.programDetailService = programDetailService
+        self.onProgramDataChanged = onProgramDataChanged
+    }
+
+    // MARK: - Loading
+
+    func loadIfNeeded() async {
+        guard !hasLoaded else { return }
+        await load()
+    }
+
+    func load() async {
+        guard !isLoading else { return }
+
+        isLoading = true
+        loadState = .loading
+        defer { isLoading = false }
+
+        do {
+            guard let user = try await userRepository.currentUser() else {
+                currentUser = nil
+                programs = []
+                hasLoaded = false
+                loadState = .failed
+                return
+            }
+
+            let savedPrograms = try await libraryRepository.fetchSavedPrograms(for: user.id)
+            currentUser = user
+            programs = savedPrograms
+            hasLoaded = true
+            loadState = savedPrograms.isEmpty ? .empty : .loaded
+        } catch {
+            currentUser = nil
+            programs = []
+            hasLoaded = false
+            loadState = .failed
+        }
+    }
+
+    // MARK: - Mutations
+
+    func removeProgram(_ programID: UUID) async {
+        guard let currentUser,
+              programs.contains(where: { $0.id == programID }),
+              programIDsBeingRemoved.insert(programID).inserted else {
+            return
+        }
+
+        defer { programIDsBeingRemoved.remove(programID) }
+
+        do {
+            try await libraryRepository.removeProgram(programID, for: currentUser.id)
+            programs.removeAll { $0.id == programID }
+            loadState = programs.isEmpty ? .empty : .loaded
+        } catch {
+            removalErrorMessage = error.localizedDescription
+        }
+    }
+
+    func dismissRemovalError() {
+        removalErrorMessage = nil
+    }
+
+    // MARK: - Program Detail
+
+    func presentProgramDetail(for programID: UUID) async {
+        do {
+            guard let user = try await userRepository.currentUser() else {
+                programDetailErrorMessage = "No active user was found."
+                return
+            }
+
+            currentUser = user
+            presentedProgramDetail = try await programDetailService.makeDetail(
+                for: programID,
+                user: user
+            )
+        } catch {
+            programDetailErrorMessage = error.localizedDescription
+        }
+    }
+
+    func dismissProgramDetail() {
+        presentedProgramDetail = nil
+    }
+
+    func selectPresentedProgram() async {
+        guard let detail = presentedProgramDetail,
+              let currentUser else {
+            return
+        }
+
+        do {
+            let result = try await programDetailService.selectProgram(
+                detail.id,
+                for: currentUser
+            )
+
+            switch result {
+            case let .switched(updatedUser):
+                self.currentUser = updatedUser
+                dismissProgramDetail()
+                onProgramDataChanged()
+            case let .blocked(pendingProgramID, alert):
+                pendingProgramSelectionID = pendingProgramID
+                programSelectionConflictAlert = alert
+                dismissProgramDetail()
+            }
+        } catch {
+            programDetailErrorMessage = error.localizedDescription
+        }
+    }
+
+    func completeActiveSessionAndSelectPendingProgram() async {
+        await resolveProgramSelectionConflict(using: .finishSession)
+    }
+
+    func cancelActiveSessionAndSelectPendingProgram() async {
+        await resolveProgramSelectionConflict(using: .cancelSession)
+    }
+
+    func cancelProgramSelectionConflict() {
+        pendingProgramSelectionID = nil
+        programSelectionConflictAlert = nil
+    }
+
+    func completePresentedProgramSession() async {
+        guard let detail = presentedProgramDetail,
+              let currentUser else {
+            return
+        }
+
+        do {
+            let didComplete = try await programDetailService.completeActiveSession(
+                for: detail.id,
+                userID: currentUser.id
+            )
+            guard didComplete else { return }
+
+            dismissProgramDetail()
+            onProgramDataChanged()
+        } catch {
+            programDetailErrorMessage = error.localizedDescription
+        }
+    }
+
+    func cancelPresentedProgramSession() async {
+        guard let detail = presentedProgramDetail,
+              let currentUser else {
+            return
+        }
+
+        do {
+            let didCancel = try await programDetailService.cancelActiveSession(
+                for: detail.id,
+                userID: currentUser.id
+            )
+            guard didCancel else { return }
+
+            dismissProgramDetail()
+            onProgramDataChanged()
+        } catch {
+            programDetailErrorMessage = error.localizedDescription
+        }
+    }
+
+    func dismissProgramDetailError() {
+        programDetailErrorMessage = nil
+    }
+
+    private func resolveProgramSelectionConflict(
+        using resolution: ProgramDetailConflictResolution
+    ) async {
+        guard let pendingProgramSelectionID,
+              let currentUser else {
+            return
+        }
+
+        do {
+            let updatedUser = try await programDetailService.resolveSelectionConflict(
+                selecting: pendingProgramSelectionID,
+                for: currentUser,
+                resolution: resolution
+            )
+            self.currentUser = updatedUser
+            cancelProgramSelectionConflict()
+            onProgramDataChanged()
+        } catch {
+            programDetailErrorMessage = error.localizedDescription
+        }
+    }
+}

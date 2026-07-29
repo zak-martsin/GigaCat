@@ -20,11 +20,6 @@ protocol HomePresentationServicing: Sendable {
         sessionExpirationInterval: TimeInterval
     ) async throws -> MiniPlayerPresentation
 
-    func makeProgramDetail(
-        for item: ProgramSectionItem,
-        selectedProgram: SelectedProgramSummary?,
-        miniPlayerContext: MiniPlayerContext
-    ) async throws -> ProgramDetail
 }
 
 /// Central place for composing Home presentation state that depends on multiple repositories.
@@ -32,6 +27,8 @@ struct HomePresentationService: HomePresentationServicing {
     private let workoutProgramRepository: WorkoutProgramRepository
     private let workoutRepository: WorkoutRepository
     private let mapper: HomeViewDataMapping
+
+    // MARK: - Initialization
 
     init(
         workoutProgramRepository: WorkoutProgramRepository,
@@ -42,6 +39,8 @@ struct HomePresentationService: HomePresentationServicing {
         self.workoutRepository = workoutRepository
         self.mapper = mapper
     }
+
+    // MARK: - Catalog Presentation
 
     func makeProgramItems(
         from catalog: [ProgramCatalogEntry],
@@ -89,6 +88,8 @@ struct HomePresentationService: HomePresentationServicing {
             progressText: progressState?.progressText
         )
     }
+
+    // MARK: - Mini Player Presentation
 
     func makeMiniPlayerPresentation(
         user: User,
@@ -158,34 +159,7 @@ struct HomePresentationService: HomePresentationServicing {
         )
     }
 
-    func makeProgramDetail(
-        for item: ProgramSectionItem,
-        selectedProgram: SelectedProgramSummary?,
-        miniPlayerContext: MiniPlayerContext
-    ) async throws -> ProgramDetail {
-        let days = try await workoutProgramRepository.fetchWorkoutDays(programId: item.id)
-
-        return mapper.mapProgramDetail(
-            item: item,
-            primaryAction: Self.primaryAction(
-                for: item.id,
-                isSelected: item.isSelected,
-                selectedProgram: selectedProgram,
-                miniPlayerContext: miniPlayerContext
-            ),
-            progressText: Self.activeProgramProgressText(
-                for: item.id,
-                selectedProgram: selectedProgram,
-                miniPlayerContext: miniPlayerContext
-            ),
-            hasActiveSession: Self.activeProgramHasSession(
-                for: item.id,
-                selectedProgram: selectedProgram,
-                miniPlayerContext: miniPlayerContext
-            ),
-            workoutDayTitles: days.map(\.title)
-        )
-    }
+    // MARK: - Progress Helpers
 
     /// Calculates workout completion by comparing planned sets against unique logged set numbers.
     nonisolated static func completionPercentage(
@@ -229,6 +203,8 @@ struct HomePresentationService: HomePresentationServicing {
         return days[nextIndex]
     }
 
+    // MARK: - Private Helpers
+
     private func totalExerciseCount(for days: [WorkoutDay]) async throws -> Int {
         var count = 0
 
@@ -267,58 +243,6 @@ struct HomePresentationService: HomePresentationServicing {
             workoutDayTitle: workoutDay.title,
             progressText: "\(workoutDay.title) • \(completionPercentage)% completed"
         )
-    }
-
-    // MARK: - Detail Presentation Rules
-
-    /// Chooses the detail CTA based on whether the program is selected and whether that selected program owns an active session.
-    private nonisolated static func primaryAction(
-        for programID: UUID,
-        isSelected: Bool,
-        selectedProgram: SelectedProgramSummary?,
-        miniPlayerContext: MiniPlayerContext
-    ) -> ProgramDetail.PrimaryAction {
-        guard isSelected else {
-            return .chooseProgram
-        }
-
-        if case .activeSession = miniPlayerContext,
-           selectedProgram?.id == programID {
-            return .continueWorkout
-        }
-
-        return .startWorkout
-    }
-
-    /// Shows progress text only for the selected program while its active session is the source of the mini player state.
-    private nonisolated static func activeProgramProgressText(
-        for programID: UUID,
-        selectedProgram: SelectedProgramSummary?,
-        miniPlayerContext: MiniPlayerContext
-    ) -> String? {
-        guard selectedProgram?.id == programID else { return nil }
-
-        switch miniPlayerContext {
-        case .activeSession:
-            return selectedProgram?.progressText
-        case .noProgramSelected, .readyToStart:
-            return nil
-        }
-    }
-
-    /// Flags only the selected program as session-backed so detail presentation can highlight the active training flow.
-    private nonisolated static func activeProgramHasSession(
-        for programID: UUID,
-        selectedProgram: SelectedProgramSummary?,
-        miniPlayerContext: MiniPlayerContext
-    ) -> Bool {
-        guard selectedProgram?.id == programID else { return false }
-
-        if case .activeSession = miniPlayerContext {
-            return true
-        }
-
-        return false
     }
 
     /// Uses the latest exercise log when available so session expiration tracks real workout activity.

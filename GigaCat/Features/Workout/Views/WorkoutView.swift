@@ -65,6 +65,8 @@ struct WorkoutView: View {
         }
     }
 
+    // MARK: - Screen States
+
     @ViewBuilder
     private var content: some View {
         switch viewModel.loadState {
@@ -138,6 +140,8 @@ struct WorkoutView: View {
         }
     }
 
+    // MARK: - Navigation
+
     @ViewBuilder
     private func exerciseDestination(for dayExerciseID: UUID) -> some View {
         if let dayContent = viewModel.selectedDayContent,
@@ -156,6 +160,8 @@ struct WorkoutView: View {
         }
     }
 }
+
+// MARK: - Session Action Bar
 
 private struct WorkoutSessionActionBar: View {
     let state: WorkoutSessionActionState

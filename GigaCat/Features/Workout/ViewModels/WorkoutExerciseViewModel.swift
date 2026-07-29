@@ -70,6 +70,8 @@ final class WorkoutExerciseViewModel {
         } ? initialDayExerciseID : orderedExercises.first?.dayExercise.id
     }
 
+    // MARK: - Exercise Selection
+
     var selectedExercise: WorkoutExerciseContent? {
         guard let selectedDayExerciseID else { return nil }
         return exercises.first { $0.dayExercise.id == selectedDayExerciseID }
@@ -100,6 +102,8 @@ final class WorkoutExerciseViewModel {
         selectedDayExerciseID = exercises[selectedExerciseIndex + 1].dayExercise.id
     }
 
+    // MARK: - Log Loading
+
     func loadLogs() async {
         logsLoadState = .loading
 
@@ -120,6 +124,8 @@ final class WorkoutExerciseViewModel {
             logsLoadState = .partiallyLoaded
         }
     }
+
+    // MARK: - Set State
 
     func savedLogs(dayExerciseID: UUID) -> [Int: ExerciseLog] {
         logsByDayExerciseID[dayExerciseID] ?? [:]
@@ -143,6 +149,8 @@ final class WorkoutExerciseViewModel {
 
         setCountByDayExerciseID[dayExercise.id] = currentCount + 1
     }
+
+    // MARK: - Set Saving
 
     func saveSet(
         weightText: String,
@@ -214,6 +222,8 @@ final class WorkoutExerciseViewModel {
             setSaveState = .failed(setNumber: setNumber)
         }
     }
+
+    // MARK: - Log and Save Helpers
 
     private func makeLogsByDayExerciseID(
         from logs: [ExerciseLog]

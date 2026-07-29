@@ -7,15 +7,6 @@ struct ExpiredSessionAlert: Identifiable, Equatable {
     let message: String
 }
 
-/// Presentation model for the conflict shown when the user tries to switch programs mid-session.
-struct ProgramSelectionConflictAlert: Identifiable, Equatable {
-    let id: UUID
-    let title: String
-    let message: String
-    let currentProgramTitle: String
-    let currentWorkoutDayTitle: String
-}
-
 /// High-level navigation outcome requested by Home interactions.
 enum MiniPlayerRoute: Equatable {
     case none

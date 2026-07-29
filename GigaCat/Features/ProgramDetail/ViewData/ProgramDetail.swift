@@ -1,8 +1,8 @@
 import Foundation
 
-/// Full program presentation model used by the Home detail sheet.
+/// Full program presentation model shared by every feature that opens program details.
 struct ProgramDetail: Identifiable, Equatable {
-    /// Primary CTA shown in the detail sheet for the current Home state.
+    /// Primary CTA shown for the current program and workout state.
     enum PrimaryAction: Equatable {
         case chooseProgram
         case startWorkout

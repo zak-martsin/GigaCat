@@ -104,6 +104,7 @@ enum MockSeedData {
         let context = makeContext()
         let users = makeUsers(context)
         let programs = makePrograms(context)
+        let savedPrograms = makeSavedPrograms(context)
         let programCatalogMetadataByProgramID = makeProgramCatalogMetadata(context)
         let workoutDays = makeWorkoutDays(context)
         let exercises = makeExercises(context)
@@ -115,6 +116,7 @@ enum MockSeedData {
         return MockDataStore(
             users: users,
             programs: programs,
+            savedPrograms: savedPrograms,
             programCatalogMetadataByProgramID: programCatalogMetadataByProgramID,
             workoutDays: workoutDays,
             dayExercises: dayExercises,

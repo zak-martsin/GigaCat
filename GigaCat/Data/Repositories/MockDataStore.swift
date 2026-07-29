@@ -18,8 +18,11 @@ struct ProgramCatalogMetadata: Equatable, Sendable {
 
 /// Shared in-memory source used by mock repositories to simulate a consistent offline-first data layer.
 actor MockDataStore {
+    // MARK: - Stored State
+
     private(set) var usersByID: [UUID: User]
     private(set) var programsByID: [UUID: WorkoutProgram]
+    private(set) var savedProgramsByID: [UUID: SavedWorkoutProgram]
     private(set) var programCatalogMetadataByProgramIDStorage: [UUID: ProgramCatalogMetadata]
     private(set) var workoutDaysByID: [UUID: WorkoutDay]
     private(set) var dayExercisesByID: [UUID: WorkoutDayExercise]
@@ -28,9 +31,12 @@ actor MockDataStore {
     private(set) var exerciseLogsByID: [UUID: ExerciseLog]
     private(set) var currentUserID: UUID?
 
+    // MARK: - Initialization
+
     init(
         users: [User] = [],
         programs: [WorkoutProgram] = [],
+        savedPrograms: [SavedWorkoutProgram] = [],
         programCatalogMetadataByProgramID: [UUID: ProgramCatalogMetadata] = [:],
         workoutDays: [WorkoutDay] = [],
         dayExercises: [WorkoutDayExercise] = [],
@@ -41,6 +47,7 @@ actor MockDataStore {
     ) {
         self.usersByID = Dictionary(uniqueKeysWithValues: users.map { ($0.id, $0) })
         self.programsByID = Dictionary(uniqueKeysWithValues: programs.map { ($0.id, $0) })
+        self.savedProgramsByID = Dictionary(uniqueKeysWithValues: savedPrograms.map { ($0.id, $0) })
         self.programCatalogMetadataByProgramIDStorage = programCatalogMetadataByProgramID
         self.workoutDaysByID = Dictionary(uniqueKeysWithValues: workoutDays.map { ($0.id, $0) })
         self.dayExercisesByID = Dictionary(uniqueKeysWithValues: dayExercises.map { ($0.id, $0) })
@@ -96,6 +103,58 @@ actor MockDataStore {
 
     func programCatalogMetadataByProgramID() -> [UUID: ProgramCatalogMetadata] {
         programCatalogMetadataByProgramIDStorage
+    }
+
+    // MARK: - Program Library
+
+    /// Returns saved catalog programs newest first while hiding the membership records from feature code.
+    func savedPrograms(for userId: UUID) throws -> [WorkoutProgram] {
+        guard usersByID[userId] != nil else {
+            throw RepositoryError.userNotFound
+        }
+
+        return savedProgramsByID.values
+            .filter { $0.userId == userId }
+            .sorted { lhs, rhs in
+                if lhs.savedAt == rhs.savedAt {
+                    return lhs.id.uuidString < rhs.id.uuidString
+                }
+
+                return lhs.savedAt > rhs.savedAt
+            }
+            .compactMap { programsByID[$0.programId] }
+    }
+
+    func saveProgram(_ programId: UUID, for userId: UUID, savedAt: Date = Date()) throws {
+        guard usersByID[userId] != nil else {
+            throw RepositoryError.userNotFound
+        }
+
+        guard programsByID[programId] != nil else {
+            throw RepositoryError.workoutProgramNotFound
+        }
+
+        let isAlreadySaved = savedProgramsByID.values.contains {
+            $0.userId == userId && $0.programId == programId
+        }
+        guard !isAlreadySaved else { return }
+
+        let savedProgram = SavedWorkoutProgram(
+            userId: userId,
+            programId: programId,
+            savedAt: savedAt
+        )
+        savedProgramsByID[savedProgram.id] = savedProgram
+    }
+
+    func removeProgram(_ programId: UUID, for userId: UUID) throws {
+        guard usersByID[userId] != nil else {
+            throw RepositoryError.userNotFound
+        }
+
+        savedProgramsByID = savedProgramsByID.filter {
+            $0.value.userId != userId || $0.value.programId != programId
+        }
     }
 
     func workoutDays(programId: UUID) -> [WorkoutDay] {
@@ -255,6 +314,8 @@ actor MockDataStore {
         )
     }
 
+    // MARK: - Exercise History
+
     private func matchingExerciseLog(
         sessionId: UUID,
         workoutDayExerciseId: UUID,
@@ -323,6 +384,8 @@ actor MockDataStore {
             }
             .first
     }
+
+    // MARK: - Private Helpers
 
     private func updatedUserSelectingProgram(for userId: UUID, programId: UUID) throws -> User {
         guard let user = usersByID[userId] else {

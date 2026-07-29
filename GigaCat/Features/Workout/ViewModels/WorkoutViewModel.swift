@@ -40,6 +40,8 @@ final class WorkoutViewModel {
         self.onWorkoutDataChanged = onWorkoutDataChanged
     }
 
+    // MARK: - Presentation State
+
     var program: WorkoutProgram? {
         context?.program
     }
@@ -70,6 +72,8 @@ final class WorkoutViewModel {
         sessionActionState != .idle
     }
 
+    // MARK: - Context Loading and Day Selection
+
     /// Reloads the workout entry context whenever the user enters the Workout flow.
     func load() async {
         loadState = .loading
@@ -91,6 +95,8 @@ final class WorkoutViewModel {
         guard days.contains(where: { $0.id == id }) else { return }
         selectedDayID = id
     }
+
+    // MARK: - Session Actions
 
     func finishActiveSession(completedAt: Date = Date()) async {
         guard let activeSession,
@@ -132,6 +138,8 @@ final class WorkoutViewModel {
             sessionActionState = .idle
         }
     }
+
+    // MARK: - Exercise Detail
 
     func makeExerciseViewModel(
         dayContent: WorkoutDayContent,
