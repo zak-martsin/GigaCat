@@ -8,6 +8,7 @@
 import CoreGraphics
 
 enum AppControlSize {
+    static let headerHeight: CGFloat = 44
     static let headerActionButton: CGFloat = 32
     static let miniPlayerArtwork: CGFloat = 40
     static let miniPlayerPlayButton: CGFloat = 30

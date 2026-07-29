@@ -43,7 +43,8 @@ struct AppHeaderView: View {
             Text(title)
                 .font(.system(.largeTitle, design: .rounded, weight: .bold))
                 .foregroundStyle(AppColor.textPrimary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Spacer(minLength: AppSpacing.md)
 
             HStack(spacing: AppSpacing.sm) {
                 ForEach(actions, id: \.self) { action in
@@ -53,6 +54,11 @@ struct AppHeaderView: View {
                 }
             }
         }
+        .frame(
+            maxWidth: .infinity,
+            minHeight: AppControlSize.headerHeight,
+            alignment: .leading
+        )
     }
 }
 

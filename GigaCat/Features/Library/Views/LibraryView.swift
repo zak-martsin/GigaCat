@@ -14,6 +14,11 @@ struct LibraryView: View {
 
             content
         }
+        .frame(
+            maxWidth: .infinity,
+            maxHeight: .infinity,
+            alignment: .top
+        )
         .background(AppColor.background.ignoresSafeArea())
         .sheet(item: presentedProgramDetail) { detail in
             ProgramDetailSheet(
