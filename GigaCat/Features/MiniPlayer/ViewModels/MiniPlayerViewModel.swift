@@ -8,6 +8,7 @@ final class MiniPlayerViewModel: ObservableObject {
     @Published var expiredSessionAlert: ExpiredSessionAlert?
     @Published private(set) var errorMessage: String?
 
+    private(set) var programID: UUID?
     private let service: MiniPlayerServicing
     private let workoutRepository: WorkoutRepository
     private let alertBuilder: MiniPlayerAlertBuilding
@@ -38,6 +39,7 @@ final class MiniPlayerViewModel: ObservableObject {
             let presentation = try await service.makePresentation()
             state = presentation.state
             context = presentation.context
+            programID = presentation.programID
         } catch {
             errorMessage = error.localizedDescription
         }

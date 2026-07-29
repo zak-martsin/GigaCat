@@ -8,6 +8,7 @@ struct AppShellView: View {
     @State private var progressViewModel: ProgressViewModel
     @StateObject private var homeViewModel: HomeViewModel
     @StateObject private var miniPlayerViewModel: MiniPlayerViewModel
+    @StateObject private var programDetailViewModel: ProgramDetailViewModel
 
     // MARK: - Initialization
 
@@ -19,6 +20,7 @@ struct AppShellView: View {
         _progressViewModel = State(initialValue: container.progressViewModel)
         _homeViewModel = StateObject(wrappedValue: container.homeViewModel)
         _miniPlayerViewModel = StateObject(wrappedValue: container.miniPlayerViewModel)
+        _programDetailViewModel = StateObject(wrappedValue: container.programDetailViewModel)
     }
 
     // MARK: - Layout
@@ -110,6 +112,20 @@ struct AppShellView: View {
         } message: { alert in
             Text(alert.message)
         }
+        .sheet(item: presentedProgramDetail) { detail in
+            appProgramDetailSheet(detail)
+        }
+        .overlay {
+            programSelectionConflictOverlay
+        }
+        .alert(
+            "Program unavailable",
+            isPresented: programDetailErrorIsPresented
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(programDetailViewModel.errorMessage ?? "Please try again.")
+        }
         .sheet(isPresented: $isProfilePresented) {
             ProfileSheetView(user: homeViewModel.profileUser)
                 .presentationDetents([.medium, .large])
@@ -141,11 +157,9 @@ struct AppShellView: View {
     }
 
     private func handleMiniPlayerAction() {
-        Task {
-            let route = miniPlayerViewModel.handlePrimaryAction()
-            if route == .openWorkout {
-                openWorkoutTab()
-            }
+        let route = miniPlayerViewModel.handlePrimaryAction()
+        if route == .openWorkout {
+            openWorkoutTab()
         }
     }
 
@@ -159,8 +173,58 @@ struct AppShellView: View {
     }
 
     private func openMiniPlayerProgramDetail() {
+        guard let programID = miniPlayerViewModel.programID else { return }
+
         Task {
-            await homeViewModel.presentSelectedProgramDetail()
+            await programDetailViewModel.present(programID: programID)
+        }
+    }
+
+    private func appProgramDetailSheet(_ detail: ProgramDetail) -> some View {
+        ProgramDetailSheet(
+            detail: detail,
+            onSelectProgram: {
+                Task {
+                    await programDetailViewModel.selectPresentedProgram()
+                }
+            },
+            onAddToLibrary: {},
+            onCompleteSession: {
+                Task {
+                    await programDetailViewModel.completeActiveSession()
+                }
+            },
+            onDeleteSession: {
+                Task {
+                    await programDetailViewModel.cancelActiveSession()
+                }
+            },
+            onOpenWorkout: {
+                programDetailViewModel.dismiss()
+                openWorkoutTab()
+            }
+        )
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+    }
+
+    @ViewBuilder
+    private var programSelectionConflictOverlay: some View {
+        if let alert = programDetailViewModel.selectionConflictAlert {
+            SessionConflictDialog(
+                alert: alert,
+                onFinishSession: {
+                    Task {
+                        await programDetailViewModel.finishSessionAndSelectPendingProgram()
+                    }
+                },
+                onCancelSession: {
+                    Task {
+                        await programDetailViewModel.cancelSessionAndSelectPendingProgram()
+                    }
+                },
+                onDismiss: programDetailViewModel.cancelSelectionConflict
+            )
         }
     }
 
@@ -172,6 +236,24 @@ struct AppShellView: View {
             set: { isPresented in
                 if !isPresented {
                     miniPlayerViewModel.expiredSessionAlert = nil
+                }
+            }
+        )
+    }
+
+    private var presentedProgramDetail: Binding<ProgramDetail?> {
+        Binding(
+            get: { programDetailViewModel.presentedDetail },
+            set: { programDetailViewModel.presentedDetail = $0 }
+        )
+    }
+
+    private var programDetailErrorIsPresented: Binding<Bool> {
+        Binding(
+            get: { programDetailViewModel.errorMessage != nil },
+            set: { isPresented in
+                if !isPresented {
+                    programDetailViewModel.errorMessage = nil
                 }
             }
         )

@@ -8,6 +8,7 @@ final class AppContainer {
     let progressViewModel: ProgressViewModel
     let workoutViewModel: WorkoutViewModel
     let miniPlayerViewModel: MiniPlayerViewModel
+    let programDetailViewModel: ProgramDetailViewModel
     private let dataChangeCoordinator: AppDataChangeCoordinator
     private let dataChangeDispatcher: AppDataChangeDispatcher
 
@@ -29,6 +30,11 @@ final class AppContainer {
         let miniPlayerViewModel = MiniPlayerViewModel(
             service: miniPlayerService,
             workoutRepository: repositoryFactory.workoutRepository,
+            onDataChanged: dataChangeDispatcher.send
+        )
+        let programDetailViewModel = ProgramDetailViewModel(
+            userRepository: repositoryFactory.userRepository,
+            service: programDetailService,
             onDataChanged: dataChangeDispatcher.send
         )
         let homeViewModel = HomeViewModel(
@@ -87,6 +93,7 @@ final class AppContainer {
         self.libraryViewModel = libraryViewModel
         self.workoutViewModel = workoutViewModel
         self.miniPlayerViewModel = miniPlayerViewModel
+        self.programDetailViewModel = programDetailViewModel
         self.dataChangeCoordinator = dataChangeCoordinator
         self.dataChangeDispatcher = dataChangeDispatcher
 

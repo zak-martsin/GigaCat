@@ -45,7 +45,7 @@ struct MiniPlayerService: MiniPlayerServicing {
 
         let days = try await workoutProgramRepository.fetchWorkoutDays(programId: program.id)
         guard !days.isEmpty else {
-            return mapper.mapProgramWithoutDays(title: program.title)
+            return mapper.mapProgramWithoutDays(id: program.id, title: program.title)
         }
 
         let sessions = try await workoutRepository.fetchSessions(for: user.id)
@@ -56,6 +56,7 @@ struct MiniPlayerService: MiniPlayerServicing {
         let nextDay = Self.nextWorkoutDay(days: days, completedSessions: completedSessions) ?? days[0]
 
         return mapper.mapReadyToStart(
+            programID: program.id,
             programTitle: program.title,
             workoutDayID: nextDay.id,
             workoutDayTitle: nextDay.title
@@ -115,11 +116,14 @@ struct MiniPlayerService: MiniPlayerServicing {
         let isExpired = now().timeIntervalSince(lastActivityAt) > sessionExpirationInterval
 
         return mapper.mapActiveSession(
-            session,
-            programTitle: program.title,
-            workoutDayTitle: day.title,
-            completionPercentage: completion,
-            isExpired: isExpired
+            ActiveMiniPlayerPresentation(
+                session: session,
+                programID: program.id,
+                programTitle: program.title,
+                workoutDayTitle: day.title,
+                completionPercentage: completion,
+                isExpired: isExpired
+            )
         )
     }
 

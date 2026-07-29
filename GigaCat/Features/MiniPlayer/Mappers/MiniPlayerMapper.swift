@@ -1,16 +1,11 @@
 import Foundation
 
 protocol MiniPlayerMapping: Sendable {
-    func mapActiveSession(
-        _ session: WorkoutSession,
-        programTitle: String,
-        workoutDayTitle: String,
-        completionPercentage: Int,
-        isExpired: Bool
-    ) -> MiniPlayerPresentation
+    func mapActiveSession(_ input: ActiveMiniPlayerPresentation) -> MiniPlayerPresentation
     func mapNoProgramSelected() -> MiniPlayerPresentation
-    func mapProgramWithoutDays(title: String) -> MiniPlayerPresentation
+    func mapProgramWithoutDays(id: UUID, title: String) -> MiniPlayerPresentation
     func mapReadyToStart(
+        programID: UUID,
         programTitle: String,
         workoutDayID: UUID,
         workoutDayTitle: String
@@ -18,44 +13,45 @@ protocol MiniPlayerMapping: Sendable {
 }
 
 struct MiniPlayerMapper: MiniPlayerMapping {
-    func mapActiveSession(
-        _ session: WorkoutSession,
-        programTitle: String,
-        workoutDayTitle: String,
-        completionPercentage: Int,
-        isExpired: Bool
-    ) -> MiniPlayerPresentation {
+    func mapActiveSession(_ input: ActiveMiniPlayerPresentation) -> MiniPlayerPresentation {
         MiniPlayerPresentation(
             state: MiniPlayerState(
-                title: programTitle,
-                subtitle: "\(workoutDayTitle) • \(completionPercentage)% completed",
+                title: input.programTitle,
+                subtitle: "\(input.workoutDayTitle) • \(input.completionPercentage)% completed",
                 action: .continueWorkout
             ),
             context: .activeSession(
-                session: session,
-                programTitle: programTitle,
-                workoutDayTitle: workoutDayTitle,
-                isExpired: isExpired
-            )
+                session: input.session,
+                programTitle: input.programTitle,
+                workoutDayTitle: input.workoutDayTitle,
+                isExpired: input.isExpired
+            ),
+            programID: input.programID
         )
     }
 
     func mapNoProgramSelected() -> MiniPlayerPresentation {
-        MiniPlayerPresentation(state: .empty, context: .noProgramSelected)
+        MiniPlayerPresentation(
+            state: .empty,
+            context: .noProgramSelected,
+            programID: nil
+        )
     }
 
-    func mapProgramWithoutDays(title: String) -> MiniPlayerPresentation {
+    func mapProgramWithoutDays(id: UUID, title: String) -> MiniPlayerPresentation {
         MiniPlayerPresentation(
             state: MiniPlayerState(
                 title: title,
                 subtitle: "This program has no workout days yet.",
                 action: .none
             ),
-            context: .noProgramSelected
+            context: .noProgramSelected,
+            programID: id
         )
     }
 
     func mapReadyToStart(
+        programID: UUID,
         programTitle: String,
         workoutDayID: UUID,
         workoutDayTitle: String
@@ -66,7 +62,8 @@ struct MiniPlayerMapper: MiniPlayerMapping {
                 subtitle: "Next workout: \(workoutDayTitle)",
                 action: .start
             ),
-            context: .readyToStart(workoutDayID: workoutDayID)
+            context: .readyToStart(workoutDayID: workoutDayID),
+            programID: programID
         )
     }
 }

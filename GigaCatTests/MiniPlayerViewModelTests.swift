@@ -15,6 +15,7 @@ struct MiniPlayerViewModelTests {
         #expect(route == .openWorkout)
         #expect(viewModel.expiredSessionAlert == nil)
         #expect(viewModel.state.action == .continueWorkout)
+        #expect(viewModel.programID != nil)
     }
 
     @Test

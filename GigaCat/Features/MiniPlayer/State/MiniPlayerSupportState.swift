@@ -4,6 +4,17 @@ import Foundation
 struct MiniPlayerPresentation {
     let state: MiniPlayerState
     let context: MiniPlayerContext
+    let programID: UUID?
+}
+
+/// Values needed to map an active workout into mini-player presentation.
+struct ActiveMiniPlayerPresentation {
+    let session: WorkoutSession
+    let programID: UUID
+    let programTitle: String
+    let workoutDayTitle: String
+    let completionPercentage: Int
+    let isExpired: Bool
 }
 
 /// Repository-backed context used to resolve mini-player actions.
