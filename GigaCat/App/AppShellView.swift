@@ -7,6 +7,7 @@ struct AppShellView: View {
     @State private var libraryViewModel: LibraryViewModel
     @State private var progressViewModel: ProgressViewModel
     @StateObject private var homeViewModel: HomeViewModel
+    @StateObject private var miniPlayerViewModel: MiniPlayerViewModel
 
     // MARK: - Initialization
 
@@ -17,6 +18,7 @@ struct AppShellView: View {
         _libraryViewModel = State(initialValue: container.libraryViewModel)
         _progressViewModel = State(initialValue: container.progressViewModel)
         _homeViewModel = StateObject(wrappedValue: container.homeViewModel)
+        _miniPlayerViewModel = StateObject(wrappedValue: container.miniPlayerViewModel)
     }
 
     // MARK: - Layout
@@ -70,7 +72,7 @@ struct AppShellView: View {
         }
         .tabViewBottomAccessory(isEnabled: selectedTab != .workout) {
             ProgramMiniPlayerView(
-                state: homeViewModel.miniPlayerState,
+                state: miniPlayerViewModel.state,
                 onTap: openMiniPlayerProgramDetail,
                 onPrimaryAction: handleMiniPlayerAction
             )
@@ -81,13 +83,13 @@ struct AppShellView: View {
         .background(AppColor.background.ignoresSafeArea())
 
         .alert(
-            homeViewModel.expiredSessionAlert?.title ?? "",
+            miniPlayerViewModel.expiredSessionAlert?.title ?? "",
             isPresented: expiredSessionAlertIsPresented,
-            presenting: homeViewModel.expiredSessionAlert
+            presenting: miniPlayerViewModel.expiredSessionAlert
         ) { _ in
             Button("Continue") {
                 Task {
-                    let route = await homeViewModel.continueExpiredSession()
+                    let route = miniPlayerViewModel.continueExpiredSession()
                     if route == .openWorkout {
                         openWorkoutTab()
                     }
@@ -96,13 +98,13 @@ struct AppShellView: View {
 
             Button("Finish") {
                 Task {
-                    await homeViewModel.completeExpiredSession()
+                    await miniPlayerViewModel.completeExpiredSession()
                 }
             }
 
             Button("Discard", role: .destructive) {
                 Task {
-                    await homeViewModel.deleteExpiredSession()
+                    await miniPlayerViewModel.deleteExpiredSession()
                 }
             }
         } message: { alert in
@@ -127,6 +129,9 @@ struct AppShellView: View {
                 break
             }
         }
+        .task {
+            await miniPlayerViewModel.reload()
+        }
     }
 
     // MARK: - Navigation and Actions
@@ -137,7 +142,7 @@ struct AppShellView: View {
 
     private func handleMiniPlayerAction() {
         Task {
-            let route = await homeViewModel.handleMiniPlayerAction()
+            let route = miniPlayerViewModel.handlePrimaryAction()
             if route == .openWorkout {
                 openWorkoutTab()
             }
@@ -163,10 +168,10 @@ struct AppShellView: View {
 
     private var expiredSessionAlertIsPresented: Binding<Bool> {
         Binding(
-            get: { homeViewModel.expiredSessionAlert != nil },
+            get: { miniPlayerViewModel.expiredSessionAlert != nil },
             set: { isPresented in
                 if !isPresented {
-                    homeViewModel.expiredSessionAlert = nil
+                    miniPlayerViewModel.expiredSessionAlert = nil
                 }
             }
         )

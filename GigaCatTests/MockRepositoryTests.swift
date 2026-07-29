@@ -124,7 +124,7 @@ struct MockRepositoryTests {
 
         let logs = try makeLogs(plannedExercises: plannedExercises)
 
-        let completionPercentage = HomePresentationService.completionPercentage(
+        let completionPercentage = MiniPlayerService.completionPercentage(
             plannedExercises: plannedExercises,
             logs: logs
         )
@@ -219,7 +219,7 @@ struct MockRepositoryTests {
             return lhsCompletedAt > rhsCompletedAt
         }
 
-        let nextDay = HomePresentationService.nextWorkoutDay(
+        let nextDay = MiniPlayerService.nextWorkoutDay(
             days: days,
             completedSessions: sortedByCompletedAt
         )

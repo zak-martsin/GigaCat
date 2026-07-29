@@ -7,9 +7,12 @@ final class AppContainer {
     let libraryViewModel: LibraryViewModel
     let progressViewModel: ProgressViewModel
     let workoutViewModel: WorkoutViewModel
+    let miniPlayerViewModel: MiniPlayerViewModel
     private let dataChangeCoordinator: AppDataChangeCoordinator
     private let dataChangeDispatcher: AppDataChangeDispatcher
 
+    // The composition root keeps the complete dependency graph visible in one place.
+    // swiftlint:disable:next function_body_length
     init(repositoryFactory: MockRepositoryFactory) {
         let dataChangeDispatcher = AppDataChangeDispatcher()
         let programDetailService = ProgramDetailService(
@@ -18,12 +21,23 @@ final class AppContainer {
             workoutProgramRepository: repositoryFactory.workoutProgramRepository,
             workoutRepository: repositoryFactory.workoutRepository
         )
+        let miniPlayerService = MiniPlayerService(
+            userRepository: repositoryFactory.userRepository,
+            workoutProgramRepository: repositoryFactory.workoutProgramRepository,
+            workoutRepository: repositoryFactory.workoutRepository
+        )
+        let miniPlayerViewModel = MiniPlayerViewModel(
+            service: miniPlayerService,
+            workoutRepository: repositoryFactory.workoutRepository,
+            onDataChanged: dataChangeDispatcher.send
+        )
         let homeViewModel = HomeViewModel(
             userRepository: repositoryFactory.userRepository,
             programCatalogRepository: repositoryFactory.programCatalogRepository,
             workoutProgramRepository: repositoryFactory.workoutProgramRepository,
             workoutRepository: repositoryFactory.workoutRepository,
-            programDetailService: programDetailService
+            programDetailService: programDetailService,
+            onDataChanged: dataChangeDispatcher.send
         )
         let progressHistoryService = ProgressHistoryService(
             userRepository: repositoryFactory.userRepository,
@@ -62,6 +76,9 @@ final class AppContainer {
             },
             invalidateWorkout: { [weak workoutViewModel] in
                 workoutViewModel?.invalidate()
+            },
+            reloadMiniPlayer: { [weak miniPlayerViewModel] in
+                await miniPlayerViewModel?.reload()
             }
         )
 
@@ -69,6 +86,7 @@ final class AppContainer {
         self.progressViewModel = progressViewModel
         self.libraryViewModel = libraryViewModel
         self.workoutViewModel = workoutViewModel
+        self.miniPlayerViewModel = miniPlayerViewModel
         self.dataChangeCoordinator = dataChangeCoordinator
         self.dataChangeDispatcher = dataChangeDispatcher
 

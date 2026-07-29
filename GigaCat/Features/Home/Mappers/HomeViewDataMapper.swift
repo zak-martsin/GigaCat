@@ -14,27 +14,6 @@ protocol HomeViewDataMapping: Sendable {
         nextWorkoutTitle: String?,
         progressText: String?
     ) -> SelectedProgramSummary
-
-    func mapMiniPlayerPresentationForActiveSession(
-        session: WorkoutSession,
-        programTitle: String,
-        workoutDayTitle: String,
-        completionPercentage: Int,
-        isExpired: Bool
-    ) -> MiniPlayerPresentation
-
-    func mapMiniPlayerPresentationForNoProgramSelected() -> MiniPlayerPresentation
-
-    func mapMiniPlayerPresentationForProgramWithoutDays(
-        programTitle: String
-    ) -> MiniPlayerPresentation
-
-    func mapMiniPlayerPresentationForReadyToStart(
-        programTitle: String,
-        workoutDayID: UUID,
-        workoutDayTitle: String
-    ) -> MiniPlayerPresentation
-
 }
 
 struct HomeViewDataMapper: HomeViewDataMapping {
@@ -70,67 +49,6 @@ struct HomeViewDataMapper: HomeViewDataMapping {
             subtitle: "\(dayCount) workout days",
             nextWorkoutTitle: nextWorkoutTitle,
             progressText: progressText
-        )
-    }
-
-    func mapMiniPlayerPresentationForActiveSession(
-        session: WorkoutSession,
-        programTitle: String,
-        workoutDayTitle: String,
-        completionPercentage: Int,
-        isExpired: Bool
-    ) -> MiniPlayerPresentation {
-        MiniPlayerPresentation(
-            state: MiniPlayerState(
-                title: programTitle,
-                subtitle: "\(workoutDayTitle) • \(completionPercentage)% completed",
-                action: .continueWorkout
-            ),
-            context: .activeSession(
-                session: session,
-                programTitle: programTitle,
-                workoutDayTitle: workoutDayTitle,
-                isExpired: isExpired
-            )
-        )
-    }
-
-    func mapMiniPlayerPresentationForNoProgramSelected() -> MiniPlayerPresentation {
-        MiniPlayerPresentation(
-            state: MiniPlayerState(
-                title: "No Program Selected",
-                subtitle: "Choose a program to start training.",
-                action: .none
-            ),
-            context: .noProgramSelected
-        )
-    }
-
-    func mapMiniPlayerPresentationForProgramWithoutDays(
-        programTitle: String
-    ) -> MiniPlayerPresentation {
-        MiniPlayerPresentation(
-            state: MiniPlayerState(
-                title: programTitle,
-                subtitle: "This program has no workout days yet.",
-                action: .none
-            ),
-            context: .noProgramSelected
-        )
-    }
-
-    func mapMiniPlayerPresentationForReadyToStart(
-        programTitle: String,
-        workoutDayID: UUID,
-        workoutDayTitle: String
-    ) -> MiniPlayerPresentation {
-        MiniPlayerPresentation(
-            state: MiniPlayerState(
-                title: programTitle,
-                subtitle: "Next workout: \(workoutDayTitle)",
-                action: .start
-            ),
-            context: .readyToStart(workoutDayID: workoutDayID)
         )
     }
 

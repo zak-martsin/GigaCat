@@ -10,14 +10,8 @@ final class HomeViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published private(set) var allPrograms: [ProgramSectionItem] = []
     @Published var selectedProgram: SelectedProgramSummary?
-    @Published var miniPlayerState = MiniPlayerState(
-        title: "No Program Selected",
-        subtitle: "Choose a program to start training.",
-        action: .none
-    )
     @Published var selectedTag: ProgramFilterTag = .all
     @Published var presentedProgramDetail: ProgramDetail?
-    @Published var expiredSessionAlert: ExpiredSessionAlert?
     @Published var programSelectionConflictAlert: ProgramSelectionConflictAlert?
     @Published var isSearchPresented = false
     @Published var searchQuery = ""
@@ -29,12 +23,10 @@ final class HomeViewModel: ObservableObject {
     private let discoveryService: HomeProgramDiscoveryServicing
     private let presentationService: HomePresentationServicing
     private let programDetailService: ProgramDetailServicing
-    private let sessionCoordinator: HomeSessionCoordinating
+    private let onDataChanged: AppDataChangeHandler
     private var loadTracker = DataLoadTracker()
     private var currentUser: User?
-    private var miniPlayerContext: MiniPlayerContext = .noProgramSelected
     private var pendingProgramSelectionID: UUID?
-    private let sessionExpirationInterval: TimeInterval = 60 * 60 * 8
 
     // MARK: - Initialization
 
@@ -46,8 +38,7 @@ final class HomeViewModel: ObservableObject {
         discoveryService: HomeProgramDiscoveryServicing = HomeProgramDiscoveryService(),
         presentationService: HomePresentationServicing? = nil,
         programDetailService: ProgramDetailServicing? = nil,
-        alertBuilder: HomeAlertBuilding = HomeAlertBuilder(),
-        sessionCoordinator: HomeSessionCoordinating? = nil
+        onDataChanged: @escaping AppDataChangeHandler = { _ in }
     ) {
         self.userRepository = userRepository
         self.programCatalogRepository = programCatalogRepository
@@ -62,11 +53,7 @@ final class HomeViewModel: ObservableObject {
             workoutProgramRepository: workoutProgramRepository,
             workoutRepository: workoutRepository
         )
-        self.sessionCoordinator = sessionCoordinator ?? HomeSessionCoordinator(
-            userRepository: userRepository,
-            workoutRepository: workoutRepository,
-            alertBuilder: alertBuilder
-        )
+        self.onDataChanged = onDataChanged
     }
 
     // MARK: - Derived State
@@ -112,7 +99,7 @@ final class HomeViewModel: ObservableObject {
         loadTracker.invalidate()
     }
 
-    /// Reloads all Home content, selected program presentation, and mini player state from repositories.
+    /// Reloads Home catalog and selected-program presentation from repositories.
     func load() async {
         guard !isLoading else { return }
 
@@ -144,15 +131,6 @@ final class HomeViewModel: ObservableObject {
                 user: user
             )
 
-            let programs = catalog.map(\.program)
-            let miniPlayerPresentation = try await presentationService.makeMiniPlayerPresentation(
-                user: user,
-                selectedProgramID: selectedProgramID,
-                programs: programs,
-                sessionExpirationInterval: sessionExpirationInterval
-            )
-            miniPlayerState = miniPlayerPresentation.state
-            miniPlayerContext = miniPlayerPresentation.context
             loadTracker.markLoaded(revision: loadingRevision)
         } catch {
             errorMessage = error.localizedDescription
@@ -166,19 +144,15 @@ final class HomeViewModel: ObservableObject {
         guard let user = currentUser else { return }
 
         do {
-            let result = try await sessionCoordinator.selectProgram(
-                id: id,
-                currentUser: user,
-                miniPlayerContext: miniPlayerContext
-            )
+            let result = try await programDetailService.selectProgram(id, for: user)
 
             switch result {
             case let .switched(updatedUser):
                 currentUser = updatedUser
-                invalidate()
+                await onDataChanged(.selectedProgram)
                 await load()
-            case let .blocked(pendingProgramSelectionID, alert):
-                self.pendingProgramSelectionID = pendingProgramSelectionID
+            case let .blocked(pendingProgramID, alert):
+                pendingProgramSelectionID = pendingProgramID
                 programSelectionConflictAlert = alert
             }
         } catch {
@@ -216,23 +190,6 @@ final class HomeViewModel: ObservableObject {
         dismissProgramDetail()
     }
 
-    // MARK: - Mini Player
-
-    /// Resolves mini player behavior, including the expired-session case that needs an alert instead of navigation.
-    func handleMiniPlayerAction() async -> MiniPlayerRoute {
-        let result = sessionCoordinator.handleMiniPlayerAction(
-            currentUser: currentUser,
-            miniPlayerContext: miniPlayerContext
-        )
-        expiredSessionAlert = result.expiredSessionAlert
-        return result.route
-    }
-
-    func continueExpiredSession() async -> MiniPlayerRoute {
-        expiredSessionAlert = nil
-        return .openWorkout
-    }
-
     func continueProgramSelectionConflict() -> MiniPlayerRoute {
         pendingProgramSelectionID = nil
         programSelectionConflictAlert = nil
@@ -246,41 +203,12 @@ final class HomeViewModel: ObservableObject {
 
     // MARK: - Session Actions
 
-    func completeExpiredSession() async {
-        do {
-            let result = try await sessionCoordinator.completeExpiredSession(
-                miniPlayerContext: miniPlayerContext
-            )
-            await apply(result)
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
     func completeActiveSessionAndSelectPendingProgram() async {
-        do {
-            let result = try await sessionCoordinator.completeActiveSessionAndSelectPendingProgram(
-                miniPlayerContext: miniPlayerContext,
-                pendingProgramSelectionID: pendingProgramSelectionID,
-                currentUser: currentUser
-            )
-            await apply(result)
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+        await resolveProgramSelectionConflict(using: .finishSession)
     }
 
     func cancelActiveSessionAndSelectPendingProgram() async {
-        do {
-            let result = try await sessionCoordinator.cancelActiveSessionAndSelectPendingProgram(
-                miniPlayerContext: miniPlayerContext,
-                pendingProgramSelectionID: pendingProgramSelectionID,
-                currentUser: currentUser
-            )
-            await apply(result)
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+        await resolveProgramSelectionConflict(using: .cancelSession)
     }
 
     func addPresentedProgramToLibrary() {
@@ -289,37 +217,40 @@ final class HomeViewModel: ObservableObject {
     }
 
     func completePresentedProgramSession() async {
+        guard let detail = presentedProgramDetail,
+              let currentUser else {
+            return
+        }
+
         do {
-            let result = try await sessionCoordinator.completePresentedProgramSession(
-                presentedProgramDetail: presentedProgramDetail,
-                miniPlayerContext: miniPlayerContext,
-                selectedProgram: selectedProgram
+            let didComplete = try await programDetailService.completeActiveSession(
+                for: detail.id,
+                userID: currentUser.id
             )
-            await apply(result)
+            guard didComplete else { return }
+            dismissProgramDetail()
+            await onDataChanged(.workoutSession)
+            await load()
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 
     func deletePresentedProgramSession() async {
-        do {
-            let result = try await sessionCoordinator.deletePresentedProgramSession(
-                presentedProgramDetail: presentedProgramDetail,
-                miniPlayerContext: miniPlayerContext,
-                selectedProgram: selectedProgram
-            )
-            await apply(result)
-        } catch {
-            errorMessage = error.localizedDescription
+        guard let detail = presentedProgramDetail,
+              let currentUser else {
+            return
         }
-    }
 
-    func deleteExpiredSession() async {
         do {
-            let result = try await sessionCoordinator.deleteExpiredSession(
-                miniPlayerContext: miniPlayerContext
+            let didCancel = try await programDetailService.cancelActiveSession(
+                for: detail.id,
+                userID: currentUser.id
             )
-            await apply(result)
+            guard didCancel else { return }
+            dismissProgramDetail()
+            await onDataChanged(.workoutSession)
+            await load()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -343,26 +274,27 @@ final class HomeViewModel: ObservableObject {
 
     // MARK: - Private Helpers
 
-    /// Applies a session mutation result back into Home state so view logic stays simple and declarative.
-    private func apply(_ result: HomeSessionMutationResult) async {
-        if let updatedUser = result.updatedUser {
-            currentUser = updatedUser
+    private func resolveProgramSelectionConflict(
+        using resolution: ProgramDetailConflictResolution
+    ) async {
+        guard let pendingProgramSelectionID,
+              let currentUser else {
+            return
         }
-        if result.clearedExpiredSessionAlert {
-            expiredSessionAlert = nil
-        }
-        if result.clearedProgramSelectionConflictAlert {
-            programSelectionConflictAlert = nil
-        }
-        if result.clearedPendingProgramSelectionID {
-            pendingProgramSelectionID = nil
-        }
-        if result.shouldDismissProgramDetail {
+
+        do {
+            let updatedUser = try await programDetailService.resolveSelectionConflict(
+                selecting: pendingProgramSelectionID,
+                for: currentUser,
+                resolution: resolution
+            )
+            self.currentUser = updatedUser
+            cancelProgramSelectionConflict()
             dismissProgramDetail()
-        }
-        if result.shouldReload {
-            invalidate()
+            await onDataChanged(.selectedProgram)
             await load()
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 }
