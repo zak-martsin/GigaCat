@@ -58,6 +58,10 @@ calendar. It does not access persistence or prepare display strings.
 `ProgressViewDataMapper` converts the resolved history and calendar periods into
 feature-specific ViewData. ViewData remains passive and contains only values needed by Views.
 
+`ProgressViewModel` owns the compact-week presentation state. It loads history through
+`ProgressHistoryServicing`, asks `ProgressDateServicing` for week boundaries, and delegates
+display formatting to `ProgressViewDataMapping`.
+
 The main and calendar screens use separate ViewModels because their data and interactions
 are different. Shared calculations remain in services rather than being duplicated.
 
@@ -73,15 +77,17 @@ Implemented:
 - ViewData contracts for the weekly strip, month grid, sessions, exercises, and sets
 - `ProgressViewDataMapper`
 - localized week, month, weekday, time, weight, and repetition presentation
-- unit tests for history loading, calendar boundaries, and ViewData mapping
+- `ProgressViewModel` loading, empty, and failure states
+- compact-week navigation with a future-week boundary
+- explicit history invalidation for a later cross-feature refresh trigger
+- unit tests for history loading, calendar boundaries, ViewData mapping, and the main ViewModel
 
 Not implemented yet:
 
-- `ProgressViewModel`
 - `ProgressCalendarViewModel`
 - compact week UI
 - full calendar UI
-- cross-feature invalidation
+- connection of invalidation to workout completion
 
 ## 5. Deferred Progress Areas
 
