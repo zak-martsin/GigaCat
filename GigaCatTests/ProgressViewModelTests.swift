@@ -96,6 +96,53 @@ struct ProgressViewModelTests {
         #expect(fixture.viewModel.loadState == .loaded)
         #expect(fixture.viewModel.weekViewData?.days.first?.hasWorkout == true)
     }
+
+    @Test
+    func calendarViewModelRequiresLoadedHistory() throws {
+        let fixture = try Fixture(historyDates: [])
+
+        let calendarViewModel = fixture.viewModel.makeCalendarViewModel()
+
+        #expect(calendarViewModel == nil)
+    }
+
+    @Test
+    func calendarViewModelUsesSelectedDateAndLoadedHistory() async throws {
+        let selectedDate = Fixture.date(
+            year: 2026,
+            month: 7,
+            day: 27,
+            hour: 8
+        )
+        let fixture = try Fixture(historyDates: [selectedDate])
+        await fixture.viewModel.load()
+
+        let calendarViewModel = try #require(
+            fixture.viewModel.makeCalendarViewModel(
+                selectedDate: selectedDate
+            )
+        )
+
+        #expect(calendarViewModel.selectedDate == selectedDate)
+        #expect(calendarViewModel.selectedDaySessions.count == 1)
+    }
+
+    @Test
+    func calendarViewModelWithoutSelectionOpensCurrentMonth() async throws {
+        let fixture = try Fixture(historyDates: [])
+        await fixture.viewModel.load()
+
+        let calendarViewModel = try #require(
+            fixture.viewModel.makeCalendarViewModel()
+        )
+
+        #expect(calendarViewModel.selectedDate == nil)
+        #expect(calendarViewModel.displayedMonthStart == Fixture.date(
+            year: 2026,
+            month: 7,
+            day: 1
+        ))
+    }
 }
 
 private extension ProgressViewModelTests {

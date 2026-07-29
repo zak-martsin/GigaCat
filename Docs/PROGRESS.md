@@ -62,8 +62,17 @@ feature-specific ViewData. ViewData remains passive and contains only values nee
 `ProgressHistoryServicing`, asks `ProgressDateServicing` for week boundaries, and delegates
 display formatting to `ProgressViewDataMapping`.
 
+`ProgressViewModel` creates `ProgressCalendarViewModel` from its loaded history context.
+Opening from the weekly strip supplies its targeted date. Opening from the general calendar
+action supplies no selection, so the current month opens without daily sessions. The calendar
+ViewModel owns month navigation, optional day selection, the month grid presentation, and the
+sessions shown for the selected day. Changing months clears the selection and daily session
+list until the user selects a visible date.
+
 The main and calendar screens use separate ViewModels because their data and interactions
 are different. Shared calculations remain in services rather than being duplicated.
+`AppShellView` builds Progress from the shared repositories and invalidates its cached history
+when Workout reports a data change.
 
 ## 4. Current Foundation
 
@@ -79,15 +88,20 @@ Implemented:
 - localized week, month, weekday, time, weight, and repetition presentation
 - `ProgressViewModel` loading, empty, and failure states
 - compact-week navigation with a future-week boundary
-- explicit history invalidation for a later cross-feature refresh trigger
-- unit tests for history loading, calendar boundaries, ViewData mapping, and the main ViewModel
+- `ProgressCalendarViewModel`
+- calendar opening on a targeted date
+- current-month opening without a selected date
+- month navigation with a current-month boundary
+- optional day selection cleared when the displayed month changes
+- selected-day session presentation
+- Progress dependency composition from shared repositories
+- cross-feature history invalidation after workout data changes
+- unit tests for history loading, calendar boundaries, ViewData mapping, and both ViewModels
 
 Not implemented yet:
 
-- `ProgressCalendarViewModel`
 - compact week UI
 - full calendar UI
-- connection of invalidation to workout completion
 
 ## 5. Deferred Progress Areas
 

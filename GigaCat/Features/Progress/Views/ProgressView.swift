@@ -1,7 +1,10 @@
 import SwiftUI
 
 struct ProgressView: View {
+    let viewModel: ProgressViewModel
     let onHeaderAction: (HeaderAction) -> Void
+
+    // MARK: - Layout
 
     var body: some View {
         PlaceholderFeatureView(

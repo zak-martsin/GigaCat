@@ -63,6 +63,23 @@ struct ProgressViewDataMapperTests {
     }
 
     @Test
+    func mapsMonthWithoutSelectedDay() throws {
+        let fixture = Fixture()
+        let today = try fixture.date(year: 2026, month: 7, day: 25)
+        let history = try fixture.history(sessionDates: [])
+        let month = fixture.dateService.month(containing: today)
+
+        let viewData = fixture.mapper.mapMonth(
+            month,
+            history: history,
+            selectedDate: nil,
+            today: today
+        )
+
+        #expect(viewData.days.allSatisfy { !$0.isSelected })
+    }
+
+    @Test
     func mapsSelectedDaySessionsChronologicallyWithExerciseLogs() throws {
         let fixture = Fixture()
         let selectedDate = try fixture.date(year: 2026, month: 7, day: 24)

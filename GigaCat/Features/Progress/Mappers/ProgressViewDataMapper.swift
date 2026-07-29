@@ -12,7 +12,7 @@ protocol ProgressViewDataMapping: Sendable {
     func mapMonth(
         _ month: ProgressMonth,
         history: ProgressHistoryContext,
-        selectedDate: Date,
+        selectedDate: Date?,
         today: Date
     ) -> ProgressMonthViewData
 
@@ -60,7 +60,7 @@ struct ProgressViewDataMapper: ProgressViewDataMapping {
     func mapMonth(
         _ month: ProgressMonth,
         history: ProgressHistoryContext,
-        selectedDate: Date,
+        selectedDate: Date?,
         today: Date
     ) -> ProgressMonthViewData {
         let workoutDays = workoutDayDates(in: history)
@@ -74,7 +74,9 @@ struct ProgressViewDataMapper: ProgressViewDataMapping {
                     date: date,
                     dayNumberText: dayNumber(for: date),
                     hasWorkout: workoutDays.contains(calendar.startOfDay(for: date)),
-                    isSelected: calendar.isDate(date, inSameDayAs: selectedDate),
+                    isSelected: selectedDate.map {
+                        calendar.isDate(date, inSameDayAs: $0)
+                    } ?? false,
                     isToday: calendar.isDate(date, inSameDayAs: today)
                 )
             }

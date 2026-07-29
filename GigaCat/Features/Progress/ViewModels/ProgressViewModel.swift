@@ -113,6 +113,22 @@ final class ProgressViewModel {
         rebuildWeekViewData()
     }
 
+    // MARK: - Calendar Presentation
+
+    func makeCalendarViewModel(
+        selectedDate: Date? = nil
+    ) -> ProgressCalendarViewModel? {
+        guard let historyContext else { return nil }
+
+        return ProgressCalendarViewModel(
+            historyContext: historyContext,
+            selectedDate: selectedDate,
+            dateService: dateService,
+            mapper: mapper,
+            now: now
+        )
+    }
+
     // MARK: - Presentation Mapping
 
     private func rebuildWeekViewData() {

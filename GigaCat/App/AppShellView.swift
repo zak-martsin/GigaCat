@@ -4,6 +4,7 @@ struct AppShellView: View {
     @State private var selectedTab: AppTab = .home
     @State private var isProfilePresented = false
     @State private var workoutViewModel: WorkoutViewModel
+    @State private var progressViewModel: ProgressViewModel
     @StateObject private var homeViewModel: HomeViewModel
 
     init(repositoryFactory: MockRepositoryFactory = MockRepositoryFactory()) {
@@ -19,6 +20,14 @@ struct AppShellView: View {
             workoutProgramRepository: repositoryFactory.workoutProgramRepository,
             workoutRepository: repositoryFactory.workoutRepository
         )
+        let progressHistoryService = ProgressHistoryService(
+            userRepository: repositoryFactory.userRepository,
+            workoutRepository: repositoryFactory.workoutRepository,
+            workoutProgramRepository: repositoryFactory.workoutProgramRepository
+        )
+        let progressViewModel = ProgressViewModel(
+            historyService: progressHistoryService
+        )
 
         _workoutViewModel = State(
             initialValue: WorkoutViewModel(
@@ -26,9 +35,11 @@ struct AppShellView: View {
                 workoutRepository: repositoryFactory.workoutRepository,
                 onWorkoutDataChanged: {
                     homeViewModel.invalidate()
+                    progressViewModel.invalidate()
                 }
             )
         )
+        _progressViewModel = State(initialValue: progressViewModel)
         _homeViewModel = StateObject(
             wrappedValue: homeViewModel
         )
@@ -47,7 +58,10 @@ struct AppShellView: View {
                 Label(AppTab.home.title, systemImage: AppTab.home.systemImage)
             }
 
-            ProgressView(onHeaderAction: handleHeaderAction)
+            ProgressView(
+                viewModel: progressViewModel,
+                onHeaderAction: handleHeaderAction
+            )
                 .tag(AppTab.progress)
                 .tabItem {
                     Label(AppTab.progress.title, systemImage: AppTab.progress.systemImage)
@@ -125,7 +139,9 @@ struct AppShellView: View {
                 await homeViewModel.loadIfNeeded()
             case .workout:
                 await workoutViewModel.load()
-            case .progress, .nutrition, .library:
+            case .progress:
+                await progressViewModel.loadIfNeeded()
+            case .nutrition, .library:
                 break
             }
         }
