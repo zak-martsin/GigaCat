@@ -30,7 +30,7 @@ final class HomeViewModel: ObservableObject {
     private let presentationService: HomePresentationServicing
     private let programDetailService: ProgramDetailServicing
     private let sessionCoordinator: HomeSessionCoordinating
-    private var hasLoaded = false
+    private var loadTracker = DataLoadTracker()
     private var currentUser: User?
     private var miniPlayerContext: MiniPlayerContext = .noProgramSelected
     private var pendingProgramSelectionID: UUID?
@@ -103,19 +103,20 @@ final class HomeViewModel: ObservableObject {
 
     /// Prevents repeated first-load work when the screen is revisited within the same lifecycle.
     func loadIfNeeded() async {
-        guard !hasLoaded else { return }
+        guard loadTracker.needsLoading else { return }
         await load()
     }
 
     /// Marks cached Home presentation as stale so the next entry reloads repository state.
     func invalidate() {
-        hasLoaded = false
+        loadTracker.invalidate()
     }
 
     /// Reloads all Home content, selected program presentation, and mini player state from repositories.
     func load() async {
         guard !isLoading else { return }
 
+        let loadingRevision = loadTracker.currentRevision
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
@@ -152,7 +153,7 @@ final class HomeViewModel: ObservableObject {
             )
             miniPlayerState = miniPlayerPresentation.state
             miniPlayerContext = miniPlayerPresentation.context
-            hasLoaded = true
+            loadTracker.markLoaded(revision: loadingRevision)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -174,7 +175,7 @@ final class HomeViewModel: ObservableObject {
             switch result {
             case let .switched(updatedUser):
                 currentUser = updatedUser
-                hasLoaded = false
+                invalidate()
                 await load()
             case let .blocked(pendingProgramSelectionID, alert):
                 self.pendingProgramSelectionID = pendingProgramSelectionID
@@ -360,7 +361,7 @@ final class HomeViewModel: ObservableObject {
             dismissProgramDetail()
         }
         if result.shouldReload {
-            hasLoaded = false
+            invalidate()
             await load()
         }
     }

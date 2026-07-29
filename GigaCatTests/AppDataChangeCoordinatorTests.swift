@@ -10,11 +10,12 @@ struct AppDataChangeCoordinatorTests {
         let coordinator = AppDataChangeCoordinator(
             invalidateHome: { invalidatedFeatures.insert("home") },
             invalidateLibrary: { invalidatedFeatures.insert("library") },
-            invalidateProgress: { invalidatedFeatures.insert("progress") }
+            invalidateProgress: { invalidatedFeatures.insert("progress") },
+            invalidateWorkout: { invalidatedFeatures.insert("workout") }
         )
 
         await coordinator.handle(.selectedProgram)
-        #expect(invalidatedFeatures == ["home", "progress"])
+        #expect(invalidatedFeatures == ["home", "progress", "workout"])
 
         invalidatedFeatures = []
         await coordinator.handle(.library)
@@ -22,6 +23,6 @@ struct AppDataChangeCoordinatorTests {
 
         invalidatedFeatures = []
         await coordinator.handle(.currentUser)
-        #expect(invalidatedFeatures == ["home", "library", "progress"])
+        #expect(invalidatedFeatures == ["home", "library", "progress", "workout"])
     }
 }

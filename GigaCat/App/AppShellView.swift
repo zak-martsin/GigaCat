@@ -118,10 +118,12 @@ struct AppShellView: View {
             case .home:
                 await homeViewModel.loadIfNeeded()
             case .workout:
-                await workoutViewModel.load()
+                await workoutViewModel.loadIfNeeded()
             case .progress:
                 await progressViewModel.loadIfNeeded()
-            case .nutrition, .library:
+            case .library:
+                await libraryViewModel.loadIfNeeded()
+            case .nutrition:
                 break
             }
         }

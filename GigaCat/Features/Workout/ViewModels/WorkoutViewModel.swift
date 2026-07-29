@@ -30,6 +30,12 @@ final class WorkoutViewModel {
     @ObservationIgnored
     private let onDataChanged: AppDataChangeHandler
 
+    @ObservationIgnored
+    private var loadTracker = DataLoadTracker()
+
+    @ObservationIgnored
+    private var isLoading = false
+
     init(
         contextService: WorkoutContextServicing,
         workoutRepository: WorkoutRepository,
@@ -74,14 +80,29 @@ final class WorkoutViewModel {
 
     // MARK: - Context Loading and Day Selection
 
-    /// Reloads the workout entry context whenever the user enters the Workout flow.
+    func loadIfNeeded() async {
+        guard loadTracker.needsLoading else { return }
+        await load()
+    }
+
+    func invalidate() {
+        loadTracker.invalidate()
+    }
+
+    /// Reloads the workout entry context from the repository-backed context service.
     func load() async {
+        guard !isLoading else { return }
+
+        let loadingRevision = loadTracker.currentRevision
+        isLoading = true
         loadState = .loading
+        defer { isLoading = false }
 
         do {
             let context = try await contextService.loadContext()
             self.context = context
             selectedDayID = context.initialDayID
+            loadTracker.markLoaded(revision: loadingRevision)
             loadState = .loaded
         } catch {
             context = nil

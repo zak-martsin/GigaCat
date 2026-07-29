@@ -41,7 +41,7 @@ final class LibraryViewModel {
     private var pendingProgramSelectionID: UUID?
 
     @ObservationIgnored
-    private var hasLoaded = false
+    private var loadTracker = DataLoadTracker()
 
     @ObservationIgnored
     private var isLoading = false
@@ -66,18 +66,19 @@ final class LibraryViewModel {
     // MARK: - Loading
 
     func loadIfNeeded() async {
-        guard !hasLoaded else { return }
+        guard loadTracker.needsLoading else { return }
         await load()
     }
 
     /// Marks the saved-program cache stale so the next Library load reads the source of truth.
     func invalidate() {
-        hasLoaded = false
+        loadTracker.invalidate()
     }
 
     func load() async {
         guard !isLoading else { return }
 
+        let loadingRevision = loadTracker.currentRevision
         isLoading = true
         loadState = .loading
         defer { isLoading = false }
@@ -86,7 +87,6 @@ final class LibraryViewModel {
             guard let user = try await userRepository.currentUser() else {
                 currentUser = nil
                 programs = []
-                hasLoaded = false
                 loadState = .failed
                 return
             }
@@ -94,12 +94,11 @@ final class LibraryViewModel {
             let savedPrograms = try await libraryRepository.fetchSavedPrograms(for: user.id)
             currentUser = user
             programs = savedPrograms
-            hasLoaded = true
+            loadTracker.markLoaded(revision: loadingRevision)
             loadState = savedPrograms.isEmpty ? .empty : .loaded
         } catch {
             currentUser = nil
             programs = []
-            hasLoaded = false
             loadState = .failed
         }
     }

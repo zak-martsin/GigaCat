@@ -15,9 +15,6 @@ struct LibraryView: View {
             content
         }
         .background(AppColor.background.ignoresSafeArea())
-        .task {
-            await viewModel.loadIfNeeded()
-        }
         .sheet(item: presentedProgramDetail) { detail in
             ProgramDetailSheet(
                 detail: detail,

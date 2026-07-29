@@ -6,15 +6,18 @@ final class AppDataChangeCoordinator {
     private let invalidateHome: @MainActor () -> Void
     private let invalidateLibrary: @MainActor () -> Void
     private let invalidateProgress: @MainActor () -> Void
+    private let invalidateWorkout: @MainActor () -> Void
 
     init(
         invalidateHome: @escaping @MainActor () -> Void,
         invalidateLibrary: @escaping @MainActor () -> Void,
-        invalidateProgress: @escaping @MainActor () -> Void
+        invalidateProgress: @escaping @MainActor () -> Void,
+        invalidateWorkout: @escaping @MainActor () -> Void
     ) {
         self.invalidateHome = invalidateHome
         self.invalidateLibrary = invalidateLibrary
         self.invalidateProgress = invalidateProgress
+        self.invalidateWorkout = invalidateWorkout
     }
 
     func handle(_ change: AppDataChange) async {
@@ -22,19 +25,23 @@ final class AppDataChangeCoordinator {
         case .selectedProgram:
             invalidateHome()
             invalidateProgress()
+            invalidateWorkout()
         case .workoutSession:
             invalidateHome()
             invalidateProgress()
+            invalidateWorkout()
         case .library:
             invalidateLibrary()
         case .programCatalog:
             invalidateHome()
             invalidateLibrary()
             invalidateProgress()
+            invalidateWorkout()
         case .currentUser:
             invalidateHome()
             invalidateLibrary()
             invalidateProgress()
+            invalidateWorkout()
         }
     }
 }

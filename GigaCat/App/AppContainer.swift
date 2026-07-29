@@ -59,6 +59,9 @@ final class AppContainer {
             },
             invalidateProgress: { [weak progressViewModel] in
                 progressViewModel?.invalidate()
+            },
+            invalidateWorkout: { [weak workoutViewModel] in
+                workoutViewModel?.invalidate()
             }
         )
 

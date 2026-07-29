@@ -33,7 +33,7 @@ final class ProgressViewModel {
     private let now: @MainActor () -> Date
 
     @ObservationIgnored
-    private var hasLoaded = false
+    private var loadTracker = DataLoadTracker()
 
     @ObservationIgnored
     private var isLoading = false
@@ -57,7 +57,7 @@ final class ProgressViewModel {
 
     /// Loads Progress once until workout history is explicitly invalidated.
     func loadIfNeeded() async {
-        guard !hasLoaded else { return }
+        guard loadTracker.needsLoading else { return }
         await load()
     }
 
@@ -65,6 +65,7 @@ final class ProgressViewModel {
     func load() async {
         guard !isLoading else { return }
 
+        let loadingRevision = loadTracker.currentRevision
         isLoading = true
         loadState = .loading
         defer { isLoading = false }
@@ -72,20 +73,19 @@ final class ProgressViewModel {
         do {
             let history = try await historyService.loadHistory()
             historyContext = history
-            hasLoaded = true
+            loadTracker.markLoaded(revision: loadingRevision)
             rebuildWeekViewData()
             loadState = history.sessions.isEmpty ? .empty : .loaded
         } catch {
             historyContext = nil
             weekViewData = nil
-            hasLoaded = false
             loadState = .failed
         }
     }
 
     /// Marks cached history as stale while preserving the current presentation until re-entry.
     func invalidate() {
-        hasLoaded = false
+        loadTracker.invalidate()
     }
 
     // MARK: - Week Navigation
