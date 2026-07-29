@@ -13,7 +13,6 @@ The goal of the feature is to give the user a single entry point for discovering
 - filtering programs by tags
 - searching programs by keywords
 - presenting program details
-- showing the mini player entry point for the current workout state
 - opening profile from a reusable header action
 
 `Home` is not responsible for:
@@ -51,18 +50,15 @@ Repositories
 - `Features/Home/Services/HomePresentationService.swift`
   Builds UI-ready Home data from repository results.
 
-- `Features/Home/Services/HomeSessionCoordinator.swift`
-  Handles session-related decisions and mutations used by Home.
-
 - `Features/Home/Mappers/HomeViewDataMapper.swift`
   Maps domain and repository data into Home-specific view data.
-
-- `Features/Home/Mappers/HomeAlertBuilder.swift`
-  Builds user-facing alert content for Home session flows.
 
 - `Features/ProgramDetail/`
   Contains the reusable detail sheet, detail presentation model, conflict dialog, and repository-backed
   service shared with Library.
+
+- `Features/MiniPlayer/`
+  Owns the app-level workout player shown by `AppShellView`; it has no dependency on Home.
 
 ## 3. Repository Dependencies
 
@@ -112,10 +108,7 @@ When `Home` loads:
 2. `HomeViewModel` loads the current user from `UserRepository`.
 3. `HomeViewModel` fetches the curated catalog from `ProgramCatalogRepository`.
 4. `HomePresentationService` maps catalog entries into `ProgramSectionItem`.
-5. `HomePresentationService` builds:
-   - selected program summary
-   - mini player state
-   - progress text for active sessions
+5. `HomePresentationService` builds the selected program summary and active-session progress text.
 6. `HomeProgramDiscoveryService` exposes:
    - available tags
    - tag-filtered programs
@@ -123,19 +116,12 @@ When `Home` loads:
 
 The view renders only prepared screen state. It does not compute business rules by itself.
 
-### Workout Invalidation
+### Cache Invalidation
 
-Home keeps loaded presentation state until it is explicitly invalidated.
-
-After Workout successfully saves a set, finishes a session, or cancels a session:
-
-1. Workout emits `onWorkoutDataChanged`.
-2. `AppShellView` calls `HomeViewModel.invalidate()`.
-3. `invalidate()` marks the Home cache as stale without loading immediately.
-4. Returning to the Home tab calls `loadIfNeeded()`.
-5. Home rebuilds the mini player and progress from current repository data.
-
-Workout ViewModels do not reference `HomeViewModel` directly. `AppShellView` owns this cross-feature connection.
+Home keeps its loaded presentation until `AppDataChangeCoordinator` marks it stale. Repository
+mutations emit domain-level `AppDataChange` values rather than calling Home directly. Returning to
+the Home tab runs `loadIfNeeded()` and rebuilds the stale presentation. Revision tracking preserves
+an invalidation even when it arrives during an existing load.
 
 ## 5. Screen Composition
 
@@ -198,7 +184,6 @@ Examples:
 
 - `ProgramSectionItem`
 - `SelectedProgramSummary`
-- `MiniPlayerState`
 
 `ProgramDetail` is shared view data owned by the cross-feature `ProgramDetail` module because both
 Home and Library present the same sheet.
@@ -230,9 +215,11 @@ Search and filtering are handled by `HomeProgramDiscoveryService`.
   - tag titles
 - All typed tokens must match the searchable text.
 
-## 8. Mini Player and Session Rules
+## 8. App-Level Mini Player and Session Rules
 
-The mini player reflects the current workout situation.
+The mini player reflects the current workout situation, but it is owned by `Features/MiniPlayer`
+and displayed by `AppShellView`. It reloads immediately after relevant data changes, regardless of
+which tab initiated the mutation.
 
 ### No Selected Program
 
@@ -241,12 +228,12 @@ The mini player reflects the current workout situation.
 
 ### Selected Program, No Active Session
 
-- Home shows the next workout day for the selected program
+- The player shows the next workout day for the selected program
 - Primary action is `Start`
 
 ### Active Session
 
-- Home shows:
+- The player shows:
   - program title
   - workout day title
   - completion progress
@@ -305,9 +292,8 @@ When adding new behavior to `Home`, prefer these rules:
 - keep `HomeView` focused on layout and event forwarding
 - keep `HomeViewModel` focused on orchestration, not low-level logic
 - put search and filtering rules into `HomeProgramDiscoveryService`
-- put session decisions and mutations into `HomeSessionCoordinator`
+- use the shared `ProgramDetailService` for program selection and detail session actions
 - put UI mapping into `HomeViewDataMapper`
-- keep alerts constructed by `HomeAlertBuilder`
 - do not access SwiftData or Supabase from `Home`
 - prefer feature-specific view data over formatting domain models inside SwiftUI views
 

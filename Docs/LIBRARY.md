@@ -42,6 +42,10 @@ placeholder. Opening a row delegates detail composition and actions to the reusa
 `Features/ProgramDetail`. Home and Library each own their presentation state and inject closures
 into the same sheet.
 
+Successful Library mutations emit `AppDataChange` values. The application coordinator invalidates
+affected tab caches and reloads the global mini player immediately when selection or session state
+changes. Library never references Home, Workout, or MiniPlayer ViewModels directly.
+
 ## 3. Saved Program Relationship
 
 `SavedWorkoutProgram` represents a user's explicit decision to add a catalog program to their

@@ -11,6 +11,8 @@ SwiftUI Views
     ↓
 ViewModels (@Observable)
     ↓
+Feature services for multi-repository workflows
+    ↓
 Repositories (protocol-based)
     ↓
 Local Data Source (SwiftData later)
@@ -25,6 +27,27 @@ Remote Data Source (Supabase later)
 - ViewModels do not access Supabase directly.
 - ViewModels talk to repositories.
 - Repositories decide how local and remote data are coordinated.
+
+## Application Composition and Data Changes
+
+`AppContainer` is the composition root. It creates repositories, services, feature ViewModels,
+and the application-scoped coordinators used by `AppShellView`. Views do not construct the
+dependency graph.
+
+Successful mutations emit an `AppDataChange` through `AppDataChangeDispatcher`. The
+`AppDataChangeCoordinator` then:
+
+- invalidates only feature caches affected by the changed domain data
+- reloads the app-level mini player immediately when selection, session, catalog, or user data changes
+- leaves screen ViewModels independent of one another
+
+Feature caches use `DataLoadTracker` revisions. A load records the revision it started with, so an
+invalidation received while that load is running remains pending for the next `loadIfNeeded()`.
+This prevents an older response from accidentally marking newer data as fresh.
+
+The mini player is an app-level feature because it remains visible across tabs. `MiniPlayerService`
+builds its repository-backed presentation, while `MiniPlayerViewModel` owns its actions and alert
+state. It does not depend on Home.
 
 ## 2. Responsibility of Each Layer
 
@@ -128,7 +151,9 @@ Keep the project feature-first, not layer-first at the top level. This makes it 
 GigaCat/
   App/
     GigaCatApp.swift
-    AppDIContainer.swift
+    AppContainer.swift
+    AppDataChangeCoordinator.swift
+    AppDataChangeDispatcher.swift
 
   Core/
     Extensions/
@@ -177,6 +202,17 @@ GigaCat/
     Progress/
       Views/
       ViewModels/
+    MiniPlayer/
+      Mappers/
+      Services/
+      State/
+      ViewModels/
+    ProgramDetail/
+      Models/
+      Services/
+      ViewData/
+      ViewModels/
+      Views/
 
   PreviewSupport/
   Resources/
