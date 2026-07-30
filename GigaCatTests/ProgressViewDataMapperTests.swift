@@ -11,6 +11,11 @@ struct ProgressViewDataMapperTests {
         let workoutDate = try fixture.date(year: 2026, month: 7, day: 20, hour: 8)
         let history = try fixture.history(sessionDates: [workoutDate])
         let week = fixture.dateService.week(containing: today)
+        let expectedWeekStart = try fixture.date(
+            year: 2026,
+            month: 7,
+            day: 20
+        )
 
         let viewData = fixture.mapper.mapWeek(
             week,
@@ -19,9 +24,8 @@ struct ProgressViewDataMapperTests {
             canShowNextWeek: false
         )
 
-        #expect(viewData.periodTitle.contains("Jul"))
-        #expect(viewData.periodTitle.contains("20"))
-        #expect(viewData.periodTitle.contains("26"))
+        #expect(viewData.startDate == expectedWeekStart)
+        #expect(viewData.monthTitle == "July 2026")
         #expect(viewData.days.map(\.weekdayText) == [
             "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"
         ])
@@ -35,6 +39,23 @@ struct ProgressViewDataMapperTests {
             false, false, true, false, false, false, false
         ])
         #expect(!viewData.canShowNextWeek)
+    }
+
+    @Test
+    func mapsWeekTitleAcrossMonthBoundary() throws {
+        let fixture = Fixture()
+        let date = try fixture.date(year: 2026, month: 7, day: 29)
+        let history = try fixture.history(sessionDates: [])
+        let week = fixture.dateService.week(containing: date)
+
+        let viewData = fixture.mapper.mapWeek(
+            week,
+            history: history,
+            today: date,
+            canShowNextWeek: false
+        )
+
+        #expect(viewData.monthTitle == "July – August 2026")
     }
 
     @Test

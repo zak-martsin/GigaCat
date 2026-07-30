@@ -1,7 +1,10 @@
 import Foundation
 
-struct ProgressWeekViewData: Equatable, Sendable {
-    let periodTitle: String
+struct ProgressWeekViewData: Identifiable, Equatable, Sendable {
+    var id: Date { startDate }
+
+    let startDate: Date
+    let monthTitle: String
     let days: [ProgressWeekDayViewData]
     let canShowNextWeek: Bool
 }

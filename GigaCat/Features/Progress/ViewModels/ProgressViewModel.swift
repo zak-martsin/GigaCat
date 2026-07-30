@@ -15,7 +15,9 @@ final class ProgressViewModel {
 
     private(set) var loadState: ProgressLoadState = .loading
     private(set) var weekViewData: ProgressWeekViewData?
+    private(set) var weekPages: [ProgressWeekViewData] = []
     private(set) var displayedWeekStart: Date
+    private(set) var selectedDate: Date?
     private(set) var historyContext: ProgressHistoryContext?
 
     // MARK: - Dependencies
@@ -74,11 +76,12 @@ final class ProgressViewModel {
             let history = try await historyService.loadHistory()
             historyContext = history
             loadTracker.markLoaded(revision: loadingRevision)
-            rebuildWeekViewData()
+            rebuildWeekPages()
             loadState = history.sessions.isEmpty ? .empty : .loaded
         } catch {
             historyContext = nil
             weekViewData = nil
+            weekPages = []
             loadState = .failed
         }
     }
@@ -91,26 +94,51 @@ final class ProgressViewModel {
     // MARK: - Week Navigation
 
     func showPreviousWeek() {
-        guard historyContext != nil else { return }
+        guard displayedWeekIndex != nil else { return }
 
-        displayedWeekStart = dateService.addingWeeks(
-            -1,
-            to: displayedWeekStart
-        )
-        rebuildWeekViewData()
+        if displayedWeekIndex == weekPages.startIndex {
+            prependPreviousWeek()
+        }
+
+        guard let currentIndex = displayedWeekIndex,
+              currentIndex > weekPages.startIndex else {
+            return
+        }
+        showWeek(startingAt: weekPages[currentIndex - 1].startDate)
     }
 
     func showNextWeek() {
-        guard historyContext != nil,
-              weekViewData?.canShowNextWeek == true else {
+        guard let currentIndex = displayedWeekIndex,
+              currentIndex < weekPages.index(before: weekPages.endIndex) else {
             return
         }
 
-        displayedWeekStart = dateService.addingWeeks(
-            1,
-            to: displayedWeekStart
-        )
-        rebuildWeekViewData()
+        showWeek(startingAt: weekPages[currentIndex + 1].startDate)
+    }
+
+    func showWeek(startingAt date: Date) {
+        guard let page = weekPages.first(where: {
+            $0.startDate == date
+        }) else {
+            return
+        }
+
+        displayedWeekStart = page.startDate
+        weekViewData = page
+
+        if page.startDate == weekPages.first?.startDate {
+            prependPreviousWeek()
+        }
+    }
+
+    func selectDate(_ date: Date) {
+        guard weekPages.contains(where: {
+            $0.days.contains(where: { $0.date == date })
+        }) else {
+            return
+        }
+
+        selectedDate = date
     }
 
     // MARK: - Calendar Presentation
@@ -131,18 +159,83 @@ final class ProgressViewModel {
 
     // MARK: - Presentation Mapping
 
-    private func rebuildWeekViewData() {
+    private var displayedWeekIndex: Int? {
+        weekPages.firstIndex {
+            $0.startDate == displayedWeekStart
+        }
+    }
+
+    private func rebuildWeekPages() {
         guard let historyContext else { return }
 
         let currentDate = now()
-        let displayedWeek = dateService.week(containing: displayedWeekStart)
         let currentWeek = dateService.week(containing: currentDate)
-        displayedWeekStart = displayedWeek.startDate
-        weekViewData = mapper.mapWeek(
-            displayedWeek,
+        let defaultFirstWeekStart = dateService.addingWeeks(
+            -1,
+            to: currentWeek.startDate
+        )
+        let firstWeekStart = weekPages.first?.startDate
+            ?? defaultFirstWeekStart
+        let pageStarts = makeWeekStarts(
+            from: firstWeekStart,
+            through: currentWeek.startDate
+        )
+
+        weekPages = pageStarts.map { startDate in
+            let week = dateService.week(containing: startDate)
+            return mapper.mapWeek(
+                week,
+                history: historyContext,
+                today: currentDate,
+                canShowNextWeek: startDate < currentWeek.startDate
+            )
+        }
+
+        let selectedPage = weekPages.first {
+            $0.startDate == displayedWeekStart
+        } ?? weekPages.last
+
+        displayedWeekStart = selectedPage?.startDate ?? currentWeek.startDate
+        weekViewData = selectedPage
+    }
+
+    private func prependPreviousWeek() {
+        guard let historyContext,
+              let firstPage = weekPages.first else {
+            return
+        }
+
+        let previousStart = dateService.addingWeeks(
+            -1,
+            to: firstPage.startDate
+        )
+        guard previousStart < firstPage.startDate else { return }
+
+        let currentDate = now()
+        let previousWeek = dateService.week(containing: previousStart)
+        let page = mapper.mapWeek(
+            previousWeek,
             history: historyContext,
             today: currentDate,
-            canShowNextWeek: displayedWeek.startDate < currentWeek.startDate
+            canShowNextWeek: true
         )
+        weekPages.insert(page, at: weekPages.startIndex)
+    }
+
+    private func makeWeekStarts(
+        from firstWeekStart: Date,
+        through currentWeekStart: Date
+    ) -> [Date] {
+        var starts: [Date] = []
+        var cursor = firstWeekStart
+
+        while cursor <= currentWeekStart {
+            starts.append(cursor)
+            let next = dateService.addingWeeks(1, to: cursor)
+            guard next > cursor else { break }
+            cursor = next
+        }
+
+        return starts
     }
 }

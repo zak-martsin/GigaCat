@@ -27,8 +27,43 @@ struct ProgressViewModelTests {
         await fixture.viewModel.load()
 
         #expect(fixture.viewModel.loadState == .empty)
+        #expect(fixture.viewModel.weekPages.map(\.startDate) == [
+            Fixture.date(year: 2026, month: 7, day: 20),
+            Fixture.date(year: 2026, month: 7, day: 27)
+        ])
         #expect(fixture.viewModel.weekViewData?.days.count == 7)
         #expect(fixture.viewModel.weekViewData?.days.allSatisfy { !$0.hasWorkout } == true)
+    }
+
+    @Test
+    func reachingOldestWeekPrependsAnotherPreviousWeek() async throws {
+        let fixture = try Fixture(historyDates: [])
+        await fixture.viewModel.load()
+        let oldestWeekStart = try #require(
+            fixture.viewModel.weekPages.first?.startDate
+        )
+
+        fixture.viewModel.showWeek(startingAt: oldestWeekStart)
+
+        #expect(fixture.viewModel.displayedWeekStart == oldestWeekStart)
+        #expect(fixture.viewModel.weekPages.map(\.startDate) == [
+            Fixture.date(year: 2026, month: 7, day: 13),
+            Fixture.date(year: 2026, month: 7, day: 20),
+            Fixture.date(year: 2026, month: 7, day: 27)
+        ])
+    }
+
+    @Test
+    func selectingLoadedDayUpdatesSelection() async throws {
+        let fixture = try Fixture(historyDates: [])
+        await fixture.viewModel.load()
+        let selectedDate = try #require(
+            fixture.viewModel.weekPages.last?.days.first?.date
+        )
+
+        fixture.viewModel.selectDate(selectedDate)
+
+        #expect(fixture.viewModel.selectedDate == selectedDate)
     }
 
     @Test

@@ -43,7 +43,8 @@ struct ProgressViewDataMapper: ProgressViewDataMapping {
         let workoutDays = workoutDayDates(in: history)
 
         return ProgressWeekViewData(
-            periodTitle: makeWeekPeriodTitle(from: week),
+            startDate: week.startDate,
+            monthTitle: makeWeekMonthTitle(from: week),
             days: week.days.map { date in
                 ProgressWeekDayViewData(
                     date: date,
@@ -127,9 +128,9 @@ struct ProgressViewDataMapper: ProgressViewDataMapping {
         })
     }
 
-    private func makeWeekPeriodTitle(from week: ProgressWeek) -> String {
+    private func makeWeekMonthTitle(from week: ProgressWeek) -> String {
         guard let endDate = week.days.last else {
-            return formattedDate(week.startDate, template: "d MMM")
+            return formattedDate(week.startDate, template: "LLLL yyyy")
         }
 
         let startComponents = calendar.dateComponents(
@@ -140,13 +141,35 @@ struct ProgressViewDataMapper: ProgressViewDataMapping {
             [.month, .year],
             from: endDate
         )
-        let includesYear = startComponents.year != endComponents.year
-        let formatter = DateIntervalFormatter()
-        formatter.calendar = calendar
-        formatter.locale = locale
-        formatter.timeZone = calendar.timeZone
-        formatter.dateTemplate = includesYear ? "d MMM yyyy" : "d MMM"
-        return formatter.string(from: week.startDate, to: endDate)
+
+        if startComponents == endComponents {
+            return formattedDate(
+                week.startDate,
+                template: "LLLL yyyy"
+            )
+        }
+
+        if startComponents.year == endComponents.year {
+            let startMonth = formattedDate(
+                week.startDate,
+                template: "LLLL"
+            )
+            let endMonthAndYear = formattedDate(
+                endDate,
+                template: "LLLL yyyy"
+            )
+            return "\(startMonth) – \(endMonthAndYear)"
+        }
+
+        let startMonthAndYear = formattedDate(
+            week.startDate,
+            template: "LLLL yyyy"
+        )
+        let endMonthAndYear = formattedDate(
+            endDate,
+            template: "LLLL yyyy"
+        )
+        return "\(startMonthAndYear) – \(endMonthAndYear)"
     }
 
     private func orderedWeekdayTitles() -> [String] {
