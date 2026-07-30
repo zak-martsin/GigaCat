@@ -12,12 +12,15 @@ struct MockRepositoryTests {
         let user = try #require(await store.currentUser())
         let program = try #require(await store.programs().first { $0.id != user.selectedProgramId })
 
+        #expect(try await repository.isProgramSaved(program.id, for: user.id) == false)
+
         try await repository.saveProgram(program.id, for: user.id)
         try await repository.saveProgram(program.id, for: user.id)
 
         let savedPrograms = try await repository.fetchSavedPrograms(for: user.id)
 
         #expect(savedPrograms.filter { $0.id == program.id }.count == 1)
+        #expect(try await repository.isProgramSaved(program.id, for: user.id))
     }
 
     @Test

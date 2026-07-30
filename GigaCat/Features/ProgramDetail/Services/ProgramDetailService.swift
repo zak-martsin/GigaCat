@@ -27,17 +27,20 @@ protocol ProgramDetailServicing: Sendable {
 struct ProgramDetailService: ProgramDetailServicing {
     private let userRepository: UserRepository
     private let programCatalogRepository: ProgramCatalogRepository
+    private let libraryRepository: WorkoutProgramLibraryRepository
     private let workoutProgramRepository: WorkoutProgramRepository
     private let workoutRepository: WorkoutRepository
 
     init(
         userRepository: UserRepository,
         programCatalogRepository: ProgramCatalogRepository,
+        libraryRepository: WorkoutProgramLibraryRepository,
         workoutProgramRepository: WorkoutProgramRepository,
         workoutRepository: WorkoutRepository
     ) {
         self.userRepository = userRepository
         self.programCatalogRepository = programCatalogRepository
+        self.libraryRepository = libraryRepository
         self.workoutProgramRepository = workoutProgramRepository
         self.workoutRepository = workoutRepository
     }
@@ -59,6 +62,10 @@ struct ProgramDetailService: ProgramDetailServicing {
             presentedProgramID: programID
         )
         let isSelected = user.selectedProgramId == programID
+        let isSavedToLibrary = try await libraryRepository.isProgramSaved(
+            programID,
+            for: user.id
+        )
 
         return ProgramDetail(
             id: entry.program.id,
@@ -68,6 +75,7 @@ struct ProgramDetailService: ProgramDetailServicing {
             exerciseCount: exerciseCount,
             rateScore: entry.rateScore,
             isSelected: isSelected,
+            isSavedToLibrary: isSavedToLibrary,
             primaryAction: primaryAction(
                 isSelected: isSelected,
                 hasActiveSession: hasActiveSession

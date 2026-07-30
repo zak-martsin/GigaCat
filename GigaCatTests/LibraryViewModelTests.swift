@@ -62,6 +62,7 @@ struct LibraryViewModelTests {
         #expect(detail.exerciseCount == 4)
         #expect(detail.primaryAction == .chooseProgram)
         #expect(!detail.hasActiveSession)
+        #expect(detail.isSavedToLibrary)
     }
 
     @Test
@@ -97,6 +98,7 @@ struct LibraryViewModelTests {
         let detailService = ProgramDetailService(
             userRepository: factory.userRepository,
             programCatalogRepository: factory.programCatalogRepository,
+            libraryRepository: factory.workoutProgramLibraryRepository,
             workoutProgramRepository: factory.workoutProgramRepository,
             workoutRepository: factory.workoutRepository
         )

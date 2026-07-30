@@ -12,6 +12,10 @@ struct MockWorkoutProgramLibraryRepository: WorkoutProgramLibraryRepository {
         try await store.savedPrograms(for: userId)
     }
 
+    func isProgramSaved(_ programId: UUID, for userId: UUID) async throws -> Bool {
+        try await store.isProgramSaved(programId, for: userId)
+    }
+
     func saveProgram(_ programId: UUID, for userId: UUID) async throws {
         try await store.saveProgram(programId, for: userId)
     }

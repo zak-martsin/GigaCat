@@ -76,6 +76,8 @@ The screen uses:
 
 The header add action remains a placeholder for custom-program creation. Catalog programs can now
 be saved from the shared detail sheet opened on Home or from the global mini player.
+Unsaved programs show a circular add button over the artwork. The button is omitted when the
+repository reports that the program already belongs to the current user's Library.
 
 ## 5. Current Persistence
 

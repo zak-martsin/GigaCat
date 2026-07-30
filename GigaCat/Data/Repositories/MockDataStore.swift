@@ -399,3 +399,15 @@ actor MockDataStore {
         return user.selectingProgram(programId)
     }
 }
+
+extension MockDataStore {
+    func isProgramSaved(_ programId: UUID, for userId: UUID) throws -> Bool {
+        guard usersByID[userId] != nil else {
+            throw RepositoryError.userNotFound
+        }
+
+        return savedProgramsByID.values.contains {
+            $0.userId == userId && $0.programId == programId
+        }
+    }
+}

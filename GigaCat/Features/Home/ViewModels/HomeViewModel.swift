@@ -53,6 +53,7 @@ final class HomeViewModel: ObservableObject {
         self.programDetailService = programDetailService ?? ProgramDetailService(
             userRepository: userRepository,
             programCatalogRepository: programCatalogRepository,
+            libraryRepository: libraryRepository,
             workoutProgramRepository: workoutProgramRepository,
             workoutRepository: workoutRepository
         )
@@ -222,7 +223,7 @@ final class HomeViewModel: ObservableObject {
 
         do {
             try await libraryRepository.saveProgram(detail.id, for: currentUser.id)
-            dismissProgramDetail()
+            presentedProgramDetail?.isSavedToLibrary = true
             await onDataChanged(.library)
         } catch {
             errorMessage = error.localizedDescription

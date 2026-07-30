@@ -78,7 +78,7 @@ final class ProgramDetailViewModel: ObservableObject {
 
         do {
             try await libraryRepository.saveProgram(detail.id, for: currentUser.id)
-            dismiss()
+            presentedDetail?.isSavedToLibrary = true
             await onDataChanged(.library)
         } catch {
             errorMessage = error.localizedDescription

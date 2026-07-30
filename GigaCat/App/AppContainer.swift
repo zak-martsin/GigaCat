@@ -19,6 +19,7 @@ final class AppContainer {
         let programDetailService = ProgramDetailService(
             userRepository: repositoryFactory.userRepository,
             programCatalogRepository: repositoryFactory.programCatalogRepository,
+            libraryRepository: repositoryFactory.workoutProgramLibraryRepository,
             workoutProgramRepository: repositoryFactory.workoutProgramRepository,
             workoutRepository: repositoryFactory.workoutRepository
         )

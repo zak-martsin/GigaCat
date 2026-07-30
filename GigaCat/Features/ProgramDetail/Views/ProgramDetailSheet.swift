@@ -12,23 +12,7 @@ struct ProgramDetailSheet: View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppSpacing.lg) {
                 ProgramArtworkPlaceholderView(height: 240) {
-                    VStack {
-                        HStack {
-                            Spacer()
-
-                            if let rateScore = detail.rateScore {
-                                Text(String(format: "%.1f", rateScore))
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(AppColor.surface)
-                                    .padding(.horizontal, AppSpacing.md)
-                                    .padding(.vertical, AppSpacing.sm)
-                                    .background(AppColor.surface.opacity(0.24), in: Capsule())
-                                    .padding(AppSpacing.md)
-                            }
-                        }
-
-                        Spacer()
-                    }
+                    artworkOverlay
                 }
 
                 VStack(alignment: .leading, spacing: AppSpacing.sm) {
@@ -107,20 +91,18 @@ struct ProgramDetailSheet: View {
                 Spacer(minLength: AppSpacing.lg)
 
                 HStack(spacing: AppSpacing.md) {
-                    Menu {
-                        Button("Add to Library", action: onAddToLibrary)
-
-                        if detail.hasActiveSession {
+                    if detail.hasActiveSession {
+                        Menu {
                             Button("Finish Session", role: .destructive, action: onCompleteSession)
                             Button("Delete Session", role: .destructive, action: onDeleteSession)
+                        } label: {
+                            Image(systemName: "ellipsis")
+                                .font(.system(size: AppIconSize.headerAction, weight: .semibold))
+                                .foregroundStyle(AppColor.textPrimary)
+                                .frame(width: AppControlSize.buttonHeight, height: AppControlSize.buttonHeight)
                         }
-                    } label: {
-                        Image(systemName: "ellipsis")
-                            .font(.system(size: AppIconSize.headerAction, weight: .semibold))
-                            .foregroundStyle(AppColor.textPrimary)
-                            .frame(width: AppControlSize.buttonHeight, height: AppControlSize.buttonHeight)
+                        .buttonStyle(.glass)
                     }
-                    .buttonStyle(.glass)
 
                     if detail.primaryAction == .chooseProgram {
                         Button(action: onSelectProgram) {
@@ -145,5 +127,40 @@ struct ProgramDetailSheet: View {
             .padding(.bottom, AppSpacing.xxl)
         }
         .background(AppColor.background.ignoresSafeArea())
+    }
+
+    private var artworkOverlay: some View {
+        VStack {
+            HStack(alignment: .top, spacing: AppSpacing.md) {
+                if !detail.isSavedToLibrary {
+                    Button(action: onAddToLibrary) {
+                        Image(systemName: "plus")
+                            .font(.system(size: AppIconSize.headerAction, weight: .semibold))
+                            .foregroundStyle(AppColor.textPrimary)
+                            .frame(
+                                width: AppControlSize.buttonHeight,
+                                height: AppControlSize.buttonHeight
+                            )
+                    }
+                    .buttonStyle(.glass)
+                    .buttonBorderShape(.circle)
+                    .accessibilityLabel("Add to Library")
+                }
+
+                Spacer()
+
+                if let rateScore = detail.rateScore {
+                    Text(String(format: "%.1f", rateScore))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppColor.surface)
+                        .padding(.horizontal, AppSpacing.md)
+                        .padding(.vertical, AppSpacing.sm)
+                        .background(AppColor.surface.opacity(0.24), in: Capsule())
+                }
+            }
+            .padding(AppSpacing.md)
+
+            Spacer()
+        }
     }
 }

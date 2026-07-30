@@ -14,6 +14,7 @@ struct ProgramDetailViewModelTests {
             service: ProgramDetailService(
                 userRepository: factory.userRepository,
                 programCatalogRepository: factory.programCatalogRepository,
+                libraryRepository: factory.workoutProgramLibraryRepository,
                 workoutProgramRepository: factory.workoutProgramRepository,
                 workoutRepository: factory.workoutRepository
             )
@@ -40,6 +41,7 @@ struct ProgramDetailViewModelTests {
             service: ProgramDetailService(
                 userRepository: factory.userRepository,
                 programCatalogRepository: factory.programCatalogRepository,
+                libraryRepository: factory.workoutProgramLibraryRepository,
                 workoutProgramRepository: factory.workoutProgramRepository,
                 workoutRepository: factory.workoutRepository
             ),
@@ -47,11 +49,12 @@ struct ProgramDetailViewModelTests {
         )
 
         await viewModel.present(programID: program.id)
+        #expect(viewModel.presentedDetail?.isSavedToLibrary == false)
         await viewModel.addPresentedProgramToLibrary()
 
         let updatedPrograms = try await factory.workoutProgramLibraryRepository.fetchSavedPrograms(for: user.id)
         #expect(updatedPrograms.contains { $0.id == program.id })
         #expect(changes == [.library])
-        #expect(viewModel.presentedDetail == nil)
+        #expect(viewModel.presentedDetail?.isSavedToLibrary == true)
     }
 }

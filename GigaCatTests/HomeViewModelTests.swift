@@ -70,12 +70,13 @@ struct HomeViewModelTests {
         let program = try #require(viewModel.allPrograms.first { !savedIDs.contains($0.id) })
 
         await viewModel.presentProgramDetail(for: program)
+        #expect(viewModel.presentedProgramDetail?.isSavedToLibrary == false)
         await viewModel.addPresentedProgramToLibrary()
 
         let updatedPrograms = try await factory.workoutProgramLibraryRepository.fetchSavedPrograms(for: user.id)
         #expect(updatedPrograms.contains { $0.id == program.id })
         #expect(changes == [.library])
-        #expect(viewModel.presentedProgramDetail == nil)
+        #expect(viewModel.presentedProgramDetail?.isSavedToLibrary == true)
     }
 
 }
