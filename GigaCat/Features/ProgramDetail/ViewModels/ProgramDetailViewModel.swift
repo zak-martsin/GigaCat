@@ -72,6 +72,7 @@ final class ProgramDetailViewModel: ObservableObject {
 
     func addPresentedProgramToLibrary() async {
         guard let detail = presentedDetail,
+              !detail.isSavedToLibrary,
               let currentUser else {
             return
         }
@@ -79,6 +80,22 @@ final class ProgramDetailViewModel: ObservableObject {
         do {
             try await libraryRepository.saveProgram(detail.id, for: currentUser.id)
             presentedDetail?.isSavedToLibrary = true
+            await onDataChanged(.library)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func removePresentedProgramFromLibrary() async {
+        guard let detail = presentedDetail,
+              detail.isSavedToLibrary,
+              let currentUser else {
+            return
+        }
+
+        do {
+            try await libraryRepository.removeProgram(detail.id, for: currentUser.id)
+            presentedDetail?.isSavedToLibrary = false
             await onDataChanged(.library)
         } catch {
             errorMessage = error.localizedDescription

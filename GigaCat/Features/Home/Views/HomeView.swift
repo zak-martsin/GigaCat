@@ -115,6 +115,11 @@ struct HomeView: View {
                     await viewModel.addPresentedProgramToLibrary()
                 }
             },
+            onRemoveFromLibrary: {
+                Task {
+                    await viewModel.removePresentedProgramFromLibrary()
+                }
+            },
             onCompleteSession: {
                 Task {
                     await viewModel.completePresentedProgramSession()

@@ -193,6 +193,11 @@ struct AppShellView: View {
                     await programDetailViewModel.addPresentedProgramToLibrary()
                 }
             },
+            onRemoveFromLibrary: {
+                Task {
+                    await programDetailViewModel.removePresentedProgramFromLibrary()
+                }
+            },
             onCompleteSession: {
                 Task {
                     await programDetailViewModel.completeActiveSession()

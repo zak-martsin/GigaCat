@@ -4,9 +4,12 @@ struct ProgramDetailSheet: View {
     let detail: ProgramDetail
     let onSelectProgram: () -> Void
     let onAddToLibrary: () -> Void
+    let onRemoveFromLibrary: () -> Void
     let onCompleteSession: () -> Void
     let onDeleteSession: () -> Void
     let onOpenWorkout: () -> Void
+
+    @State private var isRemoveConfirmationPresented = false
 
     var body: some View {
         ScrollView {
@@ -97,7 +100,7 @@ struct ProgramDetailSheet: View {
                             Button("Delete Session", role: .destructive, action: onDeleteSession)
                         } label: {
                             Image(systemName: "ellipsis")
-                                .font(.system(size: AppIconSize.headerAction, weight: .semibold))
+                                .font(.system(size: AppIconSize.iconButton, weight: .semibold))
                                 .foregroundStyle(AppColor.textPrimary)
                                 .frame(width: AppControlSize.buttonHeight, height: AppControlSize.buttonHeight)
                         }
@@ -127,25 +130,35 @@ struct ProgramDetailSheet: View {
             .padding(.bottom, AppSpacing.xxl)
         }
         .background(AppColor.background.ignoresSafeArea())
+        .alert(
+            "Remove from Library?",
+            isPresented: $isRemoveConfirmationPresented
+        ) {
+            Button("Cancel", role: .cancel) {}
+            Button("Remove", role: .destructive, action: onRemoveFromLibrary)
+        } message: {
+            Text("“\(detail.title)” will no longer appear in your Library.")
+        }
     }
 
     private var artworkOverlay: some View {
         VStack {
             HStack(alignment: .top, spacing: AppSpacing.md) {
-                if !detail.isSavedToLibrary {
-                    Button(action: onAddToLibrary) {
-                        Image(systemName: "plus")
-                            .font(.system(size: AppIconSize.headerAction, weight: .semibold))
-                            .foregroundStyle(AppColor.textPrimary)
-                            .frame(
-                                width: AppControlSize.buttonHeight,
-                                height: AppControlSize.buttonHeight
-                            )
+                Button {
+                    if detail.isSavedToLibrary {
+                        isRemoveConfirmationPresented = true
+                    } else {
+                        onAddToLibrary()
                     }
-                    .buttonStyle(.glass)
-                    .buttonBorderShape(.circle)
-                    .accessibilityLabel("Add to Library")
+                } label: {
+                    Text(detail.isSavedToLibrary ? "Remove" : "Add")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppColor.textPrimary)
+                        .padding(.horizontal, AppSpacing.md)
+                        .frame(height: AppControlSize.iconButton)
                 }
+                .buttonStyle(.glass)
+                .buttonBorderShape(.capsule)
 
                 Spacer()
 

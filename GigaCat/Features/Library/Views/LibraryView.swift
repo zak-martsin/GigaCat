@@ -29,6 +29,11 @@ struct LibraryView: View {
                     }
                 },
                 onAddToLibrary: {},
+                onRemoveFromLibrary: {
+                    Task {
+                        await viewModel.removePresentedProgramFromLibrary()
+                    }
+                },
                 onCompleteSession: {
                     Task {
                         await viewModel.completePresentedProgramSession()

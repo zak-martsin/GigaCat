@@ -66,6 +66,28 @@ struct LibraryViewModelTests {
     }
 
     @Test
+    func removingPresentedProgramUpdatesTheDetailAndLibrary() async throws {
+        let factory = MockRepositoryFactory()
+        var changes: [AppDataChange] = []
+        let viewModel = makeViewModel(factory: factory) { change in
+            changes.append(change)
+        }
+
+        await viewModel.load()
+        let savedProgram = try #require(viewModel.programs.first)
+        await viewModel.presentProgramDetail(for: savedProgram.id)
+        await viewModel.removePresentedProgramFromLibrary()
+
+        let user = try #require(try await factory.userRepository.currentUser())
+        let savedPrograms = try await factory.workoutProgramLibraryRepository.fetchSavedPrograms(for: user.id)
+
+        #expect(viewModel.presentedProgramDetail == nil)
+        #expect(viewModel.programs.isEmpty)
+        #expect(savedPrograms.isEmpty)
+        #expect(changes == [.library])
+    }
+
+    @Test
     func choosingSavedProgramCanCancelActiveSessionAndSwitchSelection() async throws {
         let factory = MockRepositoryFactory()
         var changes: [AppDataChange] = []

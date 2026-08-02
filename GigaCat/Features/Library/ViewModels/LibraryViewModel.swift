@@ -106,10 +106,24 @@ final class LibraryViewModel {
     // MARK: - Mutations
 
     func removeProgram(_ programID: UUID) async {
+        _ = await removeProgramMembership(programID)
+    }
+
+    func removePresentedProgramFromLibrary() async {
+        guard let detail = presentedProgramDetail,
+              detail.isSavedToLibrary else {
+            return
+        }
+
+        guard await removeProgramMembership(detail.id) else { return }
+        dismissProgramDetail()
+    }
+
+    private func removeProgramMembership(_ programID: UUID) async -> Bool {
         guard let currentUser,
               programs.contains(where: { $0.id == programID }),
               programIDsBeingRemoved.insert(programID).inserted else {
-            return
+            return false
         }
 
         defer { programIDsBeingRemoved.remove(programID) }
@@ -119,8 +133,10 @@ final class LibraryViewModel {
             programs.removeAll { $0.id == programID }
             loadState = programs.isEmpty ? .empty : .loaded
             await onDataChanged(.library)
+            return true
         } catch {
             removalErrorMessage = error.localizedDescription
+            return false
         }
     }
 

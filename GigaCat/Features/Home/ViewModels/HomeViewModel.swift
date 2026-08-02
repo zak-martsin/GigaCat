@@ -217,6 +217,7 @@ final class HomeViewModel: ObservableObject {
 
     func addPresentedProgramToLibrary() async {
         guard let detail = presentedProgramDetail,
+              !detail.isSavedToLibrary,
               let currentUser else {
             return
         }
@@ -224,6 +225,22 @@ final class HomeViewModel: ObservableObject {
         do {
             try await libraryRepository.saveProgram(detail.id, for: currentUser.id)
             presentedProgramDetail?.isSavedToLibrary = true
+            await onDataChanged(.library)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func removePresentedProgramFromLibrary() async {
+        guard let detail = presentedProgramDetail,
+              detail.isSavedToLibrary,
+              let currentUser else {
+            return
+        }
+
+        do {
+            try await libraryRepository.removeProgram(detail.id, for: currentUser.id)
+            presentedProgramDetail?.isSavedToLibrary = false
             await onDataChanged(.library)
         } catch {
             errorMessage = error.localizedDescription

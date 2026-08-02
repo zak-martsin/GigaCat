@@ -77,6 +77,13 @@ struct HomeViewModelTests {
         #expect(updatedPrograms.contains { $0.id == program.id })
         #expect(changes == [.library])
         #expect(viewModel.presentedProgramDetail?.isSavedToLibrary == true)
+
+        await viewModel.removePresentedProgramFromLibrary()
+
+        let programsAfterRemoval = try await factory.workoutProgramLibraryRepository.fetchSavedPrograms(for: user.id)
+        #expect(!programsAfterRemoval.contains { $0.id == program.id })
+        #expect(changes == [.library, .library])
+        #expect(viewModel.presentedProgramDetail?.isSavedToLibrary == false)
     }
 
 }
