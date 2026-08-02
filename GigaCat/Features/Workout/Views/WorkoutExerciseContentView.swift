@@ -187,7 +187,7 @@ private struct WorkoutSetRow: View {
                 .font(.headline)
                 .foregroundStyle(AppColor.textPrimary)
                 .monospacedDigit()
-                .frame(minWidth: AppControlSize.headerActionButton)
+                .frame(minWidth: AppControlSize.iconButton)
 
             Divider()
                 .frame(height: AppSpacing.xl)
@@ -232,8 +232,8 @@ private struct WorkoutSetRow: View {
             }
                 .animation(.snappy, value: showsSavedState)
                 .frame(
-                    width: AppControlSize.headerActionButton,
-                    height: AppControlSize.headerActionButton
+                    width: AppControlSize.iconButton,
+                    height: AppControlSize.iconButton
                 )
                 .foregroundStyle(AppColor.surface)
                 .background(AppColor.accent, in: Circle())

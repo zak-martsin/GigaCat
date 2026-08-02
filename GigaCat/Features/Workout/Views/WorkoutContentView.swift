@@ -49,8 +49,8 @@ struct WorkoutContentView: View {
                     .font(.system(size: AppIconSize.programInfo, weight: .bold))
                     .foregroundStyle(AppColor.textPrimary)
                     .frame(
-                        width: AppControlSize.programInfoButton,
-                        height: AppControlSize.programInfoButton
+                        width: AppControlSize.iconButton,
+                        height: AppControlSize.iconButton
                     )
             }
             .buttonStyle(.glass)

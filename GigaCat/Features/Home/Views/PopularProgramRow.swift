@@ -38,7 +38,7 @@ struct PopularProgramRow: View {
                         .frame(width: 56, height: 56)
 
                     Image(systemName: actionSymbolName)
-                        .font(.system(size: AppIconSize.headerAction, weight: .semibold))
+                        .font(.system(size: AppIconSize.iconButton, weight: .semibold))
                         .foregroundStyle(AppColor.textPrimary)
                 }
             }

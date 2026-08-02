@@ -69,9 +69,9 @@ private struct HeaderActionButton: View {
     var body: some View {
         Button(action: handler) {
             Image(systemName: action.iconName)
-                .font(.system(size: AppIconSize.headerAction, weight: .semibold))
+                .font(.system(size: AppIconSize.iconButton, weight: .semibold))
                 .foregroundStyle(AppColor.textPrimary)
-                .frame(width: AppControlSize.headerActionButton, height: AppControlSize.headerActionButton)
+                .frame(width: AppControlSize.iconButton, height: AppControlSize.iconButton)
         }
         .buttonStyle(.glass)
         .accessibilityLabel(action.accessibilityLabel)
