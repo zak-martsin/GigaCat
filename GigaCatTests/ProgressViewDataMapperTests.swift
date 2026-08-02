@@ -74,6 +74,7 @@ struct ProgressViewDataMapperTests {
             today: today
         )
 
+        #expect(viewData.startDate == month.startDate)
         #expect(viewData.title == "July 2026")
         #expect(viewData.weekdayTitles == ["M", "T", "W", "T", "F", "S", "S"])
         #expect(viewData.leadingEmptyDayCount == 2)
@@ -121,13 +122,13 @@ struct ProgressViewDataMapperTests {
             $0.replacingOccurrences(of: "\u{202F}", with: " ")
         }
         #expect(normalizedTimes == ["8:00 AM", "6:00 PM"])
-        #expect(sessions.allSatisfy { $0.workoutDayTitle == "Push" })
+        #expect(sessions.allSatisfy { $0.title == "Push and Pull. Day 1" })
 
         let firstExercise = try #require(sessions.first?.exercises.first)
         #expect(firstExercise.name == "Bench Press")
         #expect(firstExercise.sets.map(\.setNumberText) == ["1", "2"])
         #expect(firstExercise.sets.map(\.weightText) == ["62.5 kg", "60 kg"])
-        #expect(firstExercise.sets.map(\.repetitionsText) == ["1 rep", "8 reps"])
+        #expect(firstExercise.sets.map(\.repetitionsText) == ["1 rep", "8 rep"])
     }
 }
 
@@ -208,6 +209,7 @@ private extension ProgressViewDataMapperTests {
             return ProgressSessionHistory(
                 session: session,
                 workoutDay: workoutDay,
+                programTitle: "Push and Pull",
                 exercises: includesExerciseLogs
                     ? [try exerciseHistory(sessionID: session.id, workoutDayID: workoutDay.id)]
                     : []

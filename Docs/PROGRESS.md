@@ -23,7 +23,7 @@ The full calendar screen will show:
 - exercises grouped within each session
 - set number, weight, and repetitions for each log
 
-Program titles are intentionally omitted. A session is identified by its workout day title.
+A session is identified by its program title and one-based workout day order.
 
 ## 2. History Rules
 

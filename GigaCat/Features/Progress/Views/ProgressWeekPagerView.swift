@@ -5,6 +5,7 @@ struct ProgressWeekPagerView: View {
     @Binding var selectedWeekStart: Date?
     let selectedDate: Date?
     let onSelectDate: (Date) -> Void
+    let onSeeMore: () -> Void
 
     // MARK: - Layout
 
@@ -42,9 +43,10 @@ struct ProgressWeekPagerView: View {
                 .animation(.easeInOut, value: selectedPage?.monthTitle)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            Text("See more")
+            Button("See more", action: onSeeMore)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(AppColor.textSecondary)
+                .buttonStyle(.plain)
         }
     }
 

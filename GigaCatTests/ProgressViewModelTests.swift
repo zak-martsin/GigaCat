@@ -260,6 +260,7 @@ private extension ProgressViewModelTests {
                 return ProgressSessionHistory(
                     session: session,
                     workoutDay: workoutDay,
+                    programTitle: "Push and Pull",
                     exercises: []
                 )
             }

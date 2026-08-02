@@ -67,6 +67,7 @@ struct ProgressViewDataMapper: ProgressViewDataMapping {
         let workoutDays = workoutDayDates(in: history)
 
         return ProgressMonthViewData(
+            startDate: month.startDate,
             title: formattedDate(month.startDate, template: "LLLL yyyy"),
             weekdayTitles: orderedWeekdayTitles(),
             leadingEmptyDayCount: month.leadingEmptyDayCount,
@@ -99,7 +100,7 @@ struct ProgressViewDataMapper: ProgressViewDataMapping {
     ) -> ProgressSessionViewData {
         ProgressSessionViewData(
             id: history.session.id,
-            workoutDayTitle: history.workoutDay.title,
+            title: "\(history.programTitle). Day \(history.workoutDay.orderIndex + 1)",
             timeText: formattedTime(history.session.startedAt),
             exercises: history.exercises.map { exerciseHistory in
                 ProgressExerciseViewData(
@@ -116,7 +117,7 @@ struct ProgressViewDataMapper: ProgressViewDataMapping {
             id: log.id,
             setNumberText: String(log.setNumber),
             weightText: "\(formattedWeight(log.weight)) kg",
-            repetitionsText: "\(log.reps) \(log.reps == 1 ? "rep" : "reps")"
+            repetitionsText: "\(log.reps) rep"
         )
     }
 

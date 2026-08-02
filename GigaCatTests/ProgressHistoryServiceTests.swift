@@ -15,6 +15,7 @@ struct ProgressHistoryServiceTests {
 
         let sessionHistory = try #require(context.sessions.first)
         #expect(sessionHistory.workoutDay == fixture.workoutDay)
+        #expect(sessionHistory.programTitle == "Push and Pull")
         #expect(sessionHistory.exercises.map(\.exercise.id) == [
             fixture.firstExercise.id,
             fixture.secondExercise.id
@@ -60,6 +61,11 @@ private extension ProgressHistoryServiceTests {
         init() throws {
             let now = Date(timeIntervalSince1970: 20_000)
             let programID = UUID()
+            let program = try WorkoutProgram(
+                id: programID,
+                title: "Push and Pull",
+                description: "Strength training program"
+            )
             user = try User(
                 appleUserId: "progress-history-user",
                 createdAt: now.addingTimeInterval(-10_000),
@@ -93,6 +99,7 @@ private extension ProgressHistoryServiceTests {
             )
             let store = MockDataStore(
                 users: [user],
+                programs: [program],
                 workoutDays: [workoutDay],
                 dayExercises: exercisePlan.dayExercises,
                 exercises: exercisePlan.exercises,

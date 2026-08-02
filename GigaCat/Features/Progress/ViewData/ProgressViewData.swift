@@ -19,7 +19,10 @@ struct ProgressWeekDayViewData: Identifiable, Equatable, Sendable {
     let isToday: Bool
 }
 
-struct ProgressMonthViewData: Equatable, Sendable {
+struct ProgressMonthViewData: Identifiable, Equatable, Sendable {
+    var id: Date { startDate }
+
+    let startDate: Date
     let title: String
     let weekdayTitles: [String]
     let leadingEmptyDayCount: Int
@@ -38,7 +41,7 @@ struct ProgressCalendarDayViewData: Identifiable, Equatable, Sendable {
 
 struct ProgressSessionViewData: Identifiable, Equatable, Sendable {
     let id: UUID
-    let workoutDayTitle: String
+    let title: String
     let timeText: String
     let exercises: [ProgressExerciseViewData]
 }

@@ -25,6 +25,9 @@ struct ProgressCalendarViewModelTests {
         #expect(viewModel.selectedDate == targetDate)
         #expect(viewModel.displayedMonthStart == expectedMonthStart)
         #expect(viewModel.monthViewData.title == "June 2026")
+        #expect(viewModel.monthPages.map(\.title) == [
+            "May 2026", "June 2026", "July 2026"
+        ])
         #expect(viewModel.monthViewData.days.first(where: \.isSelected)?.dayNumberText == "15")
         #expect(viewModel.selectedDaySessions.count == 1)
         #expect(viewModel.canShowNextMonth)
@@ -34,7 +37,7 @@ struct ProgressCalendarViewModelTests {
     func noSelectedDateOpensCurrentMonthWithoutSessions() throws {
         let fixture = try Fixture(historyDates: [])
 
-        let viewModel = fixture.makeViewModel(selectedDate: nil)
+        let viewModel = fixture.makeViewModel()
         let expectedMonthStart = try Fixture.date(
             year: 2026,
             month: 7,
@@ -43,6 +46,9 @@ struct ProgressCalendarViewModelTests {
 
         #expect(viewModel.selectedDate == nil)
         #expect(viewModel.displayedMonthStart == expectedMonthStart)
+        #expect(viewModel.monthPages.map(\.title) == [
+            "June 2026", "July 2026"
+        ])
         #expect(viewModel.selectedDaySessions.isEmpty)
         #expect(viewModel.monthViewData.days.allSatisfy { !$0.isSelected })
     }
@@ -64,6 +70,9 @@ struct ProgressCalendarViewModelTests {
         #expect(viewModel.selectedDate == nil)
         #expect(viewModel.selectedDaySessions.isEmpty)
         #expect(viewModel.monthViewData.days.allSatisfy { !$0.isSelected })
+        #expect(viewModel.monthPages.map(\.title) == [
+            "May 2026", "June 2026", "July 2026"
+        ])
         #expect(viewModel.canShowNextMonth)
     }
 
@@ -118,6 +127,22 @@ struct ProgressCalendarViewModelTests {
         #expect(viewModel.selectedDate == initialDate)
         #expect(viewModel.displayedMonthStart == expectedMonthStart)
     }
+
+    @Test
+    func reachingOldestMonthPrependsAnotherPreviousMonth() throws {
+        let fixture = try Fixture(historyDates: [])
+        let viewModel = fixture.makeViewModel()
+        let oldestMonthStart = try #require(
+            viewModel.monthPages.first?.startDate
+        )
+
+        viewModel.showMonth(startingAt: oldestMonthStart)
+
+        #expect(viewModel.displayedMonthStart == oldestMonthStart)
+        #expect(viewModel.monthPages.map(\.title) == [
+            "May 2026", "June 2026", "July 2026"
+        ])
+    }
 }
 
 private extension ProgressCalendarViewModelTests {
@@ -153,6 +178,7 @@ private extension ProgressCalendarViewModelTests {
                 return ProgressSessionHistory(
                     session: session,
                     workoutDay: workoutDay,
+                    programTitle: "Push and Pull",
                     exercises: []
                 )
             }
@@ -164,7 +190,7 @@ private extension ProgressCalendarViewModelTests {
         }
 
         func makeViewModel(
-            selectedDate: Date?
+            selectedDate: Date? = nil
         ) -> ProgressCalendarViewModel {
             let calendar = Self.calendar
             return ProgressCalendarViewModel(

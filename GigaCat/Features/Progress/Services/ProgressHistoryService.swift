@@ -7,6 +7,7 @@ protocol ProgressHistoryServicing: Sendable {
 
 enum ProgressHistoryError: Error, Equatable {
     case currentUserNotFound
+    case workoutProgramNotFound
     case workoutDayNotFound
     case workoutDayExerciseNotFound
     case exerciseNotFound
@@ -56,6 +57,12 @@ struct ProgressHistoryService: ProgressHistoryServicing {
             throw ProgressHistoryError.workoutDayNotFound
         }
 
+        guard let workoutProgram = try await workoutProgramRepository.fetchProgram(
+            id: workoutDay.programId
+        ) else {
+            throw ProgressHistoryError.workoutProgramNotFound
+        }
+
         let dayExercises = try await workoutProgramRepository.fetchWorkoutDayExercises(
             workoutDayId: workoutDay.id
         )
@@ -92,6 +99,7 @@ struct ProgressHistoryService: ProgressHistoryServicing {
         return ProgressSessionHistory(
             session: session,
             workoutDay: workoutDay,
+            programTitle: workoutProgram.title,
             exercises: exerciseHistories
         )
     }

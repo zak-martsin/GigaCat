@@ -1,23 +1,31 @@
 import SwiftUI
 
 struct ProgressView: View {
+    @State private var calendarViewModel: ProgressCalendarViewModel?
+
     let viewModel: ProgressViewModel
     let onHeaderAction: (HeaderAction) -> Void
 
     // MARK: - Layout
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            header
-                .padding(.horizontal, AppSpacing.lg)
-                .padding(.top, AppSpacing.lg)
-                .padding(.bottom, AppSpacing.md)
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 0) {
+                header
+                    .padding(.horizontal, AppSpacing.lg)
+                    .padding(.top, AppSpacing.lg)
+                    .padding(.bottom, AppSpacing.md)
 
-            content
-        }
-        .background(AppColor.background.ignoresSafeArea())
-        .task {
-            await viewModel.loadIfNeeded()
+                content
+            }
+            .background(AppColor.background.ignoresSafeArea())
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(isPresented: calendarIsPresented) {
+                calendarDestination
+            }
+            .task {
+                await viewModel.loadIfNeeded()
+            }
         }
     }
 
@@ -77,7 +85,8 @@ struct ProgressView: View {
                         pages: viewModel.weekPages,
                         selectedWeekStart: selectedWeekBinding,
                         selectedDate: viewModel.selectedDate,
-                        onSelectDate: viewModel.selectDate
+                        onSelectDate: openCalendarForDate,
+                        onSeeMore: openCalendar
                     )
                 }
 
@@ -117,6 +126,48 @@ struct ProgressView: View {
                 guard let selectedWeekStart else { return }
                 viewModel.showWeek(startingAt: selectedWeekStart)
             }
+        )
+    }
+
+    private var calendarIsPresented: Binding<Bool> {
+        Binding(
+            get: { calendarViewModel != nil },
+            set: { isPresented in
+                if !isPresented {
+                    calendarViewModel = nil
+                }
+            }
+        )
+    }
+
+    // MARK: - Navigation
+
+    @ViewBuilder
+    private var calendarDestination: some View {
+        if let calendarViewModel {
+            ProgressCalendarView(viewModel: calendarViewModel)
+        } else {
+            AppMessageCard(
+                title: "Calendar unavailable",
+                message: "Workout history is not loaded yet."
+            )
+            .padding(AppSpacing.lg)
+            .background(AppColor.background.ignoresSafeArea())
+        }
+    }
+
+    private func openCalendarForDate(_ date: Date) {
+        viewModel.selectDate(date)
+        openCalendar(selectedDate: date)
+    }
+
+    private func openCalendar() {
+        openCalendar(selectedDate: nil)
+    }
+
+    private func openCalendar(selectedDate: Date?) {
+        calendarViewModel = viewModel.makeCalendarViewModel(
+            selectedDate: selectedDate
         )
     }
 }

@@ -118,6 +118,7 @@ private extension ProgressDateServiceTests {
             return ProgressSessionHistory(
                 session: session,
                 workoutDay: workoutDay,
+                programTitle: "Test Program",
                 exercises: []
             )
         }

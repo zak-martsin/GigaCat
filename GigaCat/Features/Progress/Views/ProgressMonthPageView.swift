@@ -1,30 +1,54 @@
 import SwiftUI
 
-struct ProgressWeekPageView: View {
-    let viewData: ProgressWeekViewData
-    let selectedDate: Date?
+struct ProgressMonthPageView: View {
+    let viewData: ProgressMonthViewData
     let onSelectDate: (Date) -> Void
+
+    private let columns = Array(
+        repeating: GridItem(.flexible(), spacing: 0),
+        count: CalendarGridLayout.columnCount
+    )
 
     // MARK: - Layout
 
     var body: some View {
-        HStack(spacing: 0) {
+        LazyVGrid(columns: columns, spacing: AppSpacing.sm) {
+            ForEach(0..<viewData.leadingEmptyDayCount, id: \.self) { _ in
+                placeholder
+            }
+
             ForEach(viewData.days) { day in
-                ProgressWeekDayView(
-                    viewData: day,
-                    isSelected: day.date == selectedDate
-                ) {
+                ProgressCalendarDayView(viewData: day) {
                     onSelectDate(day.date)
                 }
-                    .frame(maxWidth: .infinity)
+            }
+
+            ForEach(0..<trailingEmptyDayCount, id: \.self) { _ in
+                placeholder
             }
         }
     }
+
+    private var placeholder: some View {
+        Color.clear
+            .frame(
+                width: AppControlSize.iconButton,
+                height: AppControlSize.iconButton + AppSpacing.sm + 2
+            )
+    }
+
+    private var trailingEmptyDayCount: Int {
+        max(
+            0,
+            CalendarGridLayout.cellCount
+                - viewData.leadingEmptyDayCount
+                - viewData.days.count
+        )
+    }
 }
 
-private struct ProgressWeekDayView: View {
-    let viewData: ProgressWeekDayViewData
-    let isSelected: Bool
+private struct ProgressCalendarDayView: View {
+    let viewData: ProgressCalendarDayViewData
     let onSelect: () -> Void
 
     // MARK: - Layout
@@ -56,20 +80,11 @@ private struct ProgressWeekDayView: View {
                         }
                     }
 
-                Text(viewData.weekdayText)
-                    .font(.caption2.weight(viewData.isToday ? .bold : .medium))
-                    .foregroundStyle(
-                        viewData.isToday
-                            ? AppColor.textPrimary
-                            : AppColor.textSecondary
-                    )
-                    .lineLimit(1)
-
                 Capsule()
-                    .fill(isSelected ? AppColor.accent : Color.clear)
+                    .fill(viewData.isSelected ? AppColor.accent : Color.clear)
                     .frame(height: 2)
                     .shadow(
-                        color: isSelected
+                        color: viewData.isSelected
                             ? AppColor.accent.opacity(0.35)
                             : Color.clear,
                         radius: AppSpacing.xs,
@@ -79,11 +94,9 @@ private struct ProgressWeekDayView: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(
-            "\(viewData.weekdayText), \(viewData.dayNumberText)"
-        )
+        .accessibilityLabel(viewData.dayNumberText)
         .accessibilityValue(accessibilityValue)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityAddTraits(viewData.isSelected ? .isSelected : [])
     }
 
     private var accessibilityValue: String {
@@ -98,4 +111,10 @@ private struct ProgressWeekDayView: View {
             ""
         }
     }
+}
+
+private enum CalendarGridLayout {
+    static let columnCount = 7
+    static let rowCount = 6
+    static let cellCount = columnCount * rowCount
 }

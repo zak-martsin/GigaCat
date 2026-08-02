@@ -10,6 +10,7 @@ struct ProgressHistoryContext: Equatable, Sendable {
 struct ProgressSessionHistory: Equatable, Sendable {
     let session: WorkoutSession
     let workoutDay: WorkoutDay
+    let programTitle: String
     let exercises: [ProgressExerciseHistory]
 }
 
