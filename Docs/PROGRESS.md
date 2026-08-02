@@ -59,20 +59,19 @@ calendar. It does not access persistence or prepare display strings.
 feature-specific ViewData. ViewData remains passive and contains only values needed by Views.
 
 `ProgressViewModel` owns the compact-week presentation state. It loads history through
-`ProgressHistoryServicing`, asks `ProgressDateServicing` for week boundaries, and delegates
-display formatting to `ProgressViewDataMapping`.
+`ProgressHistoryServicing`, asks `ProgressDateServicing` for week boundaries, delegates
+display formatting to `ProgressViewDataMapping`, and creates `ProgressCalendarViewModel` from
+its loaded history. Tapping a week day opens the calendar on that date; the general calendar
+action opens the current month without a selected date.
 
-`ProgressViewModel` creates `ProgressCalendarViewModel` from its loaded history context.
-Opening from the weekly strip supplies its targeted date. Opening from the general calendar
-action supplies no selection, so the current month opens without daily sessions. The calendar
-ViewModel owns month navigation, optional day selection, the month grid presentation, and the
-sessions shown for the selected day. Changing months clears the selection and daily session
-list until the user selects a visible date.
+`ProgressCalendarViewModel` receives the loaded history context and owns month paging, optional
+day selection, the month grid presentation, and the sessions shown for the selected day.
+Changing months clears the selection and daily session list until the user selects a visible day.
 
 The main and calendar screens use separate ViewModels because their data and interactions
 are different. Shared calculations remain in services rather than being duplicated.
-`AppShellView` builds Progress from the shared repositories and invalidates its cached history
-when Workout reports a data change.
+`AppShellView` builds Progress from shared repositories, while `AppDataChangeCoordinator`
+invalidates its cached history after workout data changes.
 
 ## 4. Current Foundation
 
@@ -87,21 +86,20 @@ Implemented:
 - `ProgressViewDataMapper`
 - localized week, month, weekday, time, weight, and repetition presentation
 - `ProgressViewModel` loading, empty, and failure states
-- compact-week navigation with a future-week boundary
+- compact-week paging UI with a future-week boundary
 - `ProgressCalendarViewModel`
 - calendar opening on a targeted date
 - current-month opening without a selected date
-- month navigation with a current-month boundary
+- month paging UI with a current-month boundary
 - optional day selection cleared when the displayed month changes
-- selected-day session presentation
-- Progress dependency composition from shared repositories
-- cross-feature history invalidation after workout data changes
+- selected-day exercise and set-log presentation
+- program title and one-based workout day order for each session
+- history invalidation after a completed workout through `AppDataChangeCoordinator`
 - unit tests for history loading, calendar boundaries, ViewData mapping, and both ViewModels
 
 Not implemented yet:
 
-- compact week UI
-- full calendar UI
+- weekly workout target
 
 ## 5. Deferred Progress Areas
 
