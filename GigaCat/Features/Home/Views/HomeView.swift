@@ -48,6 +48,7 @@ struct HomeView: View {
             .padding(.top, AppSpacing.md)
             .padding(.bottom, AppSpacing.xxl)
         }
+        .scrollClipDisabled()
     }
 
     @ViewBuilder
