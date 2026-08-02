@@ -1,0 +1,36 @@
+name: iOS CI
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Lint and unit tests
+    runs-on: macos-26
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v6
+
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
+      - name: Run SwiftLint
+        run: swiftlint lint --strict --config .swiftlint.yml
+
+      - name: Run unit tests
+        run: |
+          xcodebuild test \
+            -project GigaCat.xcodeproj \
+            -scheme GigaCat \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' \
+            -only-testing:GigaCatTests
