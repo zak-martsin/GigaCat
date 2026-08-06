@@ -1,7 +1,7 @@
 import Foundation
 
 /// Resolves the program and workout day that should be shown when Workout opens.
-protocol WorkoutContextServicing: Sendable {
+protocol WorkoutContextServicing {
     func loadContext() async throws -> WorkoutContext
 }
 

@@ -13,6 +13,6 @@ struct ProgramCatalogEntry: Identifiable, Equatable, Sendable {
 }
 
 /// Read-only access to the curated program catalog shared by discovery and workout entry flows.
-protocol ProgramCatalogRepository: Sendable {
+protocol ProgramCatalogRepository {
     func fetchProgramCatalog() async throws -> [ProgramCatalogEntry]
 }
