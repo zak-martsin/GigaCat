@@ -241,10 +241,10 @@ struct LocalWorkoutRepository: WorkoutRepository {
 
 private extension LocalWorkoutRepository {
     private func findActiveSession(for userId: UUID) throws -> WorkoutSessionEntity? {
-        let inProgress = WorkoutSessionStatus.inProgress
+        let inProgress = WorkoutSessionStatus.inProgress.rawValue
         var descriptor = FetchDescriptor<WorkoutSessionEntity>(
             predicate: #Predicate {
-                $0.userId == userId && $0.status == inProgress
+                $0.userId == userId && $0.statusRawValue == inProgress
             },
             sortBy: [SortDescriptor(\.startedAt, order: .reverse)]
         )
@@ -376,7 +376,7 @@ private extension LocalWorkoutRepository {
     private func update(_ entity: WorkoutSessionEntity, from session: WorkoutSession) {
         entity.userId = session.userId
         entity.workoutDayId = session.workoutDayId
-        entity.status = session.status
+        entity.statusRawValue = session.status.rawValue
         entity.startedAt = session.startedAt
         entity.completedAt = session.completedAt
     }

@@ -33,12 +33,16 @@ enum UserMapper {
 
 enum WorkoutSessionMapper {
     static func toDomain(_ entity: WorkoutSessionEntity) throws -> WorkoutSession {
-        try WorkoutSession(id: entity.id,
-                           userId: entity.userId,
-                           workoutDayId: entity.workoutDayId,
-                           status: entity.status,
-                           startedAt: entity.startedAt,
-                           completedAt: entity.completedAt
+        guard let status = WorkoutSessionStatus(rawValue: entity.statusRawValue) else {
+            throw RepositoryError.invalidWorkoutSessionStatus(entity.statusRawValue)
+        }
+
+        return try WorkoutSession(id: entity.id,
+                                  userId: entity.userId,
+                                  workoutDayId: entity.workoutDayId,
+                                  status: status,
+                                  startedAt: entity.startedAt,
+                                  completedAt: entity.completedAt
         )
     }
 
@@ -46,7 +50,7 @@ enum WorkoutSessionMapper {
         WorkoutSessionEntity(id: domain.id,
                              userId: domain.userId,
                              workoutDayId: domain.workoutDayId,
-                             status: domain.status,
+                             statusRawValue: domain.status.rawValue,
                              startedAt: domain.startedAt,
                              completedAt: domain.completedAt)
     }

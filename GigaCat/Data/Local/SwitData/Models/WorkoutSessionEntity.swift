@@ -12,7 +12,7 @@ final class WorkoutSessionEntity: Identifiable {
     @Attribute(.unique) var id: UUID
     var userId: UUID
     var workoutDayId: UUID
-    var status: WorkoutSessionStatus
+    var statusRawValue: String
     var startedAt: Date
     var completedAt: Date?
 
@@ -20,14 +20,14 @@ final class WorkoutSessionEntity: Identifiable {
         id: UUID,
         userId: UUID,
         workoutDayId: UUID,
-        status: WorkoutSessionStatus,
+        statusRawValue: String,
         startedAt: Date,
         completedAt: Date?
     ) {
         self.id = id
         self.userId = userId
         self.workoutDayId = workoutDayId
-        self.status = status
+        self.statusRawValue = statusRawValue
         self.startedAt = startedAt
         self.completedAt = completedAt
     }
