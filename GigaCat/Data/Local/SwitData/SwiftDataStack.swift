@@ -5,6 +5,7 @@
 //  Created by OpenAI on 13/08/2026.
 //
 
+import Foundation
 import SwiftData
 
 /// Owns the shared SwiftData schema and container used by local repositories.
@@ -25,12 +26,24 @@ final class SwiftDataStack {
     let container: ModelContainer
     let mainContext: ModelContext
 
-    /// Creates a disk-backed store for the app or an isolated in-memory store for tests.
-    init(isStoredInMemoryOnly: Bool = false) throws {
-        let configuration = ModelConfiguration(
-            schema: Self.schema,
-            isStoredInMemoryOnly: isStoredInMemoryOnly
-        )
+    /// Creates the app store, an isolated in-memory store, or a store at a test-controlled URL.
+    init(
+        isStoredInMemoryOnly: Bool = false,
+        storeURL: URL? = nil
+    ) throws {
+        let configuration: ModelConfiguration
+        if let storeURL {
+            configuration = ModelConfiguration(
+                "GigaCat",
+                schema: Self.schema,
+                url: storeURL
+            )
+        } else {
+            configuration = ModelConfiguration(
+                schema: Self.schema,
+                isStoredInMemoryOnly: isStoredInMemoryOnly
+            )
+        }
         let container = try ModelContainer(
             for: Self.schema,
             configurations: [configuration]

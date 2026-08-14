@@ -19,7 +19,17 @@ struct LocalUserRepository: UserRepository {
 
     // TODO: Replace MockDataStore with authenticated user lookup once authentication is implemented.
     func currentUser() async throws -> User? {
-        await store.currentUser()
+        guard let authenticatedUser = await store.currentUser() else {
+            return nil
+        }
+
+        if let entity = try findUser(id: authenticatedUser.id) {
+            return try UserMapper.toDomain(entity)
+        }
+
+        context.insert(UserMapper.toEntity(authenticatedUser))
+        try context.save()
+        return authenticatedUser
     }
 
     func user(appleUserId: String) async throws -> User? {

@@ -8,10 +8,37 @@
 import SwiftUI
 
 @main
+@MainActor
 struct GigaCatApp: App {
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
+    private let startupState: AppStartupState
+
+    init() {
+        do {
+            startupState = .ready(
+                try AppCompositionRoot.makeLocalRepositoryFactory()
+            )
+        } catch {
+            startupState = .failed(error.localizedDescription)
         }
     }
+
+    var body: some Scene {
+        WindowGroup {
+            switch startupState {
+            case .ready(let repositoryFactory):
+                ContentView(repositoryFactory: repositoryFactory)
+            case .failed(let message):
+                ContentUnavailableView(
+                    "Local data unavailable",
+                    systemImage: "externaldrive.badge.exclamationmark",
+                    description: Text(message)
+                )
+            }
+        }
+    }
+}
+
+private enum AppStartupState {
+    case ready(LocalRepositoryFactory)
+    case failed(String)
 }

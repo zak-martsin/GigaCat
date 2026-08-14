@@ -1,7 +1,7 @@
 import Foundation
 
 /// Creates a coherent set of mock repositories backed by shared in-memory data.
-struct MockRepositoryFactory {
+struct MockRepositoryFactory: RepositoryFactory {
     let programCatalogRepository: ProgramCatalogRepository
     let userRepository: UserRepository
     let workoutProgramRepository: WorkoutProgramRepository

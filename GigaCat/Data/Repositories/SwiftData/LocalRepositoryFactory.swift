@@ -7,7 +7,7 @@
 
 /// Creates local repositories that share one SwiftData container and main context.
 @MainActor
-struct LocalRepositoryFactory {
+struct LocalRepositoryFactory: RepositoryFactory {
     let programCatalogRepository: ProgramCatalogRepository
     let userRepository: UserRepository
     let workoutProgramRepository: WorkoutProgramRepository
