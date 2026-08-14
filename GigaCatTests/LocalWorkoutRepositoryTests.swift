@@ -190,10 +190,10 @@ struct LocalWorkoutRepositoryTests {
     }
 }
 
-@MainActor
 private extension LocalWorkoutRepositoryTests {
+    @MainActor
     struct Fixture {
-        let container: ModelContainer
+        let stack: SwiftDataStack
         let context: ModelContext
         let repository: LocalWorkoutRepository
         let user: User
@@ -205,23 +205,8 @@ private extension LocalWorkoutRepositoryTests {
         let otherDayExercise: WorkoutDayExercise
 
         init() throws {
-            let schema = Schema([
-                UserEntity.self,
-                WorkoutProgramEntity.self,
-                WorkoutDayEntity.self,
-                WorkoutDayExerciseEntity.self,
-                ExerciseEntity.self,
-                WorkoutSessionEntity.self,
-                ExerciseLogEntity.self,
-                SavedWorkoutProgramEntity.self,
-                ProgramCatalogMetadataEntity.self
-            ])
-            let configuration = ModelConfiguration(
-                schema: schema,
-                isStoredInMemoryOnly: true
-            )
-            container = try ModelContainer(for: schema, configurations: [configuration])
-            context = ModelContext(container)
+            stack = try SwiftDataStack(isStoredInMemoryOnly: true)
+            context = stack.mainContext
             repository = LocalWorkoutRepository(context: context)
 
             user = try User(appleUserId: "local-workout-user")
