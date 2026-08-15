@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A15A0001300C000100000001 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = A15A0003300C000100000001 /* Supabase */; };
 		CEAC57FB2FEB04E200E9D691 /* AGENTS.md in Resources */ = {isa = PBXBuildFile; fileRef = CEAC57F92FEB04D300E9D691 /* AGENTS.md */; };
 /* End PBXBuildFile section */
 
@@ -62,6 +63,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A15A0001300C000100000001 /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -125,6 +127,7 @@
 			);
 			name = GigaCat;
 			packageProductDependencies = (
+				A15A0003300C000100000001 /* Supabase */,
 			);
 			productName = GigaCat;
 			productReference = CEAC57CE2FEB03DE00E9D691 /* GigaCat.app */;
@@ -208,6 +211,9 @@
 			);
 			mainGroup = CEAC57C52FEB03DE00E9D691;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A15A0002300C000100000001 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = CEAC57CF2FEB03DE00E9D691 /* Products */;
 			projectDirPath = "";
@@ -612,6 +618,27 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A15A0002300C000100000001 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+			traits = (
+			);
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A15A0003300C000100000001 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A15A0002300C000100000001 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = CEAC57C62FEB03DE00E9D691 /* Project object */;
 }
