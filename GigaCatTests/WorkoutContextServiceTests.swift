@@ -241,9 +241,8 @@ private extension WorkoutContextServiceTests {
                 nil
             }
 
-            return try User(
+            return User(
                 id: identifiers.userID,
-                appleUserId: "workout-context-user",
                 selectedProgramId: selectedProgramID,
                 createdAt: now.addingTimeInterval(-1_000),
                 updatedAt: now

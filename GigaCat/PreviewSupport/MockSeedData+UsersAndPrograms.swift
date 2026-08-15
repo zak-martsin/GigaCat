@@ -2,22 +2,20 @@ import Foundation
 
 extension MockSeedData {
     static func makeUsers(_ context: MockSeedContext) -> [User] {
-        compact([
-            try? User(
+        [
+            User(
                 id: context.currentUserID,
-                appleUserId: "mock-apple-user",
                 selectedProgramId: context.upperBodyProgramID,
                 createdAt: context.createdAt,
                 updatedAt: context.createdAt
             ),
-            try? User(
+            User(
                 id: context.secondUserID,
-                appleUserId: "mock-second-user",
                 selectedProgramId: context.strengthProgramID,
                 createdAt: context.createdAt.addingTimeInterval(600),
                 updatedAt: context.createdAt.addingTimeInterval(600)
             )
-        ])
+        ]
     }
 
     static func makePrograms(_ context: MockSeedContext) -> [WorkoutProgram] {

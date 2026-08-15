@@ -65,8 +65,8 @@ actor MockDataStore {
         return usersByID[currentUserID]
     }
 
-    func user(appleUserId: String) -> User? {
-        usersByID.values.first { $0.appleUserId == appleUserId }
+    func user(id: UUID) -> User? {
+        usersByID[id]
     }
 
     func saveUser(_ user: User) {

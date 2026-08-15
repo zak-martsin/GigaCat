@@ -359,7 +359,7 @@ private extension LocalWorkoutRepository {
             throw RepositoryError.workoutProgramNotFound
         }
 
-        let user = try UserMapper.toDomain(userEntity)
+        let user = UserMapper.toDomain(userEntity)
         return (userEntity, user.selectingProgram(programId))
     }
 

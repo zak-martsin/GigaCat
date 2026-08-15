@@ -78,7 +78,7 @@ private extension WorkoutSetRepositoryTests {
         let repository: MockWorkoutRepository
 
         init() throws {
-            user = try User(appleUserId: "workout-set-user")
+            user = User()
             day = try WorkoutDay(programId: UUID(), title: "Day 1", orderIndex: 0)
             otherDay = try WorkoutDay(
                 programId: day.programId,

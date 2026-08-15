@@ -18,8 +18,7 @@ Represents the authenticated person using the app. The user owns workout history
 
 ### Fields
 
-- `id`: Stable internal identifier.
-- `appleUserId`: External identity from Sign in with Apple.
+- `id`: Provider-independent account identity issued by Supabase Auth.
 - `selectedProgramId`: Identifier of the currently selected `WorkoutProgram`.
 - `createdAt`: When the user record was created.
 - `updatedAt`: When the user record was last updated.

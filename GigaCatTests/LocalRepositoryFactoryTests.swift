@@ -13,7 +13,7 @@ struct LocalRepositoryFactoryTests {
             stack: stack,
             currentUserStore: MockDataStore()
         )
-        let user = try User(appleUserId: "shared-stack-user")
+        let user = User()
         let program = try WorkoutProgram(
             title: "Shared Stack Program",
             description: "Program stored in the factory stack"
@@ -23,9 +23,7 @@ struct LocalRepositoryFactoryTests {
         stack.mainContext.insert(WorkoutProgramMapper.toEntity(program))
         try stack.mainContext.save()
 
-        let fetchedUser = try await factory.userRepository.user(
-            appleUserId: user.appleUserId
-        )
+        let fetchedUser = try await factory.userRepository.user(id: user.id)
         let catalog = try await factory.programCatalogRepository.fetchProgramCatalog()
 
         #expect(fetchedUser == user)

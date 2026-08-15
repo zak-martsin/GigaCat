@@ -396,8 +396,7 @@ Requirements
 
 User
 
-* id
-* appleUserId
+* id (Supabase Auth user ID)
 * createdAt
 * updatedAt
 

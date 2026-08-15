@@ -284,7 +284,7 @@ private struct ProfileSheetView: View {
                     .foregroundStyle(AppColor.textPrimary)
 
                 if let user {
-                    profileRow(title: "Apple User ID", value: user.appleUserId)
+                    profileRow(title: "User ID", value: user.id.uuidString)
                     profileRow(title: "User ID", value: user.id.uuidString)
                     profileRow(
                         title: "Selected Program ID",

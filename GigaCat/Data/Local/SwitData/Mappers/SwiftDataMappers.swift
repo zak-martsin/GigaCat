@@ -6,18 +6,16 @@
 //
 
 enum UserMapper {
-    static func toDomain(_ entity: UserEntity) throws -> User {
-        try User(id: entity.id,
-                 appleUserId: entity.appleUserId,
-                 selectedProgramId: entity.selectedProgramId,
-                 createdAt: entity.createdAt,
-                 updatedAt: entity.updatedAt,
+    static func toDomain(_ entity: UserEntity) -> User {
+        User(id: entity.id,
+             selectedProgramId: entity.selectedProgramId,
+             createdAt: entity.createdAt,
+             updatedAt: entity.updatedAt
         )
     }
 
     static func toEntity(_ domain: User) -> UserEntity {
         UserEntity(id: domain.id,
-                   appleUserId: domain.appleUserId,
                    selectedProgramId: domain.selectedProgramId,
                    createdAt: domain.createdAt,
                    updatedAt: domain.updatedAt
@@ -25,7 +23,6 @@ enum UserMapper {
     }
 
     static func update(_ entity: UserEntity, from domain: User) {
-        entity.appleUserId = domain.appleUserId
         entity.selectedProgramId = domain.selectedProgramId
         entity.updatedAt = domain.updatedAt
     }

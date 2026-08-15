@@ -297,8 +297,8 @@ private extension MockRepositoryTests {
         let otherUserLog: ExerciseLog
 
         init(content: LatestExerciseContent) throws {
-            user = try User(appleUserId: "latest-log-user")
-            otherUser = try User(appleUserId: "other-latest-log-user")
+            user = User()
+            otherUser = User()
             previousSession = try WorkoutSession(
                 userId: user.id,
                 workoutDayId: content.firstDay.id,

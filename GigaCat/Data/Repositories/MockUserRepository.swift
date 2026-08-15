@@ -12,8 +12,8 @@ struct MockUserRepository: UserRepository {
         await store.currentUser()
     }
 
-    func user(appleUserId: String) async throws -> User? {
-        await store.user(appleUserId: appleUserId)
+    func user(id: UUID) async throws -> User? {
+        await store.user(id: id)
     }
 
     func save(_ user: User) async throws {

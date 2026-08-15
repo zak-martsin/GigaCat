@@ -24,7 +24,7 @@ struct LocalUserRepository: UserRepository {
         }
 
         if let entity = try findUser(id: authenticatedUser.id) {
-            return try UserMapper.toDomain(entity)
+            return UserMapper.toDomain(entity)
         }
 
         context.insert(UserMapper.toEntity(authenticatedUser))
@@ -32,12 +32,11 @@ struct LocalUserRepository: UserRepository {
         return authenticatedUser
     }
 
-    func user(appleUserId: String) async throws -> User? {
-        let descriptor = FetchDescriptor<UserEntity>(predicate: #Predicate{ $0.appleUserId == appleUserId})
-        guard let entity = try context.fetch(descriptor).first else {
+    func user(id: UUID) async throws -> User? {
+        guard let entity = try findUser(id: id) else {
             return nil
         }
-        return try UserMapper.toDomain(entity)
+        return UserMapper.toDomain(entity)
     }
 
     func save(_ user: User) async throws {
@@ -65,7 +64,7 @@ struct LocalUserRepository: UserRepository {
 
         try context.save()
 
-        return try UserMapper.toDomain(entity)
+        return UserMapper.toDomain(entity)
     }
 
     private func findUser(id: UUID) throws -> UserEntity? {

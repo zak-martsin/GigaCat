@@ -61,9 +61,8 @@ struct MiniPlayerViewModelTests {
 
         return MockDataStore(
             users: [
-                try User(
+                User(
                     id: userID,
-                    appleUserId: "active-user",
                     selectedProgramId: programID,
                     createdAt: now.addingTimeInterval(-86_400),
                     updatedAt: now.addingTimeInterval(-86_400)

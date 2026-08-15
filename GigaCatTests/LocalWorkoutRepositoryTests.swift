@@ -170,7 +170,7 @@ struct LocalWorkoutRepositoryTests {
         let expected = try await fixture.repository.saveSet(
             fixture.input(performedAt: Date(timeIntervalSince1970: 2_000))
         ).log
-        let otherUser = try User(appleUserId: "other-local-user")
+        let otherUser = User()
         fixture.context.insert(UserMapper.toEntity(otherUser))
         try fixture.context.save()
 
@@ -209,7 +209,7 @@ private extension LocalWorkoutRepositoryTests {
             context = stack.mainContext
             repository = LocalWorkoutRepository(context: context)
 
-            user = try User(appleUserId: "local-workout-user")
+            user = User()
             program = try WorkoutProgram(
                 title: "Local Program",
                 description: "Program used by local repository tests"
