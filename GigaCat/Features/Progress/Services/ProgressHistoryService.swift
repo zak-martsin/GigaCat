@@ -1,7 +1,7 @@
 import Foundation
 
 /// Loads completed workout history and resolves the referenced workout metadata.
-protocol ProgressHistoryServicing: Sendable {
+protocol ProgressHistoryServicing {
     func loadHistory() async throws -> ProgressHistoryContext
 }
 

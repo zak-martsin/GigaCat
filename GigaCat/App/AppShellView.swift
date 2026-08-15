@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct AppShellView: View {
+    private let container: AppContainer
     @State private var selectedTab: AppTab = .home
     @State private var isProfilePresented = false
     @State private var workoutViewModel: WorkoutViewModel
@@ -12,9 +13,10 @@ struct AppShellView: View {
 
     // MARK: - Initialization
 
-    init(repositoryFactory: MockRepositoryFactory = MockRepositoryFactory()) {
+    init(repositoryFactory: some RepositoryFactory) {
         let container = AppContainer(repositoryFactory: repositoryFactory)
 
+        self.container = container
         _workoutViewModel = State(initialValue: container.workoutViewModel)
         _libraryViewModel = State(initialValue: container.libraryViewModel)
         _progressViewModel = State(initialValue: container.progressViewModel)

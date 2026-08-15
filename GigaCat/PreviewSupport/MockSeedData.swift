@@ -99,28 +99,39 @@ enum MockSeedData {
     }
     // swiftlint:enable function_body_length
 
+    /// Provides the same stable catalog to mock and SwiftData-backed development flows.
+    static func makeCatalogSeed() -> WorkoutCatalogSeed {
+        makeCatalogSeed(makeContext())
+    }
+
+    private static func makeCatalogSeed(_ context: MockSeedContext) -> WorkoutCatalogSeed {
+        WorkoutCatalogSeed(
+            programs: makePrograms(context),
+            metadataByProgramID: makeProgramCatalogMetadata(context),
+            workoutDays: makeWorkoutDays(context),
+            dayExercises: makeDayExercises(context),
+            exercises: makeExercises(context)
+        )
+    }
+
     /// Creates a coherent graph of users, programs, workout days, exercises, sessions, and logs.
     static func makeStore() -> MockDataStore {
         let context = makeContext()
+        let catalog = makeCatalogSeed(context)
         let users = makeUsers(context)
-        let programs = makePrograms(context)
         let savedPrograms = makeSavedPrograms(context)
-        let programCatalogMetadataByProgramID = makeProgramCatalogMetadata(context)
-        let workoutDays = makeWorkoutDays(context)
-        let exercises = makeExercises(context)
-        let dayExercises = makeDayExercises(context)
         let sessions = makeSessions(context)
         let exerciseLogs = makeExerciseLogs(context)
         let currentUserID = context.currentUserID
 
         return MockDataStore(
             users: users,
-            programs: programs,
+            programs: catalog.programs,
             savedPrograms: savedPrograms,
-            programCatalogMetadataByProgramID: programCatalogMetadataByProgramID,
-            workoutDays: workoutDays,
-            dayExercises: dayExercises,
-            exercises: exercises,
+            programCatalogMetadataByProgramID: catalog.metadataByProgramID,
+            workoutDays: catalog.workoutDays,
+            dayExercises: catalog.dayExercises,
+            exercises: catalog.exercises,
             sessions: sessions,
             exerciseLogs: exerciseLogs,
             currentUserID: currentUserID

@@ -11,7 +11,7 @@ enum ProgramDetailConflictResolution {
 }
 
 /// Shared program-detail operations used without coupling the presenting feature to Home.
-protocol ProgramDetailServicing: Sendable {
+protocol ProgramDetailServicing {
     func makeDetail(for programID: UUID, user: User) async throws -> ProgramDetail
     func selectProgram(_ programID: UUID, for user: User) async throws -> ProgramDetailSelectionResult
     func resolveSelectionConflict(

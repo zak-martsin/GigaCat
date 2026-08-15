@@ -1,7 +1,7 @@
 import Foundation
 
 /// Coordinates workout session lifecycle and persisted exercise logging.
-protocol WorkoutRepository: Sendable {
+protocol WorkoutRepository {
     func activeSession(for userId: UUID) async throws -> WorkoutSession?
     func startSession(userId: UUID, workoutDayId: UUID, startedAt: Date) async throws -> WorkoutSession
     func completeSession(sessionId: UUID, completedAt: Date) async throws -> WorkoutSession

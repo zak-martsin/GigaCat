@@ -1,7 +1,7 @@
 import Foundation
 
 /// Builds Home-specific view data from repository-backed domain state.
-protocol HomePresentationServicing: Sendable {
+protocol HomePresentationServicing {
     func makeProgramItems(
         from catalog: [ProgramCatalogEntry],
         selectedProgramID: UUID?

@@ -1,7 +1,7 @@
 import Foundation
 
 /// Builds app-level mini-player state from the current repository snapshot.
-protocol MiniPlayerServicing: Sendable {
+protocol MiniPlayerServicing {
     func makePresentation() async throws -> MiniPlayerPresentation
 }
 

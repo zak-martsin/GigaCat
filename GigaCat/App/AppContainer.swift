@@ -14,7 +14,7 @@ final class AppContainer {
 
     // The composition root keeps the complete dependency graph visible in one place.
     // swiftlint:disable:next function_body_length
-    init(repositoryFactory: MockRepositoryFactory) {
+    init(repositoryFactory: some RepositoryFactory) {
         let dataChangeDispatcher = AppDataChangeDispatcher()
         let programDetailService = ProgramDetailService(
             userRepository: repositoryFactory.userRepository,
