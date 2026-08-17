@@ -34,6 +34,10 @@ Remote Data Source (Supabase later)
 and the application-scoped coordinators used by `AppShellView`. Views do not construct the
 dependency graph.
 
+`CurrentUserContext` is the neutral app-scoped identity boundary. Authentication writes only the
+active domain user ID into it, while local repositories read that ID without depending on Supabase
+or another remote implementation.
+
 Successful mutations emit an `AppDataChange` through `AppDataChangeDispatcher`. The
 `AppDataChangeCoordinator` then:
 
@@ -118,8 +122,8 @@ Store the app's working data on device.
 
 Current status:
 
-- Planned for later.
-- SwiftData will become the local source of truth.
+- SwiftData is the disk-backed local source of truth.
+- Local repositories hide `ModelContext` and persistence entities from feature code.
 
 Responsibilities later:
 
@@ -134,8 +138,8 @@ Handle authentication and cloud sync.
 
 Current status:
 
-- Planned for later.
-- Supabase will be used for auth and sync.
+- Supabase email authentication is integrated behind `AuthenticationService`.
+- Supabase sync remains planned for later.
 
 Responsibilities later:
 
@@ -387,8 +391,6 @@ The architecture should acknowledge future plans without building them too early
 
 Not implemented yet:
 
-- SwiftData persistence implementation
-- Supabase authentication implementation
 - Supabase sync engine
 - Conflict resolution strategy for sync
 - Background sync scheduler details

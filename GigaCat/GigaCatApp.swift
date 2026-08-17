@@ -15,7 +15,7 @@ struct GigaCatApp: App {
     init() {
         do {
             startupState = .ready(
-                try AppCompositionRoot.makeLocalRepositoryFactory()
+                try AppCompositionRoot.makeDependencies()
             )
         } catch {
             startupState = .failed(error.localizedDescription)
@@ -25,8 +25,12 @@ struct GigaCatApp: App {
     var body: some Scene {
         WindowGroup {
             switch startupState {
-            case .ready(let repositoryFactory):
-                ContentView(repositoryFactory: repositoryFactory)
+            case .ready(let dependencies):
+                AuthenticationRootView(
+                    authenticationService: dependencies.authenticationService,
+                    currentUserIDStore: dependencies.currentUserContext,
+                    repositoryFactory: dependencies.repositoryFactory
+                )
             case .failed(let message):
                 ContentUnavailableView(
                     "Local data unavailable",
@@ -39,6 +43,6 @@ struct GigaCatApp: App {
 }
 
 private enum AppStartupState {
-    case ready(LocalRepositoryFactory)
+    case ready(AppDependencies)
     case failed(String)
 }

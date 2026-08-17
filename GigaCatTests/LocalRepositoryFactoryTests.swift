@@ -11,7 +11,7 @@ struct LocalRepositoryFactoryTests {
         let stack = try SwiftDataStack(isStoredInMemoryOnly: true)
         let factory = LocalRepositoryFactory(
             stack: stack,
-            currentUserStore: MockDataStore()
+            currentUserIDProvider: CurrentUserContext()
         )
         let user = User()
         let program = try WorkoutProgram(
@@ -33,25 +33,45 @@ struct LocalRepositoryFactoryTests {
     @Test
     func currentUserIsCreatedOnceThenReadFromSwiftData() async throws {
         let stack = try SwiftDataStack(isStoredInMemoryOnly: true)
-        let currentUserStore = MockSeedData.makeStore()
+        let currentUserID = UUID()
         let factory = LocalRepositoryFactory(
             stack: stack,
-            currentUserStore: currentUserStore
+            currentUserIDProvider: CurrentUserContext(userID: currentUserID)
         )
-        let authenticatedUser = try #require(await currentUserStore.currentUser())
-        #expect(authenticatedUser.selectedProgramId != nil)
 
         let firstRead = try await factory.userRepository.currentUser()
         _ = try await factory.userRepository.updateSelectedProgram(
-            for: authenticatedUser.id,
+            for: currentUserID,
             programId: nil
         )
         let secondRead = try await factory.userRepository.currentUser()
 
-        #expect(firstRead == authenticatedUser)
+        #expect(firstRead?.id == currentUserID)
         #expect(secondRead?.selectedProgramId == nil)
         #expect(
             try stack.mainContext.fetchCount(FetchDescriptor<UserEntity>()) == 1
+        )
+    }
+
+    @Test
+    func changingCurrentUserIDKeepsLocalProfilesSeparated() async throws {
+        let stack = try SwiftDataStack(isStoredInMemoryOnly: true)
+        let firstUserID = UUID()
+        let secondUserID = UUID()
+        let currentUserContext = CurrentUserContext(userID: firstUserID)
+        let factory = LocalRepositoryFactory(
+            stack: stack,
+            currentUserIDProvider: currentUserContext
+        )
+
+        let firstUser = try await factory.userRepository.currentUser()
+        await currentUserContext.setCurrentUserID(secondUserID)
+        let secondUser = try await factory.userRepository.currentUser()
+
+        #expect(firstUser?.id == firstUserID)
+        #expect(secondUser?.id == secondUserID)
+        #expect(
+            try stack.mainContext.fetchCount(FetchDescriptor<UserEntity>()) == 2
         )
     }
 
@@ -71,7 +91,9 @@ struct LocalRepositoryFactoryTests {
         let reopenedStack = try SwiftDataStack(storeURL: storeURL)
         let reopenedFactory = LocalRepositoryFactory(
             stack: reopenedStack,
-            currentUserStore: MockSeedData.makeStore()
+            currentUserIDProvider: CurrentUserContext(
+                userID: identifiers.userID
+            )
         )
         let reopenedUser = try #require(
             try await reopenedFactory.userRepository.currentUser()
@@ -98,7 +120,9 @@ private func persistUserChangesAndProgram(
 
     let factory = LocalRepositoryFactory(
         stack: stack,
-        currentUserStore: MockSeedData.makeStore()
+        currentUserIDProvider: CurrentUserContext(
+            userID: UUID(uuidString: "11111111-1111-1111-1111-111111111111")
+        )
     )
     let user = try #require(try await factory.userRepository.currentUser())
     let program = try #require(catalog.programs.first)

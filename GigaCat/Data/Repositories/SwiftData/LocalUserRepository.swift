@@ -10,26 +10,29 @@ import SwiftData
 
 struct LocalUserRepository: UserRepository {
     private let context: ModelContext
-    private let store: MockDataStore
+    private let currentUserIDProvider: any CurrentUserIDProviding
 
-    init(context: ModelContext, store: MockDataStore) {
+    init(
+        context: ModelContext,
+        currentUserIDProvider: any CurrentUserIDProviding
+    ) {
         self.context = context
-        self.store = store
+        self.currentUserIDProvider = currentUserIDProvider
     }
 
-    // TODO: Replace MockDataStore with authenticated user lookup once authentication is implemented.
     func currentUser() async throws -> User? {
-        guard let authenticatedUser = await store.currentUser() else {
+        guard let userID = await currentUserIDProvider.currentUserID() else {
             return nil
         }
 
-        if let entity = try findUser(id: authenticatedUser.id) {
+        if let entity = try findUser(id: userID) {
             return UserMapper.toDomain(entity)
         }
 
-        context.insert(UserMapper.toEntity(authenticatedUser))
+        let user = User(id: userID)
+        context.insert(UserMapper.toEntity(user))
         try context.save()
-        return authenticatedUser
+        return user
     }
 
     func user(id: UUID) async throws -> User? {

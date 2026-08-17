@@ -8,4 +8,5 @@ enum AppIconSize {
     static let exerciseArtwork: CGFloat = 22
     static let exerciseDetailArtwork: CGFloat = 54
     static let exerciseNavigation: CGFloat = 18
+    static let authenticationLogo: CGFloat = 44
 }

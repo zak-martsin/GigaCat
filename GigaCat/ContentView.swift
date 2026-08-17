@@ -10,8 +10,14 @@ import SwiftUI
 struct ContentView: View {
     private let appShellView: AppShellView
 
-    init(repositoryFactory: some RepositoryFactory) {
-        appShellView = AppShellView(repositoryFactory: repositoryFactory)
+    init(
+        repositoryFactory: some RepositoryFactory,
+        onSignOut: @escaping () -> Void = {}
+    ) {
+        appShellView = AppShellView(
+            repositoryFactory: repositoryFactory,
+            onSignOut: onSignOut
+        )
     }
 
     var body: some View {

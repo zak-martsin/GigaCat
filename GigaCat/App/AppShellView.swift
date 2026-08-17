@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AppShellView: View {
     private let container: AppContainer
+    private let onSignOut: () -> Void
     @State private var selectedTab: AppTab = .home
     @State private var isProfilePresented = false
     @State private var workoutViewModel: WorkoutViewModel
@@ -13,10 +14,14 @@ struct AppShellView: View {
 
     // MARK: - Initialization
 
-    init(repositoryFactory: some RepositoryFactory) {
+    init(
+        repositoryFactory: some RepositoryFactory,
+        onSignOut: @escaping () -> Void = {}
+    ) {
         let container = AppContainer(repositoryFactory: repositoryFactory)
 
         self.container = container
+        self.onSignOut = onSignOut
         _workoutViewModel = State(initialValue: container.workoutViewModel)
         _libraryViewModel = State(initialValue: container.libraryViewModel)
         _progressViewModel = State(initialValue: container.progressViewModel)
@@ -129,7 +134,10 @@ struct AppShellView: View {
             Text(programDetailViewModel.errorMessage ?? "Please try again.")
         }
         .sheet(isPresented: $isProfilePresented) {
-            ProfileSheetView(user: homeViewModel.profileUser)
+            ProfileSheetView(
+                user: homeViewModel.profileUser,
+                onSignOut: signOut
+            )
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
@@ -172,6 +180,11 @@ struct AppShellView: View {
         case .search, .add, .more:
             break
         }
+    }
+
+    private func signOut() {
+        isProfilePresented = false
+        onSignOut()
     }
 
     private func openMiniPlayerProgramDetail() {
@@ -275,6 +288,7 @@ struct AppShellView: View {
 
 private struct ProfileSheetView: View {
     let user: User?
+    let onSignOut: () -> Void
 
     var body: some View {
         ScrollView {
@@ -300,6 +314,16 @@ private struct ProfileSheetView: View {
                         .padding(AppSpacing.lg)
                         .appCardStyle()
                 }
+
+                Spacer(minLength: AppSpacing.lg)
+
+                Button(role: .destructive, action: onSignOut) {
+                    Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: AppControlSize.buttonHeight)
+                }
+                .buttonStyle(.bordered)
             }
             .padding(.horizontal, AppSpacing.lg)
             .padding(.top, AppSpacing.lg)

@@ -16,15 +16,17 @@ struct LocalRepositoryFactory: RepositoryFactory {
 
     private let stack: SwiftDataStack
 
-    /// Uses a mock store only until authenticated-user lookup has a dedicated provider.
-    init(stack: SwiftDataStack, currentUserStore: MockDataStore) {
+    init(
+        stack: SwiftDataStack,
+        currentUserIDProvider: any CurrentUserIDProviding
+    ) {
         self.stack = stack
 
         let context = stack.mainContext
         programCatalogRepository = LocalProgramCatalogRepository(context: context)
         userRepository = LocalUserRepository(
             context: context,
-            store: currentUserStore
+            currentUserIDProvider: currentUserIDProvider
         )
         workoutProgramRepository = LocalWorkoutProgramRepository(context: context)
         workoutProgramLibraryRepository = LocalWorkoutProgramLibraryRepository(context: context)

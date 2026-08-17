@@ -74,7 +74,8 @@ Included
 
 Authentication
 
-* Sign in with Apple
+* Sign in with email and password
+* Sign in with Apple as an additional option
 * persistent user session
 
 Workout Programs
@@ -141,11 +142,12 @@ FR-1 Authentication
 
 Description
 
-Users must authenticate using Sign in with Apple.
+Users must authenticate using email and password. Sign in with Apple is an additional option.
 
 Acceptance Criteria
 
-* User can sign in with Apple.
+* User can register and sign in with email and password.
+* User can optionally sign in with Apple.
 * User remains authenticated after app restart.
 * User can sign out.
 * User data is associated with a unique account.
@@ -453,7 +455,8 @@ AIInsight
 
 12. Security Requirements
 
-* Sign in with Apple only
+* email and password authentication
+* Sign in with Apple as an additional provider
 * secure token storage
 * Keychain for sensitive credentials
 * HTTPS only
