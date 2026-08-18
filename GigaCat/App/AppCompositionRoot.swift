@@ -9,12 +9,29 @@ enum AppCompositionRoot {
         )
         let configuration = try SupabaseConfiguration.load()
         let supabaseStack = SupabaseStack(configuration: configuration)
+        let profileRemoteRepository = SupabaseUserProfileRepository(
+            client: supabaseStack.client
+        )
+        let profileBootstrapService = ProfileBootstrapService(
+            remoteRepository: profileRemoteRepository,
+            userRepository: repositoryFactory.userRepository,
+            outboxRepository: repositoryFactory.syncOutboxRepository
+        )
+        let syncWorker = SyncWorker(
+            outboxRepository: repositoryFactory.syncOutboxRepository,
+            remoteExecutor: SupabaseSyncExecutor(
+                profileRepository: profileRemoteRepository
+            )
+        )
+        let syncCoordinator = SyncCoordinator(worker: syncWorker)
 
         return AppDependencies(
             repositoryFactory: repositoryFactory,
             authenticationService: SupabaseAuthenticationService(
                 client: supabaseStack.client
             ),
+            profileBootstrapService: profileBootstrapService,
+            syncCoordinator: syncCoordinator,
             currentUserContext: currentUserContext
         )
     }
@@ -41,5 +58,7 @@ enum AppCompositionRoot {
 struct AppDependencies {
     let repositoryFactory: LocalRepositoryFactory
     let authenticationService: SupabaseAuthenticationService
+    let profileBootstrapService: ProfileBootstrapService
+    let syncCoordinator: SyncCoordinator
     let currentUserContext: CurrentUserContext
 }

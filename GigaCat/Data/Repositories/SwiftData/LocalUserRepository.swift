@@ -11,6 +11,7 @@ import SwiftData
 struct LocalUserRepository: UserRepository {
     private let context: ModelContext
     private let currentUserIDProvider: any CurrentUserIDProviding
+    private let outboxWriter: UserProfileOutboxWriter
 
     init(
         context: ModelContext,
@@ -18,6 +19,7 @@ struct LocalUserRepository: UserRepository {
     ) {
         self.context = context
         self.currentUserIDProvider = currentUserIDProvider
+        outboxWriter = UserProfileOutboxWriter(context: context)
     }
 
     func currentUser() async throws -> User? {
@@ -64,6 +66,8 @@ struct LocalUserRepository: UserRepository {
 
         entity.selectedProgramId = programId
         entity.updatedAt = Date()
+        entity.revision += 1
+        try outboxWriter.enqueueProfileUpdate(for: entity)
 
         try context.save()
 

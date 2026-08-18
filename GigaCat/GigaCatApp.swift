@@ -29,6 +29,8 @@ struct GigaCatApp: App {
                 AuthenticationRootView(
                     authenticationService: dependencies.authenticationService,
                     currentUserIDStore: dependencies.currentUserContext,
+                    profileBootstrapper: dependencies.profileBootstrapService,
+                    syncCoordinator: dependencies.syncCoordinator,
                     repositoryFactory: dependencies.repositoryFactory
                 )
             case .failed(let message):

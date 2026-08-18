@@ -26,4 +26,16 @@ struct UserProfileDTOTests {
         #expect(object["updated_at"] != nil)
         #expect(object["selectedProgramID"] == nil)
     }
+
+    @Test
+    func updatePayloadEncodesNilAsDatabaseNull() throws {
+        let data = try JSONEncoder().encode(
+            UpdateUserProfileDTO(selectedProgramID: nil)
+        )
+        let object = try #require(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+
+        #expect(object["selected_program_id"] is NSNull)
+    }
 }

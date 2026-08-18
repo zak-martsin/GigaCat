@@ -10,9 +10,11 @@ import SwiftData
 
 struct LocalWorkoutRepository: WorkoutRepository {
     private let context: ModelContext
+    private let outboxWriter: UserProfileOutboxWriter
 
     init(context: ModelContext) {
         self.context = context
+        outboxWriter = UserProfileOutboxWriter(context: context)
     }
 
     func activeSession(for userId: UUID) async throws -> WorkoutSession? {
@@ -93,6 +95,8 @@ struct LocalWorkoutRepository: WorkoutRepository {
 
         update(sessionEntity, from: completedSession)
         UserMapper.update(userEntity, from: updatedUser)
+        userEntity.revision += 1
+        try outboxWriter.enqueueProfileUpdate(for: userEntity)
         try context.save()
 
         return updatedUser
@@ -115,6 +119,8 @@ struct LocalWorkoutRepository: WorkoutRepository {
         try deleteExerciseLogs(sessionId: sessionId)
         context.delete(sessionEntity)
         UserMapper.update(userEntity, from: updatedUser)
+        userEntity.revision += 1
+        try outboxWriter.enqueueProfileUpdate(for: userEntity)
         try context.save()
 
         return updatedUser

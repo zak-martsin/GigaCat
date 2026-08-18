@@ -13,6 +13,7 @@ struct LocalRepositoryFactory: RepositoryFactory {
     let workoutProgramRepository: WorkoutProgramRepository
     let workoutProgramLibraryRepository: WorkoutProgramLibraryRepository
     let workoutRepository: WorkoutRepository
+    let syncOutboxRepository: LocalSyncOutboxRepository
 
     private let stack: SwiftDataStack
 
@@ -31,5 +32,6 @@ struct LocalRepositoryFactory: RepositoryFactory {
         workoutProgramRepository = LocalWorkoutProgramRepository(context: context)
         workoutProgramLibraryRepository = LocalWorkoutProgramLibraryRepository(context: context)
         workoutRepository = LocalWorkoutRepository(context: context)
+        syncOutboxRepository = LocalSyncOutboxRepository(context: context)
     }
 }

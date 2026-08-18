@@ -14,16 +14,19 @@ final class UserEntity: Identifiable {
     var selectedProgramId: UUID?
     var createdAt: Date
     var updatedAt: Date
+    var revision: Int = 0
 
     init(
         id: UUID,
         selectedProgramId: UUID?,
         createdAt: Date,
-        updatedAt: Date
+        updatedAt: Date,
+        revision: Int = 0
     ) {
         self.id = id
         self.selectedProgramId = selectedProgramId
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        self.revision = revision
     }
 }

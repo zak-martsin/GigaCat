@@ -14,7 +14,10 @@ final class AppContainer {
 
     // The composition root keeps the complete dependency graph visible in one place.
     // swiftlint:disable:next function_body_length
-    init(repositoryFactory: some RepositoryFactory) {
+    init(
+        repositoryFactory: some RepositoryFactory,
+        syncCoordinator: any SyncCoordinating
+    ) {
         let dataChangeDispatcher = AppDataChangeDispatcher()
         let programDetailService = ProgramDetailService(
             userRepository: repositoryFactory.userRepository,
@@ -88,6 +91,9 @@ final class AppContainer {
             },
             reloadMiniPlayer: { [weak miniPlayerViewModel] in
                 await miniPlayerViewModel?.reload()
+            },
+            requestProfileSync: {
+                syncCoordinator.requestSync()
             }
         )
 

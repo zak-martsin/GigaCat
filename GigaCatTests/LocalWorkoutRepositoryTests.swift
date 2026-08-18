@@ -113,6 +113,10 @@ struct LocalWorkoutRepositoryTests {
         #expect(sessions.first?.status == .completed)
         #expect(sessions.first?.completedAt == completedAt)
         #expect(try fixture.persistedUser().selectedProgramId == fixture.program.id)
+        #expect(
+            try fixture.context.fetchCount(FetchDescriptor<SyncOperationEntity>()) == 1
+        )
+        #expect(try fixture.persistedUser().revision == 1)
     }
 
     @Test
@@ -136,6 +140,9 @@ struct LocalWorkoutRepositoryTests {
         let activeSession = try await fixture.repository.activeSession(for: fixture.user.id)
         #expect(activeSession == session)
         #expect(try fixture.persistedUser().selectedProgramId == nil)
+        #expect(
+            try fixture.context.fetchCount(FetchDescriptor<SyncOperationEntity>()) == 0
+        )
     }
 
     @Test

@@ -13,15 +13,21 @@ struct AuthenticationViewModelTests {
         )
         let service = AuthenticationServiceStub(currentAccount: account)
         let currentUserContext = CurrentUserContext()
+        let profileBootstrapper = ProfileBootstrapperSpy()
+        let syncCoordinator = SyncCoordinatorSpy()
         let viewModel = AuthenticationViewModel(
             authenticationService: service,
-            currentUserIDStore: currentUserContext
+            currentUserIDStore: currentUserContext,
+            profileBootstrapper: profileBootstrapper,
+            syncCoordinator: syncCoordinator
         )
 
         await viewModel.restoreSession()
 
         #expect(viewModel.sessionState == .authenticated(account))
         #expect(await currentUserContext.currentUserID() == account.id)
+        #expect(profileBootstrapper.receivedUserIDs == [account.id])
+        #expect(syncCoordinator.activatedUserIDs == [account.id])
     }
 
     @Test
@@ -29,7 +35,9 @@ struct AuthenticationViewModelTests {
         let currentUserContext = CurrentUserContext(userID: UUID())
         let viewModel = AuthenticationViewModel(
             authenticationService: AuthenticationServiceStub(),
-            currentUserIDStore: currentUserContext
+            currentUserIDStore: currentUserContext,
+            profileBootstrapper: ProfileBootstrapperSpy(),
+            syncCoordinator: SyncCoordinatorSpy()
         )
 
         await viewModel.restoreSession()
@@ -46,9 +54,13 @@ struct AuthenticationViewModelTests {
         )
         let service = AuthenticationServiceStub(signInAccount: account)
         let currentUserContext = CurrentUserContext()
+        let profileBootstrapper = ProfileBootstrapperSpy()
+        let syncCoordinator = SyncCoordinatorSpy()
         let viewModel = AuthenticationViewModel(
             authenticationService: service,
-            currentUserIDStore: currentUserContext
+            currentUserIDStore: currentUserContext,
+            profileBootstrapper: profileBootstrapper,
+            syncCoordinator: syncCoordinator
         )
         await viewModel.restoreSession()
         viewModel.email = "  user@example.com  "
@@ -60,6 +72,8 @@ struct AuthenticationViewModelTests {
         #expect(viewModel.password.isEmpty)
         #expect(await service.lastSignInEmail() == "user@example.com")
         #expect(await currentUserContext.currentUserID() == account.id)
+        #expect(profileBootstrapper.receivedUserIDs == [account.id])
+        #expect(syncCoordinator.activatedUserIDs == [account.id])
     }
 
     @Test
@@ -69,7 +83,9 @@ struct AuthenticationViewModelTests {
         )
         let viewModel = AuthenticationViewModel(
             authenticationService: service,
-            currentUserIDStore: CurrentUserContext()
+            currentUserIDStore: CurrentUserContext(),
+            profileBootstrapper: ProfileBootstrapperSpy(),
+            syncCoordinator: SyncCoordinatorSpy()
         )
         await viewModel.restoreSession()
         viewModel.mode = .signUp
@@ -89,7 +105,9 @@ struct AuthenticationViewModelTests {
         let service = AuthenticationServiceStub(signInError: .invalidCredentials)
         let viewModel = AuthenticationViewModel(
             authenticationService: service,
-            currentUserIDStore: CurrentUserContext()
+            currentUserIDStore: CurrentUserContext(),
+            profileBootstrapper: ProfileBootstrapperSpy(),
+            syncCoordinator: SyncCoordinatorSpy()
         )
         await viewModel.restoreSession()
         viewModel.email = "user@example.com"
@@ -103,6 +121,36 @@ struct AuthenticationViewModelTests {
     }
 
     @Test
+    func profileBootstrapFailureDoesNotExposeAuthenticatedFeatures() async {
+        let account = AuthenticatedAccount(
+            id: UUID(),
+            email: "user@example.com"
+        )
+        let currentUserContext = CurrentUserContext()
+        let syncCoordinator = SyncCoordinatorSpy()
+        let viewModel = AuthenticationViewModel(
+            authenticationService: AuthenticationServiceStub(signInAccount: account),
+            currentUserIDStore: currentUserContext,
+            profileBootstrapper: ProfileBootstrapperSpy(error: .failed),
+            syncCoordinator: syncCoordinator
+        )
+        await viewModel.restoreSession()
+        let deactivationCountBeforeSubmission = syncCoordinator.deactivationCount
+        viewModel.email = "user@example.com"
+        viewModel.password = "password"
+
+        await viewModel.submit()
+
+        #expect(viewModel.sessionState == .signedOut)
+        #expect(viewModel.errorMessage == ProfileBootstrapTestError.failed.localizedDescription)
+        #expect(await currentUserContext.currentUserID() == nil)
+        #expect(
+            syncCoordinator.deactivationCount
+                == deactivationCountBeforeSubmission + 1
+        )
+    }
+
+    @Test
     func signOutClearsSessionAndReturnsToAuthenticationForm() async {
         let account = AuthenticatedAccount(
             id: UUID(),
@@ -110,9 +158,12 @@ struct AuthenticationViewModelTests {
         )
         let service = AuthenticationServiceStub(currentAccount: account)
         let currentUserContext = CurrentUserContext()
+        let syncCoordinator = SyncCoordinatorSpy()
         let viewModel = AuthenticationViewModel(
             authenticationService: service,
-            currentUserIDStore: currentUserContext
+            currentUserIDStore: currentUserContext,
+            profileBootstrapper: ProfileBootstrapperSpy(),
+            syncCoordinator: syncCoordinator
         )
         await viewModel.restoreSession()
         viewModel.email = "user@example.com"
@@ -125,6 +176,52 @@ struct AuthenticationViewModelTests {
         #expect(viewModel.password.isEmpty)
         #expect(await service.didSignOut())
         #expect(await currentUserContext.currentUserID() == nil)
+        #expect(syncCoordinator.deactivationCount == 1)
+    }
+}
+
+@MainActor
+private final class SyncCoordinatorSpy: SyncCoordinating {
+    private(set) var activatedUserIDs: [UUID] = []
+    private(set) var deactivationCount = 0
+    private(set) var requestCount = 0
+
+    func activate(for userID: UUID) {
+        activatedUserIDs.append(userID)
+    }
+
+    func deactivate() {
+        deactivationCount += 1
+    }
+
+    func requestSync() {
+        requestCount += 1
+    }
+}
+
+@MainActor
+private final class ProfileBootstrapperSpy: ProfileBootstrapping {
+    private(set) var receivedUserIDs: [UUID] = []
+    private let error: ProfileBootstrapTestError?
+
+    init(error: ProfileBootstrapTestError? = nil) {
+        self.error = error
+    }
+
+    func bootstrapProfile(for userID: UUID) throws {
+        receivedUserIDs.append(userID)
+
+        if let error {
+            throw error
+        }
+    }
+}
+
+private enum ProfileBootstrapTestError: LocalizedError {
+    case failed
+
+    var errorDescription: String? {
+        "Unable to prepare the local profile."
     }
 }
 

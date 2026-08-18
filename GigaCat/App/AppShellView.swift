@@ -16,9 +16,13 @@ struct AppShellView: View {
 
     init(
         repositoryFactory: some RepositoryFactory,
+        syncCoordinator: any SyncCoordinating,
         onSignOut: @escaping () -> Void = {}
     ) {
-        let container = AppContainer(repositoryFactory: repositoryFactory)
+        let container = AppContainer(
+            repositoryFactory: repositoryFactory,
+            syncCoordinator: syncCoordinator
+        )
 
         self.container = container
         self.onSignOut = onSignOut

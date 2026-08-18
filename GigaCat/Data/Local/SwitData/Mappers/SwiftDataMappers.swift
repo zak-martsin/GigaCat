@@ -24,6 +24,7 @@ enum UserMapper {
 
     static func update(_ entity: UserEntity, from domain: User) {
         entity.selectedProgramId = domain.selectedProgramId
+        entity.createdAt = domain.createdAt
         entity.updatedAt = domain.updatedAt
     }
 }

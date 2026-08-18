@@ -57,14 +57,24 @@ final class AuthenticationViewModel {
     @ObservationIgnored
     private let currentUserIDStore: any CurrentUserIDStoring
 
+    @ObservationIgnored
+    private let profileBootstrapper: any ProfileBootstrapping
+
+    @ObservationIgnored
+    private let syncCoordinator: any SyncCoordinating
+
     // MARK: - Initialization
 
     init(
         authenticationService: any AuthenticationService,
-        currentUserIDStore: any CurrentUserIDStoring
+        currentUserIDStore: any CurrentUserIDStoring,
+        profileBootstrapper: any ProfileBootstrapping,
+        syncCoordinator: any SyncCoordinating
     ) {
         self.authenticationService = authenticationService
         self.currentUserIDStore = currentUserIDStore
+        self.profileBootstrapper = profileBootstrapper
+        self.syncCoordinator = syncCoordinator
     }
 
     // MARK: - Session
@@ -75,9 +85,9 @@ final class AuthenticationViewModel {
 
         do {
             if let account = try await authenticationService.currentAccount() {
-                await currentUserIDStore.setCurrentUserID(account.id)
-                sessionState = .authenticated(account)
+                try await completeAuthentication(with: account)
             } else {
+                syncCoordinator.deactivate()
                 await currentUserIDStore.clearCurrentUserID()
                 sessionState = .signedOut
             }
@@ -93,6 +103,7 @@ final class AuthenticationViewModel {
 
         do {
             try await authenticationService.signOut()
+            syncCoordinator.deactivate()
             await currentUserIDStore.clearCurrentUserID()
             email = ""
             password = ""
@@ -124,14 +135,14 @@ final class AuthenticationViewModel {
                     email: normalizedEmail,
                     password: password
                 )
-                await completeAuthentication(with: account)
+                try await completeAuthentication(with: account)
 
             case .signUp:
                 let result = try await authenticationService.signUp(
                     email: normalizedEmail,
                     password: password
                 )
-                await handleRegistration(result)
+                try await handleRegistration(result)
             }
         } catch {
             errorMessage = error.localizedDescription
@@ -144,10 +155,10 @@ final class AuthenticationViewModel {
         email.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private func handleRegistration(_ result: RegistrationResult) async {
+    private func handleRegistration(_ result: RegistrationResult) async throws {
         switch result {
         case .authenticated(let account):
-            await completeAuthentication(with: account)
+            try await completeAuthentication(with: account)
 
         case .emailConfirmationRequired:
             password = ""
@@ -156,8 +167,18 @@ final class AuthenticationViewModel {
         }
     }
 
-    private func completeAuthentication(with account: AuthenticatedAccount) async {
+    private func completeAuthentication(with account: AuthenticatedAccount) async throws {
         await currentUserIDStore.setCurrentUserID(account.id)
+
+        do {
+            try await profileBootstrapper.bootstrapProfile(for: account.id)
+        } catch {
+            syncCoordinator.deactivate()
+            await currentUserIDStore.clearCurrentUserID()
+            throw error
+        }
+
+        syncCoordinator.activate(for: account.id)
         password = ""
         sessionState = .authenticated(account)
     }

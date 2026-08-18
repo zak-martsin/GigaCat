@@ -51,6 +51,12 @@ struct LocalRepositoryFactoryTests {
         #expect(
             try stack.mainContext.fetchCount(FetchDescriptor<UserEntity>()) == 1
         )
+        let operation = try #require(
+            try stack.mainContext.fetch(FetchDescriptor<SyncOperationEntity>()).first
+        )
+        #expect(operation.userId == currentUserID)
+        #expect(operation.revision == 1)
+        #expect(operation.statusRawValue == SyncOperationStatus.pending.rawValue)
     }
 
     @Test
@@ -104,6 +110,11 @@ struct LocalRepositoryFactoryTests {
         #expect(reopenedUser.id == identifiers.userID)
         #expect(reopenedUser.selectedProgramId == nil)
         #expect(savedPrograms.map(\.id) == [identifiers.programID])
+        #expect(
+            try reopenedFactory.syncOutboxRepository.operationCount(
+                for: identifiers.userID
+            ) == 1
+        )
     }
 }
 

@@ -1,21 +1,28 @@
 import SwiftUI
 
 struct AuthenticationRootView<Factory: RepositoryFactory>: View {
+    @Environment(\.scenePhase) private var scenePhase
     @State private var viewModel: AuthenticationViewModel
     @State private var isPasswordRecoveryNoticePresented = false
     private let repositoryFactory: Factory
+    private let syncCoordinator: any SyncCoordinating
 
     init(
         authenticationService: any AuthenticationService,
         currentUserIDStore: any CurrentUserIDStoring,
+        profileBootstrapper: any ProfileBootstrapping,
+        syncCoordinator: any SyncCoordinating,
         repositoryFactory: Factory
     ) {
         _viewModel = State(
             initialValue: AuthenticationViewModel(
                 authenticationService: authenticationService,
-                currentUserIDStore: currentUserIDStore
+                currentUserIDStore: currentUserIDStore,
+                profileBootstrapper: profileBootstrapper,
+                syncCoordinator: syncCoordinator
             )
         )
+        self.syncCoordinator = syncCoordinator
         self.repositoryFactory = repositoryFactory
     }
 
@@ -38,6 +45,7 @@ struct AuthenticationRootView<Factory: RepositoryFactory>: View {
             case .authenticated:
                 ContentView(
                     repositoryFactory: repositoryFactory,
+                    syncCoordinator: syncCoordinator,
                     onSignOut: signOut
                 )
 
@@ -59,6 +67,10 @@ struct AuthenticationRootView<Factory: RepositoryFactory>: View {
         .task {
             guard case .checking = viewModel.sessionState else { return }
             await viewModel.restoreSession()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active else { return }
+            syncCoordinator.requestSync()
         }
         .alert(
             "Password recovery",
