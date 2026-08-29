@@ -63,7 +63,7 @@ struct ProgressHistoryService: ProgressHistoryServicing {
             throw ProgressHistoryError.workoutProgramNotFound
         }
 
-        let dayExercises = try await workoutProgramRepository.fetchWorkoutDayExercises(
+        let dayExercises = try await workoutProgramRepository.fetchWorkoutDayExercisesForHistory(
             workoutDayId: workoutDay.id
         )
         let logs = try await workoutRepository.fetchExerciseLogs(sessionId: session.id)

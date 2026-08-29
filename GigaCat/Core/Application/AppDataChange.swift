@@ -2,9 +2,7 @@
 enum AppDataChange: Equatable, Sendable {
     case selectedProgram
     case workoutSession
-    case library
     case programCatalog
-    case currentUser
 }
 
 typealias AppDataChangeHandler = @MainActor (AppDataChange) async -> Void

@@ -201,7 +201,9 @@ private struct WorkoutSetRow: View {
 
             valueField(
                 text: $draft.repsText,
-                placeholder: viewData.suggestedRepsPlaceholder,
+                placeholder: viewData.suggestedRepsPlaceholder.isEmpty
+                    ? "Reps"
+                    : viewData.suggestedRepsPlaceholder,
                 unit: "rep",
                 keyboardType: .numberPad
             )

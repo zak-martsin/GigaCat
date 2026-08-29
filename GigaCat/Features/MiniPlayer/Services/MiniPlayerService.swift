@@ -69,7 +69,9 @@ struct MiniPlayerService: MiniPlayerServicing {
         logs: [ExerciseLog]
     ) -> Int? {
         let plannedSetCounts = Dictionary(
-            uniqueKeysWithValues: plannedExercises.map { ($0.id, $0.targetSets) }
+            uniqueKeysWithValues: plannedExercises.compactMap { exercise in
+                exercise.targetSets.map { (exercise.id, $0) }
+            }
         )
         let totalPlannedSets = plannedSetCounts.values.reduce(0, +)
         guard totalPlannedSets > 0 else { return nil }

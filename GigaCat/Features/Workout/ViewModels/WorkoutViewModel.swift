@@ -3,6 +3,7 @@ import Observation
 
 enum WorkoutLoadState: Equatable {
     case loading
+    case empty
     case loaded
     case failed
 }
@@ -93,22 +94,33 @@ final class WorkoutViewModel {
     func load() async {
         guard !isLoading else { return }
 
-        let loadingRevision = loadTracker.currentRevision
         isLoading = true
-        loadState = .loading
         defer { isLoading = false }
 
-        do {
-            let context = try await contextService.loadContext()
-            self.context = context
-            selectedDayID = context.initialDayID
-            loadTracker.markLoaded(revision: loadingRevision)
-            loadState = .loaded
-        } catch {
-            context = nil
-            selectedDayID = nil
-            loadState = .failed
-        }
+        repeat {
+            let loadingRevision = loadTracker.currentRevision
+            loadState = .loading
+
+            do {
+                guard let context = try await contextService.loadContext() else {
+                    self.context = nil
+                    selectedDayID = nil
+                    loadTracker.markLoaded(revision: loadingRevision)
+                    loadState = .empty
+                    continue
+                }
+
+                self.context = context
+                selectedDayID = context.initialDayID
+                loadTracker.markLoaded(revision: loadingRevision)
+                loadState = .loaded
+            } catch {
+                context = nil
+                selectedDayID = nil
+                loadState = .failed
+                return
+            }
+        } while loadTracker.needsLoading
     }
 
     /// Changes the inspected day without changing the day of an active session.
@@ -131,6 +143,7 @@ final class WorkoutViewModel {
         do {
             _ = try await workoutRepository.completeSession(
                 sessionId: activeSession.id,
+                userId: activeSession.userId,
                 completedAt: completedAt
             )
             await onDataChanged(.workoutSession)
@@ -151,7 +164,10 @@ final class WorkoutViewModel {
         sessionActionState = .cancelling
 
         do {
-            try await workoutRepository.deleteSession(sessionId: activeSession.id)
+            try await workoutRepository.deleteSession(
+                sessionId: activeSession.id,
+                userId: activeSession.userId
+            )
             await onDataChanged(.workoutSession)
             sessionActionState = .idle
             await load()

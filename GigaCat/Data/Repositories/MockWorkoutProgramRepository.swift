@@ -8,10 +8,6 @@ struct MockWorkoutProgramRepository: WorkoutProgramRepository {
         self.store = store
     }
 
-    func fetchPrograms() async throws -> [WorkoutProgram] {
-        await store.programs()
-    }
-
     func fetchProgram(id: UUID) async throws -> WorkoutProgram? {
         await store.program(id: id)
     }

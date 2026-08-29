@@ -53,10 +53,15 @@ struct LocalWorkoutRepository: WorkoutRepository {
         return session
     }
 
-    func completeSession(sessionId: UUID, completedAt: Date) async throws -> WorkoutSession {
+    func completeSession(
+        sessionId: UUID,
+        userId: UUID,
+        completedAt: Date
+    ) async throws -> WorkoutSession {
         guard let entity = try findSession(id: sessionId) else {
             throw RepositoryError.workoutSessionNotFound
         }
+        try validateOwnership(of: entity, userId: userId)
 
         let session = try WorkoutSessionMapper.toDomain(entity)
         let completedSession = try session.markCompleted(at: completedAt)
@@ -66,10 +71,11 @@ struct LocalWorkoutRepository: WorkoutRepository {
         return completedSession
     }
 
-    func deleteSession(sessionId: UUID) async throws {
+    func deleteSession(sessionId: UUID, userId: UUID) async throws {
         guard let session = try findSession(id: sessionId) else {
             throw RepositoryError.workoutSessionNotFound
         }
+        try validateOwnership(of: session, userId: userId)
 
         try deleteExerciseLogs(sessionId: sessionId)
         context.delete(session)
@@ -85,6 +91,7 @@ struct LocalWorkoutRepository: WorkoutRepository {
         guard let sessionEntity = try findSession(id: sessionId) else {
             throw RepositoryError.workoutSessionNotFound
         }
+        try validateOwnership(of: sessionEntity, userId: userId)
 
         let completedSession = try WorkoutSessionMapper.toDomain(sessionEntity)
             .markCompleted(at: completedAt)
@@ -110,6 +117,7 @@ struct LocalWorkoutRepository: WorkoutRepository {
         guard let sessionEntity = try findSession(id: sessionId) else {
             throw RepositoryError.workoutSessionNotFound
         }
+        try validateOwnership(of: sessionEntity, userId: userId)
 
         let (userEntity, updatedUser) = try userSelectingProgram(
             userId: userId,
@@ -352,6 +360,15 @@ private extension LocalWorkoutRepository {
     }
 
     // MARK: - Mutation Helpers
+
+    private func validateOwnership(
+        of session: WorkoutSessionEntity,
+        userId: UUID
+    ) throws {
+        guard session.userId == userId else {
+            throw RepositoryError.workoutSessionOwnershipMismatch
+        }
+    }
 
     private func userSelectingProgram(
         userId: UUID,

@@ -13,6 +13,17 @@ struct GigaCatApp: App {
     private let startupState: AppStartupState
 
     init() {
+        #if DEBUG
+        if UITestAppDependencies.isRequested {
+            do {
+                startupState = .uiTesting(try UITestAppDependencies.make())
+            } catch {
+                startupState = .failed(error.localizedDescription)
+            }
+            return
+        }
+        #endif
+
         do {
             startupState = .ready(
                 try AppCompositionRoot.makeDependencies()
@@ -31,8 +42,17 @@ struct GigaCatApp: App {
                     currentUserIDStore: dependencies.currentUserContext,
                     profileBootstrapper: dependencies.profileBootstrapService,
                     syncCoordinator: dependencies.syncCoordinator,
+                    systemCatalogSynchronizer: dependencies.systemCatalogSyncService,
                     repositoryFactory: dependencies.repositoryFactory
                 )
+            #if DEBUG
+            case .uiTesting(let dependencies):
+                ContentView(
+                    repositoryFactory: dependencies.repositoryFactory,
+                    syncCoordinator: dependencies.syncCoordinator,
+                    systemCatalogSynchronizer: dependencies.systemCatalogSynchronizer
+                )
+            #endif
             case .failed(let message):
                 ContentUnavailableView(
                     "Local data unavailable",
@@ -46,5 +66,8 @@ struct GigaCatApp: App {
 
 private enum AppStartupState {
     case ready(AppDependencies)
+    #if DEBUG
+    case uiTesting(UITestAppDependencies)
+    #endif
     case failed(String)
 }

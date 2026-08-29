@@ -30,6 +30,7 @@ struct MiniPlayerViewModelTests {
         let session = try #require(try await factory.workoutRepository.activeSession(for: user.id))
         _ = try await factory.workoutRepository.completeSession(
             sessionId: session.id,
+            userId: user.id,
             completedAt: Date()
         )
 
@@ -74,13 +75,6 @@ struct MiniPlayerViewModelTests {
                     title: "Searchable Strength",
                     description: "A simple strength plan.",
                     tags: [.strength]
-                )
-            ],
-            programCatalogMetadataByProgramID: [
-                programID: ProgramCatalogMetadata(
-                    isRecommended: true,
-                    isPopular: true,
-                    rateScore: 4.7
                 )
             ],
             workoutDays: [

@@ -55,7 +55,6 @@ Design Rules
 Current Domain
 
 * WorkoutProgram
-* SavedWorkoutProgram
 * WorkoutDay
 * WorkoutDayExercise
 * Exercise

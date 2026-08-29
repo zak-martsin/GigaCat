@@ -9,7 +9,6 @@ final class ProgramDetailViewModel: ObservableObject {
     @Published var errorMessage: String?
 
     private let userRepository: UserRepository
-    private let libraryRepository: WorkoutProgramLibraryRepository
     private let service: ProgramDetailServicing
     private let onDataChanged: AppDataChangeHandler
     private var currentUser: User?
@@ -17,12 +16,10 @@ final class ProgramDetailViewModel: ObservableObject {
 
     init(
         userRepository: UserRepository,
-        libraryRepository: WorkoutProgramLibraryRepository,
         service: ProgramDetailServicing,
         onDataChanged: @escaping AppDataChangeHandler = { _ in }
     ) {
         self.userRepository = userRepository
-        self.libraryRepository = libraryRepository
         self.service = service
         self.onDataChanged = onDataChanged
     }
@@ -65,38 +62,6 @@ final class ProgramDetailViewModel: ObservableObject {
                 selectionConflictAlert = alert
                 dismiss()
             }
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    func addPresentedProgramToLibrary() async {
-        guard let detail = presentedDetail,
-              !detail.isSavedToLibrary,
-              let currentUser else {
-            return
-        }
-
-        do {
-            try await libraryRepository.saveProgram(detail.id, for: currentUser.id)
-            presentedDetail?.isSavedToLibrary = true
-            await onDataChanged(.library)
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    func removePresentedProgramFromLibrary() async {
-        guard let detail = presentedDetail,
-              detail.isSavedToLibrary,
-              let currentUser else {
-            return
-        }
-
-        do {
-            try await libraryRepository.removeProgram(detail.id, for: currentUser.id)
-            presentedDetail?.isSavedToLibrary = false
-            await onDataChanged(.library)
         } catch {
             errorMessage = error.localizedDescription
         }

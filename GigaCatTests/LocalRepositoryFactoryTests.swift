@@ -15,6 +15,7 @@ struct LocalRepositoryFactoryTests {
         )
         let user = User()
         let program = try WorkoutProgram(
+            audience: .men,
             title: "Shared Stack Program",
             description: "Program stored in the factory stack"
         )
@@ -24,10 +25,89 @@ struct LocalRepositoryFactoryTests {
         try stack.mainContext.save()
 
         let fetchedUser = try await factory.userRepository.user(id: user.id)
-        let catalog = try await factory.programCatalogRepository.fetchProgramCatalog()
+        let catalog = try await factory.defaultProgramCatalogRepository.fetchProgramCatalog()
 
         #expect(fetchedUser == user)
         #expect(catalog.map(\.program) == [program])
+    }
+
+    @Test
+    func localAndMockDefaultCatalogsApplyTheSameVisibilityContract() async throws {
+        let visibleProgram = try WorkoutProgram(title: "Visible", description: "System program")
+        let inactiveProgram = try WorkoutProgram(
+            isActive: false,
+            title: "Inactive",
+            description: "Hidden system program"
+        )
+        let authoredProgram = try WorkoutProgram(
+            authorId: UUID(),
+            title: "Authored",
+            description: "Private user program"
+        )
+        let programs = [visibleProgram, inactiveProgram, authoredProgram]
+        let stack = try SwiftDataStack(isStoredInMemoryOnly: true)
+        let localRepository = LocalDefaultProgramCatalogRepository(context: stack.mainContext)
+        let mockRepository = MockDefaultProgramCatalogRepository(
+            store: MockDataStore(programs: programs)
+        )
+
+        programs.forEach { stack.mainContext.insert(WorkoutProgramMapper.toEntity($0)) }
+        try stack.mainContext.save()
+
+        let localCatalog = try await localRepository.fetchProgramCatalog()
+        let mockCatalog = try await mockRepository.fetchProgramCatalog()
+
+        #expect(localCatalog.map(\.id) == [visibleProgram.id])
+        #expect(mockCatalog == localCatalog)
+    }
+
+    @Test
+    func historyLookupIncludesInactivePlannedExercises() async throws {
+        let stack = try SwiftDataStack(isStoredInMemoryOnly: true)
+        let factory = LocalRepositoryFactory(
+            stack: stack,
+            currentUserIDProvider: CurrentUserContext()
+        )
+        let program = try WorkoutProgram(
+            title: "Archived structure",
+            description: "Program with a historical assignment"
+        )
+        let day = try WorkoutDay(
+            programId: program.id,
+            title: "Day",
+            orderIndex: 0
+        )
+        let exercise = try Exercise(name: "Bench Press", muscleGroup: .chest)
+        let assignment = try WorkoutDayExercise(
+            workoutDayId: day.id,
+            exerciseId: exercise.id,
+            orderIndex: 0
+        )
+        let assignmentEntity = WorkoutDayExerciseMapper.toEntity(assignment)
+        let dayEntity = WorkoutDayMapper.toEntity(day)
+        dayEntity.isActive = false
+        assignmentEntity.isActive = false
+
+        stack.mainContext.insert(WorkoutProgramMapper.toEntity(program))
+        stack.mainContext.insert(dayEntity)
+        stack.mainContext.insert(ExerciseMapper.toEntity(exercise))
+        stack.mainContext.insert(assignmentEntity)
+        try stack.mainContext.save()
+
+        let activeDays = try await factory.workoutProgramRepository.fetchWorkoutDays(
+            programId: program.id
+        )
+        let historicalDays = try await factory.workoutProgramRepository
+            .fetchWorkoutDaysForHistory(programId: program.id)
+        let activeAssignments = try await factory.workoutProgramRepository
+            .fetchWorkoutDayExercises(workoutDayId: day.id)
+        let historicalAssignments = try await factory.workoutProgramRepository
+            .fetchWorkoutDayExercisesForHistory(workoutDayId: day.id)
+
+        #expect(activeDays.isEmpty)
+        #expect(historicalDays == [day])
+        #expect(activeAssignments.isEmpty)
+        #expect(historicalAssignments == [assignment])
     }
 
     @Test
@@ -60,29 +140,41 @@ struct LocalRepositoryFactoryTests {
     }
 
     @Test
-    func changingCurrentUserIDKeepsLocalProfilesSeparated() async throws {
+    func changingCurrentUserIDKeepsProfilesSeparatedAndDefaultCatalogShared() async throws {
         let stack = try SwiftDataStack(isStoredInMemoryOnly: true)
         let firstUserID = UUID()
         let secondUserID = UUID()
+        let defaultProgram = try WorkoutProgram(
+            title: "Shared default program",
+            description: "Visible to every local account"
+        )
         let currentUserContext = CurrentUserContext(userID: firstUserID)
         let factory = LocalRepositoryFactory(
             stack: stack,
             currentUserIDProvider: currentUserContext
         )
+        stack.mainContext.insert(WorkoutProgramMapper.toEntity(defaultProgram))
+        try stack.mainContext.save()
 
         let firstUser = try await factory.userRepository.currentUser()
+        let firstCatalog = try await factory.defaultProgramCatalogRepository
+            .fetchProgramCatalog()
         await currentUserContext.setCurrentUserID(secondUserID)
         let secondUser = try await factory.userRepository.currentUser()
+        let secondCatalog = try await factory.defaultProgramCatalogRepository
+            .fetchProgramCatalog()
 
         #expect(firstUser?.id == firstUserID)
         #expect(secondUser?.id == secondUserID)
+        #expect(firstCatalog.map(\.program) == [defaultProgram])
+        #expect(secondCatalog == firstCatalog)
         #expect(
             try stack.mainContext.fetchCount(FetchDescriptor<UserEntity>()) == 2
         )
     }
 
     @Test
-    func savedProgramAndUserChangesSurviveContainerRecreation() async throws {
+    func selectedProgramChangeSurvivesContainerRecreation() async throws {
         let directoryURL = FileManager.default.temporaryDirectory
             .appending(path: UUID().uuidString, directoryHint: .isDirectory)
         try FileManager.default.createDirectory(
@@ -92,7 +184,7 @@ struct LocalRepositoryFactoryTests {
         defer { try? FileManager.default.removeItem(at: directoryURL) }
 
         let storeURL = directoryURL.appending(path: "GigaCat.store")
-        let identifiers = try await persistUserChangesAndProgram(at: storeURL)
+        let identifiers = try await persistSelectedProgram(at: storeURL)
 
         let reopenedStack = try SwiftDataStack(storeURL: storeURL)
         let reopenedFactory = LocalRepositoryFactory(
@@ -104,12 +196,8 @@ struct LocalRepositoryFactoryTests {
         let reopenedUser = try #require(
             try await reopenedFactory.userRepository.currentUser()
         )
-        let savedPrograms = try await reopenedFactory.workoutProgramLibraryRepository
-            .fetchSavedPrograms(for: reopenedUser.id)
-
         #expect(reopenedUser.id == identifiers.userID)
-        #expect(reopenedUser.selectedProgramId == nil)
-        #expect(savedPrograms.map(\.id) == [identifiers.programID])
+        #expect(reopenedUser.selectedProgramId == identifiers.programID)
         #expect(
             try reopenedFactory.syncOutboxRepository.operationCount(
                 for: identifiers.userID
@@ -119,11 +207,11 @@ struct LocalRepositoryFactoryTests {
 }
 
 @MainActor
-private func persistUserChangesAndProgram(
+private func persistSelectedProgram(
     at storeURL: URL
 ) async throws -> (userID: UUID, programID: UUID) {
     let stack = try SwiftDataStack(storeURL: storeURL)
-    let catalog = MockSeedData.makeCatalogSeed()
+    let catalog = try BundledDefaultCatalog.load()
     try SwiftDataBootstrapService(
         context: stack.mainContext,
         catalog: catalog
@@ -138,13 +226,9 @@ private func persistUserChangesAndProgram(
     let user = try #require(try await factory.userRepository.currentUser())
     let program = try #require(catalog.programs.first)
 
-    try await factory.workoutProgramLibraryRepository.saveProgram(
-        program.id,
-        for: user.id
-    )
     _ = try await factory.userRepository.updateSelectedProgram(
         for: user.id,
-        programId: nil
+        programId: program.id
     )
 
     return (user.id, program.id)

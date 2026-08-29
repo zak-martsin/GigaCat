@@ -25,9 +25,7 @@ struct ProgramDetail: Identifiable, Equatable {
     let description: String
     let dayCount: Int
     let exerciseCount: Int
-    let rateScore: Double?
     let isSelected: Bool
-    var isSavedToLibrary: Bool
     let primaryAction: PrimaryAction
     let progressText: String?
     let hasActiveSession: Bool

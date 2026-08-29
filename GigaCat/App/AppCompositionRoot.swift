@@ -12,6 +12,9 @@ enum AppCompositionRoot {
         let profileRemoteRepository = SupabaseUserProfileRepository(
             client: supabaseStack.client
         )
+        let systemCatalogRemoteRepository = SupabaseSystemCatalogRepository(
+            client: supabaseStack.client
+        )
         let profileBootstrapService = ProfileBootstrapService(
             remoteRepository: profileRemoteRepository,
             userRepository: repositoryFactory.userRepository,
@@ -24,6 +27,10 @@ enum AppCompositionRoot {
             )
         )
         let syncCoordinator = SyncCoordinator(worker: syncWorker)
+        let systemCatalogSyncService = SystemCatalogSyncService(
+            remoteRepository: systemCatalogRemoteRepository,
+            localStore: repositoryFactory.systemCatalogStore
+        )
 
         return AppDependencies(
             repositoryFactory: repositoryFactory,
@@ -32,20 +39,20 @@ enum AppCompositionRoot {
             ),
             profileBootstrapService: profileBootstrapService,
             syncCoordinator: syncCoordinator,
+            systemCatalogSyncService: systemCatalogSyncService,
             currentUserContext: currentUserContext
         )
     }
 
-    /// Creates disk-backed repositories and hydrates their catalog with bundled data.
+    /// Creates disk-backed repositories and hydrates an empty catalog for first-launch offline use.
     static func makeLocalRepositoryFactory(
         currentUserIDProvider: any CurrentUserIDProviding
     ) throws -> LocalRepositoryFactory {
         let stack = try SwiftDataStack()
-        let catalog = MockSeedData.makeCatalogSeed()
 
         try SwiftDataBootstrapService(
             context: stack.mainContext,
-            catalog: catalog
+            catalog: BundledDefaultCatalog.load()
         ).bootstrapIfNeeded()
 
         return LocalRepositoryFactory(
@@ -60,5 +67,6 @@ struct AppDependencies {
     let authenticationService: SupabaseAuthenticationService
     let profileBootstrapService: ProfileBootstrapService
     let syncCoordinator: SyncCoordinator
+    let systemCatalogSyncService: SystemCatalogSyncService
     let currentUserContext: CurrentUserContext
 }

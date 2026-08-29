@@ -38,6 +38,20 @@ struct WorkoutViewModelTests {
     }
 
     @Test
+    func missingSelectedProgramProducesEmptyState() async {
+        let viewModel = WorkoutViewModel(
+            contextService: WorkoutContextServiceStub(results: [.success(nil)]),
+            workoutRepository: makeWorkoutRepository()
+        )
+
+        await viewModel.load()
+
+        #expect(viewModel.loadState == .empty)
+        #expect(viewModel.context == nil)
+        #expect(viewModel.selectedDayID == nil)
+    }
+
+    @Test
     func selectDayChangesOnlyTheInspectedDay() async throws {
         let context = try makeContext(hasActiveSession: true)
         let viewModel = WorkoutViewModel(
@@ -253,13 +267,13 @@ private actor WorkoutContextServiceStub: WorkoutContextServicing {
         case missingResult
     }
 
-    private var results: [Result<WorkoutContext, StubError>]
+    private var results: [Result<WorkoutContext?, StubError>]
 
-    init(results: [Result<WorkoutContext, StubError>]) {
+    init(results: [Result<WorkoutContext?, StubError>]) {
         self.results = results
     }
 
-    func loadContext() async throws -> WorkoutContext {
+    func loadContext() async throws -> WorkoutContext? {
         guard !results.isEmpty else { throw StubError.missingResult }
         return try results.removeFirst().get()
     }

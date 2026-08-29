@@ -8,7 +8,7 @@ struct SwiftDataBootstrapServiceTests {
     @Test
     func bootstrapAddsCatalogOnceWithoutUserOwnedData() throws {
         let stack = try SwiftDataStack(isStoredInMemoryOnly: true)
-        let catalog = MockSeedData.makeCatalogSeed()
+        let catalog = try BundledDefaultCatalog.load()
         let service = SwiftDataBootstrapService(
             context: stack.mainContext,
             catalog: catalog
@@ -22,7 +22,6 @@ struct SwiftDataBootstrapServiceTests {
         try expectCatalogCounts(in: stack.mainContext, match: catalog)
 
         #expect(try stack.mainContext.fetchCount(FetchDescriptor<UserEntity>()) == 0)
-        #expect(try stack.mainContext.fetchCount(FetchDescriptor<SavedWorkoutProgramEntity>()) == 0)
         #expect(try stack.mainContext.fetchCount(FetchDescriptor<WorkoutSessionEntity>()) == 0)
         #expect(try stack.mainContext.fetchCount(FetchDescriptor<ExerciseLogEntity>()) == 0)
     }
@@ -30,7 +29,7 @@ struct SwiftDataBootstrapServiceTests {
     @Test
     func bootstrapCompletesPartiallyStoredCatalogWithoutReplacingExistingRecords() throws {
         let stack = try SwiftDataStack(isStoredInMemoryOnly: true)
-        let catalog = MockSeedData.makeCatalogSeed()
+        let catalog = try BundledDefaultCatalog.load()
         let existingProgram = WorkoutProgramMapper.toEntity(try #require(catalog.programs.first))
         let existingExercise = ExerciseMapper.toEntity(try #require(catalog.exercises.first))
         existingProgram.title = "Locally edited title"
@@ -59,10 +58,6 @@ private func expectCatalogCounts(
     match catalog: WorkoutCatalogSeed
 ) throws {
     #expect(try context.fetchCount(FetchDescriptor<WorkoutProgramEntity>()) == catalog.programs.count)
-    #expect(
-        try context.fetchCount(FetchDescriptor<ProgramCatalogMetadataEntity>())
-            == catalog.metadataByProgramID.count
-    )
     #expect(try context.fetchCount(FetchDescriptor<WorkoutDayEntity>()) == catalog.workoutDays.count)
     #expect(
         try context.fetchCount(FetchDescriptor<WorkoutDayExerciseEntity>())

@@ -78,6 +78,7 @@ struct WorkoutContentView: View {
             }
             .padding(.vertical, AppSpacing.xs)
         }
+        .scrollClipDisabled()
     }
 
     // MARK: - Exercises
@@ -174,7 +175,7 @@ private struct WorkoutExerciseRow: View {
                         .foregroundStyle(AppColor.textPrimary)
                         .lineLimit(2)
 
-                    Text("\(exercise.targetSets) x \(exercise.targetReps) reps")
+                    Text(targetSummary)
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(AppColor.textSecondary)
                 }
@@ -186,5 +187,18 @@ private struct WorkoutExerciseRow: View {
         .buttonStyle(.plain)
         .accessibilityHint("Opens exercise details")
         .accessibilityIdentifier("workout.exercise.\(exercise.id)")
+    }
+
+    private var targetSummary: String {
+        switch (exercise.targetSets, exercise.targetReps) {
+        case let (targetSets?, targetReps?):
+            return "\(targetSets) x \(targetReps) reps"
+        case let (targetSets?, nil):
+            return "\(targetSets) \(targetSets == 1 ? "set" : "sets")"
+        case let (nil, targetReps?):
+            return "\(targetReps) \(targetReps == 1 ? "rep" : "reps")"
+        case (nil, nil):
+            return "No targets"
+        }
     }
 }

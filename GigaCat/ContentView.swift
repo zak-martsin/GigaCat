@@ -13,11 +13,13 @@ struct ContentView: View {
     init(
         repositoryFactory: some RepositoryFactory,
         syncCoordinator: any SyncCoordinating,
+        systemCatalogSynchronizer: any SystemCatalogSyncing,
         onSignOut: @escaping () -> Void = {}
     ) {
         appShellView = AppShellView(
             repositoryFactory: repositoryFactory,
             syncCoordinator: syncCoordinator,
+            systemCatalogSynchronizer: systemCatalogSynchronizer,
             onSignOut: onSignOut
         )
     }

@@ -1,29 +1,11 @@
 import Foundation
 
-struct ProgramCatalogMetadata: Equatable, Sendable {
-    let isRecommended: Bool
-    let isPopular: Bool
-    let rateScore: Double?
-
-    init(
-        isRecommended: Bool = false,
-        isPopular: Bool = false,
-        rateScore: Double? = nil
-    ) {
-        self.isRecommended = isRecommended
-        self.isPopular = isPopular
-        self.rateScore = rateScore
-    }
-}
-
 /// Shared in-memory source used by mock repositories to simulate a consistent offline-first data layer.
 actor MockDataStore {
     // MARK: - Stored State
 
     private(set) var usersByID: [UUID: User]
     private(set) var programsByID: [UUID: WorkoutProgram]
-    private(set) var savedProgramsByID: [UUID: SavedWorkoutProgram]
-    private(set) var programCatalogMetadataByProgramIDStorage: [UUID: ProgramCatalogMetadata]
     private(set) var workoutDaysByID: [UUID: WorkoutDay]
     private(set) var dayExercisesByID: [UUID: WorkoutDayExercise]
     private(set) var exercisesByID: [UUID: Exercise]
@@ -36,8 +18,6 @@ actor MockDataStore {
     init(
         users: [User] = [],
         programs: [WorkoutProgram] = [],
-        savedPrograms: [SavedWorkoutProgram] = [],
-        programCatalogMetadataByProgramID: [UUID: ProgramCatalogMetadata] = [:],
         workoutDays: [WorkoutDay] = [],
         dayExercises: [WorkoutDayExercise] = [],
         exercises: [Exercise] = [],
@@ -47,8 +27,6 @@ actor MockDataStore {
     ) {
         self.usersByID = Dictionary(uniqueKeysWithValues: users.map { ($0.id, $0) })
         self.programsByID = Dictionary(uniqueKeysWithValues: programs.map { ($0.id, $0) })
-        self.savedProgramsByID = Dictionary(uniqueKeysWithValues: savedPrograms.map { ($0.id, $0) })
-        self.programCatalogMetadataByProgramIDStorage = programCatalogMetadataByProgramID
         self.workoutDaysByID = Dictionary(uniqueKeysWithValues: workoutDays.map { ($0.id, $0) })
         self.dayExercisesByID = Dictionary(uniqueKeysWithValues: dayExercises.map { ($0.id, $0) })
         self.exercisesByID = Dictionary(uniqueKeysWithValues: exercises.map { ($0.id, $0) })
@@ -101,62 +79,6 @@ actor MockDataStore {
         programsByID[id]
     }
 
-    func programCatalogMetadataByProgramID() -> [UUID: ProgramCatalogMetadata] {
-        programCatalogMetadataByProgramIDStorage
-    }
-
-    // MARK: - Program Library
-
-    /// Returns saved catalog programs newest first while hiding the membership records from feature code.
-    func savedPrograms(for userId: UUID) throws -> [WorkoutProgram] {
-        guard usersByID[userId] != nil else {
-            throw RepositoryError.userNotFound
-        }
-
-        return savedProgramsByID.values
-            .filter { $0.userId == userId }
-            .sorted { lhs, rhs in
-                if lhs.savedAt == rhs.savedAt {
-                    return lhs.id.uuidString < rhs.id.uuidString
-                }
-
-                return lhs.savedAt > rhs.savedAt
-            }
-            .compactMap { programsByID[$0.programId] }
-    }
-
-    func saveProgram(_ programId: UUID, for userId: UUID, savedAt: Date = Date()) throws {
-        guard usersByID[userId] != nil else {
-            throw RepositoryError.userNotFound
-        }
-
-        guard programsByID[programId] != nil else {
-            throw RepositoryError.workoutProgramNotFound
-        }
-
-        let isAlreadySaved = savedProgramsByID.values.contains {
-            $0.userId == userId && $0.programId == programId
-        }
-        guard !isAlreadySaved else { return }
-
-        let savedProgram = SavedWorkoutProgram(
-            userId: userId,
-            programId: programId,
-            savedAt: savedAt
-        )
-        savedProgramsByID[savedProgram.id] = savedProgram
-    }
-
-    func removeProgram(_ programId: UUID, for userId: UUID) throws {
-        guard usersByID[userId] != nil else {
-            throw RepositoryError.userNotFound
-        }
-
-        savedProgramsByID = savedProgramsByID.filter {
-            $0.value.userId != userId || $0.value.programId != programId
-        }
-    }
-
     func workoutDays(programId: UUID) -> [WorkoutDay] {
         workoutDaysByID.values
             .filter { $0.programId == programId }
@@ -207,10 +129,15 @@ actor MockDataStore {
         return session
     }
 
-    func completeSession(sessionId: UUID, completedAt: Date) throws -> WorkoutSession {
+    func completeSession(
+        sessionId: UUID,
+        userId: UUID,
+        completedAt: Date
+    ) throws -> WorkoutSession {
         guard let session = sessionsByID[sessionId] else {
             throw RepositoryError.workoutSessionNotFound
         }
+        try validateOwnership(of: session, userId: userId)
 
         let completedSession = try session.markCompleted(at: completedAt)
         sessionsByID[sessionId] = completedSession
@@ -226,6 +153,7 @@ actor MockDataStore {
         guard let session = sessionsByID[sessionId] else {
             throw RepositoryError.workoutSessionNotFound
         }
+        try validateOwnership(of: session, userId: userId)
 
         let completedSession = try session.markCompleted(at: completedAt)
         let updatedUser = try updatedUserSelectingProgram(for: userId, programId: programId)
@@ -235,10 +163,11 @@ actor MockDataStore {
         return updatedUser
     }
 
-    func deleteSession(sessionId: UUID) throws {
-        guard sessionsByID[sessionId] != nil else {
+    func deleteSession(sessionId: UUID, userId: UUID) throws {
+        guard let session = sessionsByID[sessionId] else {
             throw RepositoryError.workoutSessionNotFound
         }
+        try validateOwnership(of: session, userId: userId)
 
         sessionsByID.removeValue(forKey: sessionId)
         exerciseLogsByID = exerciseLogsByID.filter { $0.value.sessionId != sessionId }
@@ -249,9 +178,10 @@ actor MockDataStore {
         userId: UUID,
         programId: UUID
     ) throws -> User {
-        guard sessionsByID[sessionId] != nil else {
+        guard let session = sessionsByID[sessionId] else {
             throw RepositoryError.workoutSessionNotFound
         }
+        try validateOwnership(of: session, userId: userId)
 
         let updatedUser = try updatedUserSelectingProgram(for: userId, programId: programId)
 
@@ -387,6 +317,12 @@ actor MockDataStore {
 
     // MARK: - Private Helpers
 
+    private func validateOwnership(of session: WorkoutSession, userId: UUID) throws {
+        guard session.userId == userId else {
+            throw RepositoryError.workoutSessionOwnershipMismatch
+        }
+    }
+
     private func updatedUserSelectingProgram(for userId: UUID, programId: UUID) throws -> User {
         guard let user = usersByID[userId] else {
             throw RepositoryError.userNotFound
@@ -397,17 +333,5 @@ actor MockDataStore {
         }
 
         return user.selectingProgram(programId)
-    }
-}
-
-extension MockDataStore {
-    func isProgramSaved(_ programId: UUID, for userId: UUID) throws -> Bool {
-        guard usersByID[userId] != nil else {
-            throw RepositoryError.userNotFound
-        }
-
-        return savedProgramsByID.values.contains {
-            $0.userId == userId && $0.programId == programId
-        }
     }
 }

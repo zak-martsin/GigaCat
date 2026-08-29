@@ -6,7 +6,10 @@ struct WorkoutView: View {
     @State private var showsCancelConfirmation = false
 
     let viewModel: WorkoutViewModel
+    let isActive: Bool
     let onHeaderAction: (HeaderAction) -> Void
+    let onOpenCatalog: () -> Void
+    let onProgramInfo: (UUID) -> Void
     private let mapper = WorkoutViewDataMapper()
 
     var body: some View {
@@ -62,6 +65,11 @@ struct WorkoutView: View {
                     selectedDayExerciseID = nil
                 }
             }
+            .onChange(of: isActive) { _, isActive in
+                if !isActive {
+                    selectedDayExerciseID = nil
+                }
+            }
         }
     }
 
@@ -72,6 +80,8 @@ struct WorkoutView: View {
         switch viewModel.loadState {
         case .loading:
             loadingState
+        case .empty:
+            emptyState
         case .loaded:
             loadedState
         case .failed:
@@ -88,7 +98,7 @@ struct WorkoutView: View {
                 viewData: viewData,
                 onSelectDay: viewModel.selectDay,
                 onSelectExercise: { selectedDayExerciseID = $0 },
-                onProgramInfo: {}
+                onProgramInfo: { onProgramInfo(context.program.id) }
             )
             .safeAreaInset(edge: .bottom) {
                 if viewModel.hasActiveSessionForSelectedDay {
@@ -111,6 +121,25 @@ struct WorkoutView: View {
                 message: "Preparing your program and training days."
             ) {
                 SwiftUI.ProgressView()
+            }
+            .padding(.horizontal, AppSpacing.lg)
+            .padding(.top, AppSpacing.md)
+        }
+    }
+
+    private var emptyState: some View {
+        ScrollView {
+            VStack(spacing: AppSpacing.md) {
+                AppMessageCard(
+                    title: "Choose a workout program",
+                    message: "Select a default program in Catalog before starting a workout."
+                )
+
+                Button("Open Catalog", action: onOpenCatalog)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: AppControlSize.buttonHeight)
+                    .buttonStyle(.glassProminent)
+                    .tint(AppColor.accent)
             }
             .padding(.horizontal, AppSpacing.lg)
             .padding(.top, AppSpacing.md)

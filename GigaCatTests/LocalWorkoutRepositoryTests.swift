@@ -82,7 +82,10 @@ struct LocalWorkoutRepositoryTests {
         let fixture = try Fixture()
         let result = try await fixture.repository.saveSet(fixture.input())
 
-        try await fixture.repository.deleteSession(sessionId: result.session.id)
+        try await fixture.repository.deleteSession(
+            sessionId: result.session.id,
+            userId: fixture.user.id
+        )
 
         #expect(try await fixture.repository.fetchSessions(for: fixture.user.id).isEmpty)
         #expect(
@@ -146,6 +149,62 @@ struct LocalWorkoutRepositoryTests {
     }
 
     @Test
+    func foreignUserCannotCompleteOrDeleteSession() async throws {
+        let fixture = try Fixture()
+        let foreignUser = try fixture.insertForeignUser()
+        let session = try await fixture.repository.startSession(
+            userId: fixture.user.id,
+            workoutDayId: fixture.day.id,
+            startedAt: Date(timeIntervalSince1970: 1_000)
+        )
+
+        await #expect(throws: RepositoryError.workoutSessionOwnershipMismatch) {
+            try await fixture.repository.completeSession(
+                sessionId: session.id,
+                userId: foreignUser.id,
+                completedAt: Date(timeIntervalSince1970: 2_000)
+            )
+        }
+        await #expect(throws: RepositoryError.workoutSessionOwnershipMismatch) {
+            try await fixture.repository.deleteSession(
+                sessionId: session.id,
+                userId: foreignUser.id
+            )
+        }
+
+        #expect(try await fixture.repository.activeSession(for: fixture.user.id) == session)
+    }
+
+    @Test
+    func foreignUserCannotResolveSelectionConflictWithAnotherUsersSession() async throws {
+        let fixture = try Fixture()
+        let foreignUser = try fixture.insertForeignUser()
+        let result = try await fixture.repository.saveSet(fixture.input())
+
+        await #expect(throws: RepositoryError.workoutSessionOwnershipMismatch) {
+            try await fixture.repository.completeSessionAndSelectProgram(
+                sessionId: result.session.id,
+                completedAt: Date(timeIntervalSince1970: 2_000),
+                userId: foreignUser.id,
+                programId: fixture.program.id
+            )
+        }
+        await #expect(throws: RepositoryError.workoutSessionOwnershipMismatch) {
+            try await fixture.repository.deleteSessionAndSelectProgram(
+                sessionId: result.session.id,
+                userId: foreignUser.id,
+                programId: fixture.program.id
+            )
+        }
+
+        #expect(try await fixture.repository.activeSession(for: fixture.user.id) == result.session)
+        #expect(try await fixture.repository.fetchExerciseLogs(sessionId: result.session.id) == [result.log])
+        #expect(try fixture.persistedUser(id: foreignUser.id).selectedProgramId == nil)
+        #expect(try fixture.persistedUser(id: foreignUser.id).revision == 0)
+        #expect(try fixture.context.fetchCount(FetchDescriptor<SyncOperationEntity>()) == 0)
+    }
+
+    @Test
     func sessionsAndLogsAreReturnedInExpectedOrder() async throws {
         let fixture = try Fixture()
         let first = try await fixture.repository.saveSet(
@@ -156,6 +215,7 @@ struct LocalWorkoutRepositoryTests {
         )
         _ = try await fixture.repository.completeSession(
             sessionId: first.session.id,
+            userId: fixture.user.id,
             completedAt: Date(timeIntervalSince1970: 1_300)
         )
         let second = try await fixture.repository.startSession(
@@ -287,8 +347,15 @@ private extension LocalWorkoutRepositoryTests {
             )
         }
 
-        func persistedUser() throws -> UserEntity {
-            let userId = user.id
+        func insertForeignUser() throws -> User {
+            let foreignUser = User()
+            context.insert(UserMapper.toEntity(foreignUser))
+            try context.save()
+            return foreignUser
+        }
+
+        func persistedUser(id: UUID? = nil) throws -> UserEntity {
+            let userId = id ?? user.id
             var descriptor = FetchDescriptor<UserEntity>(
                 predicate: #Predicate {
                     $0.id == userId

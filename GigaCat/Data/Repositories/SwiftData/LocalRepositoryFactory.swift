@@ -8,12 +8,12 @@
 /// Creates local repositories that share one SwiftData container and main context.
 @MainActor
 struct LocalRepositoryFactory: RepositoryFactory {
-    let programCatalogRepository: ProgramCatalogRepository
+    let defaultProgramCatalogRepository: DefaultProgramCatalogRepository
     let userRepository: UserRepository
     let workoutProgramRepository: WorkoutProgramRepository
-    let workoutProgramLibraryRepository: WorkoutProgramLibraryRepository
     let workoutRepository: WorkoutRepository
     let syncOutboxRepository: LocalSyncOutboxRepository
+    let systemCatalogStore: LocalSystemCatalogStore
 
     private let stack: SwiftDataStack
 
@@ -24,14 +24,14 @@ struct LocalRepositoryFactory: RepositoryFactory {
         self.stack = stack
 
         let context = stack.mainContext
-        programCatalogRepository = LocalProgramCatalogRepository(context: context)
+        defaultProgramCatalogRepository = LocalDefaultProgramCatalogRepository(context: context)
         userRepository = LocalUserRepository(
             context: context,
             currentUserIDProvider: currentUserIDProvider
         )
         workoutProgramRepository = LocalWorkoutProgramRepository(context: context)
-        workoutProgramLibraryRepository = LocalWorkoutProgramLibraryRepository(context: context)
         workoutRepository = LocalWorkoutRepository(context: context)
         syncOutboxRepository = LocalSyncOutboxRepository(context: context)
+        systemCatalogStore = LocalSystemCatalogStore(context: context)
     }
 }

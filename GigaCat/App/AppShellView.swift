@@ -1,14 +1,14 @@
 import SwiftUI
 
 struct AppShellView: View {
+    @Environment(\.scenePhase) private var scenePhase
     private let container: AppContainer
     private let onSignOut: () -> Void
-    @State private var selectedTab: AppTab = .home
+    @State private var selectedTab: AppTab = .catalog
     @State private var isProfilePresented = false
     @State private var workoutViewModel: WorkoutViewModel
-    @State private var libraryViewModel: LibraryViewModel
     @State private var progressViewModel: ProgressViewModel
-    @StateObject private var homeViewModel: HomeViewModel
+    @StateObject private var catalogViewModel: CatalogViewModel
     @StateObject private var miniPlayerViewModel: MiniPlayerViewModel
     @StateObject private var programDetailViewModel: ProgramDetailViewModel
 
@@ -17,19 +17,20 @@ struct AppShellView: View {
     init(
         repositoryFactory: some RepositoryFactory,
         syncCoordinator: any SyncCoordinating,
+        systemCatalogSynchronizer: any SystemCatalogSyncing,
         onSignOut: @escaping () -> Void = {}
     ) {
         let container = AppContainer(
             repositoryFactory: repositoryFactory,
-            syncCoordinator: syncCoordinator
+            syncCoordinator: syncCoordinator,
+            systemCatalogSynchronizer: systemCatalogSynchronizer
         )
 
         self.container = container
         self.onSignOut = onSignOut
         _workoutViewModel = State(initialValue: container.workoutViewModel)
-        _libraryViewModel = State(initialValue: container.libraryViewModel)
         _progressViewModel = State(initialValue: container.progressViewModel)
-        _homeViewModel = StateObject(wrappedValue: container.homeViewModel)
+        _catalogViewModel = StateObject(wrappedValue: container.catalogViewModel)
         _miniPlayerViewModel = StateObject(wrappedValue: container.miniPlayerViewModel)
         _programDetailViewModel = StateObject(wrappedValue: container.programDetailViewModel)
     }
@@ -39,49 +40,36 @@ struct AppShellView: View {
     var body: some View {
 
         TabView(selection: $selectedTab) {
-            HomeView(
-                viewModel: homeViewModel,
+            CatalogView(
+                viewModel: catalogViewModel,
                 onOpenWorkout: openWorkoutTab,
-                onHeaderAction: handleHeaderAction
+                onOpenProfile: { isProfilePresented = true }
             )
-            .tag(AppTab.home)
+            .tag(AppTab.catalog)
             .tabItem {
-                Label(AppTab.home.title, systemImage: AppTab.home.systemImage)
+                Label(AppTab.catalog.title, systemImage: AppTab.catalog.systemImage)
             }
-
-            ProgressView(
-                viewModel: progressViewModel,
-                onHeaderAction: handleHeaderAction
-            )
-                .tag(AppTab.progress)
-                .tabItem {
-                    Label(AppTab.progress.title, systemImage: AppTab.progress.systemImage)
-                }
 
             WorkoutView(
                 viewModel: workoutViewModel,
-                onHeaderAction: handleHeaderAction
+                isActive: selectedTab == .workout,
+                onHeaderAction: handleHeaderAction,
+                onOpenCatalog: openCatalogTab,
+                onProgramInfo: openProgramDetail
             )
             .tag(AppTab.workout)
             .tabItem {
                 Label(AppTab.workout.title, systemImage: AppTab.workout.systemImage)
             }
 
-            NutritionView(onHeaderAction: handleHeaderAction)
-                .tag(AppTab.nutrition)
-                .tabItem {
-                    Label(AppTab.nutrition.title, systemImage: AppTab.nutrition.systemImage)
-                }
-
-            LibraryView(
-                viewModel: libraryViewModel,
-                onOpenWorkout: openWorkoutTab,
+            ProgressView(
+                viewModel: progressViewModel,
                 onHeaderAction: handleHeaderAction
             )
-                .tag(AppTab.library)
-                .tabItem {
-                    Label(AppTab.library.title, systemImage: AppTab.library.systemImage)
-                }
+            .tag(AppTab.progress)
+            .tabItem {
+                Label(AppTab.progress.title, systemImage: AppTab.progress.systemImage)
+            }
         }
         .tabViewBottomAccessory(isEnabled: selectedTab != .workout) {
             ProgramMiniPlayerView(
@@ -112,18 +100,20 @@ struct AppShellView: View {
             Button("Finish") {
                 Task {
                     await miniPlayerViewModel.completeExpiredSession()
+                    await loadSelectedTabIfNeeded()
                 }
             }
 
             Button("Discard", role: .destructive) {
                 Task {
                     await miniPlayerViewModel.deleteExpiredSession()
+                    await loadSelectedTabIfNeeded()
                 }
             }
         } message: { alert in
             Text(alert.message)
         }
-        .sheet(item: presentedProgramDetail) { detail in
+        .sheet(item: $programDetailViewModel.presentedDetail) { detail in
             appProgramDetailSheet(detail)
         }
         .overlay {
@@ -139,7 +129,7 @@ struct AppShellView: View {
         }
         .sheet(isPresented: $isProfilePresented) {
             ProfileSheetView(
-                user: homeViewModel.profileUser,
+                user: catalogViewModel.profileUser,
                 onSignOut: signOut
             )
                 .presentationDetents([.medium, .large])
@@ -147,20 +137,31 @@ struct AppShellView: View {
         }
         .task(id: selectedTab) {
             switch selectedTab {
-            case .home:
-                await homeViewModel.loadIfNeeded()
+            case .catalog:
+                await catalogViewModel.loadIfNeeded()
             case .workout:
                 await workoutViewModel.loadIfNeeded()
             case .progress:
                 await progressViewModel.loadIfNeeded()
-            case .library:
-                await libraryViewModel.loadIfNeeded()
-            case .nutrition:
-                break
             }
         }
         .task {
             await miniPlayerViewModel.reload()
+        }
+        .task {
+            let didChange = await container.refreshSystemCatalog()
+            if didChange {
+                await loadSelectedTabIfNeeded()
+            }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active else { return }
+            Task {
+                let didChange = await container.refreshSystemCatalog()
+                if didChange {
+                    await loadSelectedTabIfNeeded()
+                }
+            }
         }
     }
 
@@ -168,6 +169,21 @@ struct AppShellView: View {
 
     private func openWorkoutTab() {
         selectedTab = .workout
+    }
+
+    private func openCatalogTab() {
+        selectedTab = .catalog
+    }
+
+    private func loadSelectedTabIfNeeded() async {
+        switch selectedTab {
+        case .catalog:
+            await catalogViewModel.loadIfNeeded()
+        case .workout:
+            await workoutViewModel.loadIfNeeded()
+        case .progress:
+            await progressViewModel.loadIfNeeded()
+        }
     }
 
     private func handleMiniPlayerAction() {
@@ -181,8 +197,6 @@ struct AppShellView: View {
         switch action {
         case .profile:
             isProfilePresented = true
-        case .search, .add, .more:
-            break
         }
     }
 
@@ -194,6 +208,10 @@ struct AppShellView: View {
     private func openMiniPlayerProgramDetail() {
         guard let programID = miniPlayerViewModel.programID else { return }
 
+        openProgramDetail(programID)
+    }
+
+    private func openProgramDetail(_ programID: UUID) {
         Task {
             await programDetailViewModel.present(programID: programID)
         }
@@ -205,26 +223,19 @@ struct AppShellView: View {
             onSelectProgram: {
                 Task {
                     await programDetailViewModel.selectPresentedProgram()
-                }
-            },
-            onAddToLibrary: {
-                Task {
-                    await programDetailViewModel.addPresentedProgramToLibrary()
-                }
-            },
-            onRemoveFromLibrary: {
-                Task {
-                    await programDetailViewModel.removePresentedProgramFromLibrary()
+                    await loadSelectedTabIfNeeded()
                 }
             },
             onCompleteSession: {
                 Task {
                     await programDetailViewModel.completeActiveSession()
+                    await loadSelectedTabIfNeeded()
                 }
             },
             onDeleteSession: {
                 Task {
                     await programDetailViewModel.cancelActiveSession()
+                    await loadSelectedTabIfNeeded()
                 }
             },
             onOpenWorkout: {
@@ -244,11 +255,13 @@ struct AppShellView: View {
                 onFinishSession: {
                     Task {
                         await programDetailViewModel.finishSessionAndSelectPendingProgram()
+                        await loadSelectedTabIfNeeded()
                     }
                 },
                 onCancelSession: {
                     Task {
                         await programDetailViewModel.cancelSessionAndSelectPendingProgram()
+                        await loadSelectedTabIfNeeded()
                     }
                 },
                 onDismiss: programDetailViewModel.cancelSelectionConflict
@@ -266,13 +279,6 @@ struct AppShellView: View {
                     miniPlayerViewModel.expiredSessionAlert = nil
                 }
             }
-        )
-    }
-
-    private var presentedProgramDetail: Binding<ProgramDetail?> {
-        Binding(
-            get: { programDetailViewModel.presentedDetail },
-            set: { programDetailViewModel.presentedDetail = $0 }
         )
     }
 
@@ -302,7 +308,6 @@ private struct ProfileSheetView: View {
                     .foregroundStyle(AppColor.textPrimary)
 
                 if let user {
-                    profileRow(title: "User ID", value: user.id.uuidString)
                     profileRow(title: "User ID", value: user.id.uuidString)
                     profileRow(
                         title: "Selected Program ID",

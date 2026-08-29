@@ -6,26 +6,8 @@ import Testing
 struct MockRepositoryTests {
 
     @Test
-    func savingTheSameProgramTwiceCreatesOneLibraryMembership() async throws {
-        let store = MockSeedData.makeStore()
-        let repository = MockWorkoutProgramLibraryRepository(store: store)
-        let user = try #require(await store.currentUser())
-        let program = try #require(await store.programs().first { $0.id != user.selectedProgramId })
-
-        #expect(try await repository.isProgramSaved(program.id, for: user.id) == false)
-
-        try await repository.saveProgram(program.id, for: user.id)
-        try await repository.saveProgram(program.id, for: user.id)
-
-        let savedPrograms = try await repository.fetchSavedPrograms(for: user.id)
-
-        #expect(savedPrograms.filter { $0.id == program.id }.count == 1)
-        #expect(try await repository.isProgramSaved(program.id, for: user.id))
-    }
-
-    @Test
     func selectedProgramUpdatePersistsInStore() async throws {
-        let store = MockSeedData.makeStore()
+        let store = try MockSeedData.makeStore()
         let repository = MockUserRepository(store: store)
         let originalUser = try #require(await store.currentUser())
         let program = try #require(await store.programs().first)
@@ -38,18 +20,43 @@ struct MockRepositoryTests {
 
     @Test
     func workoutDaysAreReturnedInPlannedOrder() async throws {
-        let store = MockSeedData.makeStore()
+        let store = try MockSeedData.makeStore()
         let repository = MockWorkoutProgramRepository(store: store)
-        let programID = try #require(UUID(uuidString: "22222222-2222-2222-2222-222222222222"))
+        let programID = try #require(UUID(uuidString: "20000000-0000-0000-0000-000000000001"))
 
         let days = try await repository.fetchWorkoutDays(programId: programID)
 
-        #expect(days.map(\.title) == ["Push", "Pull", "Arms & Delts"])
+        #expect(days.map(\.title) == [
+            "Грудь, плечи и бицепс",
+            "Спина, плечи и трицепс",
+            "Ноги и ягодицы"
+        ])
+    }
+
+    @Test
+    func defaultCatalogReturnsOnlyActiveSystemPrograms() async throws {
+        let visibleProgram = try WorkoutProgram(title: "Visible", description: "System program")
+        let inactiveProgram = try WorkoutProgram(
+            isActive: false,
+            title: "Inactive",
+            description: "Hidden system program"
+        )
+        let authoredProgram = try WorkoutProgram(
+            authorId: UUID(),
+            title: "Authored",
+            description: "Private user program"
+        )
+        let store = MockDataStore(programs: [visibleProgram, inactiveProgram, authoredProgram])
+        let repository = MockDefaultProgramCatalogRepository(store: store)
+
+        let catalog = try await repository.fetchProgramCatalog()
+
+        #expect(catalog.map(\.id) == [visibleProgram.id])
     }
 
     @Test
     func startingSecondActiveSessionFails() async throws {
-        let store = MockSeedData.makeStore()
+        let store = try MockSeedData.makeStore()
         let repository = MockWorkoutRepository(store: store)
         let user = try #require(await store.currentUser())
         let selectedProgramID = try #require(user.selectedProgramId)
@@ -79,7 +86,7 @@ struct MockRepositoryTests {
 
     @Test
     func completingSessionAndSelectingProgramIsAtomicWhenProgramIsMissing() async throws {
-        let store = MockSeedData.makeStore()
+        let store = try MockSeedData.makeStore()
         let repository = MockWorkoutRepository(store: store)
         let user = try #require(await store.currentUser())
         let activeSession = try #require(await store.activeSession(for: user.id))
@@ -101,6 +108,35 @@ struct MockRepositoryTests {
         #expect(unchangedUser.selectedProgramId == originalSelectedProgramID)
         #expect(unchangedSession.id == activeSession.id)
         #expect(unchangedSession.status == .inProgress)
+    }
+
+    @Test
+    func sessionMutationsRejectAnotherUserWithoutChangingMockState() async throws {
+        let store = try MockSeedData.makeStore()
+        let repository = MockWorkoutRepository(store: store)
+        let currentUser = try #require(await store.currentUser())
+        let session = try #require(await store.activeSession(for: currentUser.id))
+        let foreignUser = try #require(
+            await store.user(id: MockSeedData.uuid("11111111-1111-1111-1111-222222222222"))
+        )
+
+        await #expect(throws: RepositoryError.workoutSessionOwnershipMismatch) {
+            try await repository.completeSession(
+                sessionId: session.id,
+                userId: foreignUser.id,
+                completedAt: Date()
+            )
+        }
+        await #expect(throws: RepositoryError.workoutSessionOwnershipMismatch) {
+            try await repository.deleteSessionAndSelectProgram(
+                sessionId: session.id,
+                userId: foreignUser.id,
+                programId: MockSeedData.uuid("20000000-0000-0000-0000-000000000001")
+            )
+        }
+
+        #expect(await store.activeSession(for: currentUser.id) == session)
+        #expect(await store.user(id: foreignUser.id) == foreignUser)
     }
 
     @Test

@@ -1,34 +1,19 @@
 import SwiftUI
 
 enum HeaderAction: Hashable {
-    case search
     case profile
-    case add
-    case more
 
     var iconName: String {
         switch self {
-        case .search:
-            "magnifyingglass"
         case .profile:
             "person"
-        case .add:
-            "plus"
-        case .more:
-            "ellipsis"
         }
     }
 
     var accessibilityLabel: String {
         switch self {
-        case .search:
-            "Search"
         case .profile:
             "Profile"
-        case .add:
-            "Add"
-        case .more:
-            "More"
         }
     }
 }

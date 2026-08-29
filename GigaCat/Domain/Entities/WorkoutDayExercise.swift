@@ -5,23 +5,23 @@ struct WorkoutDayExercise: Identifiable, Codable, Equatable, Sendable {
     let id: UUID
     let workoutDayId: UUID
     let exerciseId: UUID
-    let targetSets: Int
-    let targetReps: Int
+    let targetSets: Int?
+    let targetReps: Int?
     let orderIndex: Int
 
     init(
         id: UUID = UUID(),
         workoutDayId: UUID,
         exerciseId: UUID,
-        targetSets: Int,
-        targetReps: Int,
+        targetSets: Int? = nil,
+        targetReps: Int? = nil,
         orderIndex: Int
     ) throws {
-        guard targetSets > 0 else {
+        if let targetSets, targetSets <= 0 {
             throw DomainValidationError.nonPositiveValue(field: "targetSets")
         }
 
-        guard targetReps > 0 else {
+        if let targetReps, targetReps <= 0 {
             throw DomainValidationError.nonPositiveValue(field: "targetReps")
         }
 

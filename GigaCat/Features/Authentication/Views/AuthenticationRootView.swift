@@ -6,12 +6,14 @@ struct AuthenticationRootView<Factory: RepositoryFactory>: View {
     @State private var isPasswordRecoveryNoticePresented = false
     private let repositoryFactory: Factory
     private let syncCoordinator: any SyncCoordinating
+    private let systemCatalogSynchronizer: any SystemCatalogSyncing
 
     init(
         authenticationService: any AuthenticationService,
         currentUserIDStore: any CurrentUserIDStoring,
         profileBootstrapper: any ProfileBootstrapping,
         syncCoordinator: any SyncCoordinating,
+        systemCatalogSynchronizer: any SystemCatalogSyncing,
         repositoryFactory: Factory
     ) {
         _viewModel = State(
@@ -23,6 +25,7 @@ struct AuthenticationRootView<Factory: RepositoryFactory>: View {
             )
         )
         self.syncCoordinator = syncCoordinator
+        self.systemCatalogSynchronizer = systemCatalogSynchronizer
         self.repositoryFactory = repositoryFactory
     }
 
@@ -46,6 +49,7 @@ struct AuthenticationRootView<Factory: RepositoryFactory>: View {
                 ContentView(
                     repositoryFactory: repositoryFactory,
                     syncCoordinator: syncCoordinator,
+                    systemCatalogSynchronizer: systemCatalogSynchronizer,
                     onSignOut: signOut
                 )
 
@@ -69,7 +73,7 @@ struct AuthenticationRootView<Factory: RepositoryFactory>: View {
             await viewModel.restoreSession()
         }
         .onChange(of: scenePhase) { _, newPhase in
-            guard newPhase == .active else { return }
+            guard newPhase == .active, authenticatedUserID != nil else { return }
             syncCoordinator.requestSync()
         }
         .alert(
@@ -86,5 +90,12 @@ struct AuthenticationRootView<Factory: RepositoryFactory>: View {
         Task {
             await viewModel.signOut()
         }
+    }
+
+    private var authenticatedUserID: UUID? {
+        guard case .authenticated(let account) = viewModel.sessionState else {
+            return nil
+        }
+        return account.id
     }
 }

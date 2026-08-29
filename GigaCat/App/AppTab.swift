@@ -1,39 +1,29 @@
 import Foundation
 
 enum AppTab: Hashable, CaseIterable {
-    case home
-    case progress
+    case catalog
     case workout
-    case nutrition
-    case library
+    case progress
 
     var title: String {
         switch self {
-        case .home:
-            "Home"
-        case .progress:
-            "Progress"
+        case .catalog:
+            "Catalog"
         case .workout:
             "Workout"
-        case .nutrition:
-            "Nutrition"
-        case .library:
-            "Library"
+        case .progress:
+            "Progress"
         }
     }
 
     var systemImage: String {
         switch self {
-        case .home:
-            "house"
-        case .progress:
-            "chart.line.uptrend.xyaxis"
+        case .catalog:
+            "square.grid.2x2"
         case .workout:
             "dumbbell"
-        case .nutrition:
-            "leaf"
-        case .library:
-            "books.vertical"
+        case .progress:
+            "chart.line.uptrend.xyaxis"
         }
     }
 }

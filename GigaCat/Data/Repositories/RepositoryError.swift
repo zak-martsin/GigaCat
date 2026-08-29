@@ -7,6 +7,7 @@ enum RepositoryError: LocalizedError, Equatable {
     case workoutDayNotFound
     case exerciseNotFound
     case workoutSessionNotFound
+    case workoutSessionOwnershipMismatch
     case invalidWorkoutSessionStatus(String)
     case activeSessionAlreadyExists
     case activeSessionWorkoutDayConflict
@@ -23,6 +24,8 @@ enum RepositoryError: LocalizedError, Equatable {
             return "The exercise could not be found."
         case .workoutSessionNotFound:
             return "The workout session could not be found."
+        case .workoutSessionOwnershipMismatch:
+            return "The workout session belongs to another user."
         case .invalidWorkoutSessionStatus(let rawValue):
             return "The workout session contains an invalid status: \(rawValue)."
         case .activeSessionAlreadyExists:

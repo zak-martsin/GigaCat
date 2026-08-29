@@ -13,17 +13,19 @@ final class WorkoutDayExerciseEntity: Identifiable {
     @Attribute(.unique) var id: UUID
     var workoutDayId: UUID
     var exerciseId: UUID
-    var targetSets: Int
-    var targetReps: Int
+    var targetSets: Int?
+    var targetReps: Int?
     var orderIndex: Int
+    var isActive: Bool = true
 
     init(
         id: UUID,
         workoutDayId: UUID,
         exerciseId: UUID,
-        targetSets: Int,
-        targetReps: Int,
-        orderIndex: Int
+        targetSets: Int? = nil,
+        targetReps: Int? = nil,
+        orderIndex: Int,
+        isActive: Bool = true
     ) {
         self.id = id
         self.workoutDayId = workoutDayId
@@ -31,5 +33,6 @@ final class WorkoutDayExerciseEntity: Identifiable {
         self.targetSets = targetSets
         self.targetReps = targetReps
         self.orderIndex = orderIndex
+        self.isActive = isActive
     }
 }
