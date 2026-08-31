@@ -101,6 +101,64 @@ struct AuthenticationViewModelTests {
     }
 
     @Test
+    func callbackAuthenticatesAccountAndStartsUserServices() async throws {
+        let callbackURL = try #require(
+            URL(string: "com.zakmartsin.gigacat://auth-callback?code=test-code")
+        )
+        let account = AuthenticatedAccount(
+            id: UUID(),
+            email: "user@example.com"
+        )
+        let service = AuthenticationServiceStub(callbackAccount: account)
+        let currentUserContext = CurrentUserContext()
+        let profileBootstrapper = ProfileBootstrapperSpy()
+        let syncCoordinator = SyncCoordinatorSpy()
+        let viewModel = AuthenticationViewModel(
+            authenticationService: service,
+            currentUserIDStore: currentUserContext,
+            profileBootstrapper: profileBootstrapper,
+            syncCoordinator: syncCoordinator
+        )
+
+        await viewModel.handleCallback(callbackURL)
+
+        #expect(await service.lastCallbackURL() == callbackURL)
+        #expect(viewModel.sessionState == .authenticated(account))
+        #expect(await currentUserContext.currentUserID() == account.id)
+        #expect(profileBootstrapper.receivedUserIDs == [account.id])
+        #expect(syncCoordinator.activatedUserIDs == [account.id])
+    }
+
+    @Test
+    func callbackFailureKeepsAuthenticationFormVisible() async throws {
+        let callbackURL = try #require(
+            URL(string: "com.zakmartsin.gigacat://auth-callback?code=invalid-code")
+        )
+        let currentUserContext = CurrentUserContext()
+        let profileBootstrapper = ProfileBootstrapperSpy()
+        let syncCoordinator = SyncCoordinatorSpy()
+        let viewModel = AuthenticationViewModel(
+            authenticationService: AuthenticationServiceStub(
+                callbackError: .serviceUnavailable
+            ),
+            currentUserIDStore: currentUserContext,
+            profileBootstrapper: profileBootstrapper,
+            syncCoordinator: syncCoordinator
+        )
+
+        await viewModel.handleCallback(callbackURL)
+
+        #expect(viewModel.sessionState == .signedOut)
+        #expect(
+            viewModel.errorMessage
+                == AuthenticationError.serviceUnavailable.localizedDescription
+        )
+        #expect(await currentUserContext.currentUserID() == nil)
+        #expect(profileBootstrapper.receivedUserIDs.isEmpty)
+        #expect(syncCoordinator.activatedUserIDs.isEmpty)
+    }
+
+    @Test
     func submissionFailureKeepsFormVisible() async {
         let service = AuthenticationServiceStub(signInError: .invalidCredentials)
         let viewModel = AuthenticationViewModel(
@@ -232,7 +290,10 @@ private actor AuthenticationServiceStub: AuthenticationService {
     private let signUpError: AuthenticationError?
     private let signInAccountValue: AuthenticatedAccount
     private let signInError: AuthenticationError?
+    private let callbackAccountValue: AuthenticatedAccount
+    private let callbackError: AuthenticationError?
     private var receivedSignInEmail: String?
+    private var receivedCallbackURL: URL?
     private var signedOut = false
 
     init(
@@ -244,7 +305,9 @@ private actor AuthenticationServiceStub: AuthenticationService {
             id: UUID(),
             email: "user@example.com"
         ),
-        signInError: AuthenticationError? = nil
+        signInError: AuthenticationError? = nil,
+        callbackAccount: AuthenticatedAccount? = nil,
+        callbackError: AuthenticationError? = nil
     ) {
         currentAccountValue = currentAccount
         self.currentAccountError = currentAccountError
@@ -252,6 +315,8 @@ private actor AuthenticationServiceStub: AuthenticationService {
         self.signUpError = signUpError
         signInAccountValue = signInAccount
         self.signInError = signInError
+        callbackAccountValue = callbackAccount ?? signInAccount
+        self.callbackError = callbackError
     }
 
     func currentAccount() throws -> AuthenticatedAccount? {
@@ -271,6 +336,14 @@ private actor AuthenticationServiceStub: AuthenticationService {
         return signUpResultValue
     }
 
+    func handleCallback(_ url: URL) throws -> AuthenticatedAccount {
+        receivedCallbackURL = url
+        if let callbackError {
+            throw callbackError
+        }
+        return callbackAccountValue
+    }
+
     func signIn(
         email: String,
         password _: String
@@ -288,6 +361,10 @@ private actor AuthenticationServiceStub: AuthenticationService {
 
     func lastSignInEmail() -> String? {
         receivedSignInEmail
+    }
+
+    func lastCallbackURL() -> URL? {
+        receivedCallbackURL
     }
 
     func didSignOut() -> Bool {

@@ -115,6 +115,20 @@ final class AuthenticationViewModel {
         }
     }
 
+    func handleCallback(_ url: URL) async {
+        sessionState = .checking
+        errorMessage = nil
+        noticeMessage = nil
+
+        do {
+            let account = try await authenticationService.handleCallback(url)
+            try await completeAuthentication(with: account)
+        } catch {
+            sessionState = .signedOut
+            errorMessage = error.localizedDescription
+        }
+    }
+
     // MARK: - Submission
 
     func submit() async {

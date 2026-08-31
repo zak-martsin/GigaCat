@@ -72,6 +72,16 @@ struct AuthenticationRootView<Factory: RepositoryFactory>: View {
             guard case .checking = viewModel.sessionState else { return }
             await viewModel.restoreSession()
         }
+        .onOpenURL { url in
+            guard url.scheme == "com.zakmartsin.gigacat",
+                  url.host == "auth-callback" else {
+                return
+            }
+
+            Task {
+                await viewModel.handleCallback(url)
+            }
+        }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active, authenticatedUserID != nil else { return }
             syncCoordinator.requestSync()

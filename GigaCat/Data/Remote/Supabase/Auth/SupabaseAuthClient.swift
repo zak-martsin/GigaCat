@@ -1,10 +1,12 @@
 import Supabase
+import Foundation
 
 /// Narrow SDK boundary used to test authentication without making network requests.
 protocol SupabaseAuthClient: Sendable {
     func currentUser() async throws -> Auth.User?
     func signUp(email: String, password: String) async throws -> AuthResponse
     func signIn(email: String, password: String) async throws -> Session
+    func session(from url: URL) async throws -> Session
     func signOut() async throws
 }
 
@@ -29,6 +31,10 @@ struct LiveSupabaseAuthClient: SupabaseAuthClient {
 
     func signIn(email: String, password: String) async throws -> Session {
         try await client.auth.signIn(email: email, password: password)
+    }
+
+    func session(from url: URL) async throws -> Session {
+        try await client.auth.session(from: url)
     }
 
     func signOut() async throws {

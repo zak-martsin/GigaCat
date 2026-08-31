@@ -1,4 +1,5 @@
 import Supabase
+import Foundation
 
 /// Owns the single Supabase client shared by remote data sources and auth services.
 final class SupabaseStack {
@@ -7,7 +8,15 @@ final class SupabaseStack {
     init(configuration: SupabaseConfiguration) {
         client = SupabaseClient(
             supabaseURL: configuration.projectURL,
-            supabaseKey: configuration.publishableKey
+            supabaseKey: configuration.publishableKey,
+            options: SupabaseClientOptions(
+                auth: .init(
+                    redirectToURL: URL(
+                        string: "com.zakmartsin.gigacat://auth-callback"
+                    ),
+                    flowType: .pkce
+                )
+            )
         )
     }
 }

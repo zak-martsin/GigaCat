@@ -48,6 +48,16 @@ actor MockAuthenticationService: AuthenticationService {
         return account
     }
 
+    func handleCallback(_ url: URL) throws -> AuthenticatedAccount {
+        guard let currentAccountStorage else {
+            throw AuthenticationError.unexpected(
+                "No authentication callback is available in the mock service."
+            )
+        }
+
+        return currentAccountStorage
+    }
+
     func signOut() {
         currentAccountStorage = nil
     }

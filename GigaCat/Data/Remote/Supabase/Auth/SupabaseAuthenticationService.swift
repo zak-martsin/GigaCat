@@ -59,6 +59,15 @@ struct SupabaseAuthenticationService: AuthenticationService {
         }
     }
 
+    func handleCallback(_ url: URL) async throws -> AuthenticatedAccount {
+        do {
+            let session = try await authClient.session(from: url)
+            return Self.account(from: session.user)
+        } catch {
+            throw Self.authenticationError(from: error)
+        }
+    }
+
     func signOut() async throws {
         do {
             try await authClient.signOut()
