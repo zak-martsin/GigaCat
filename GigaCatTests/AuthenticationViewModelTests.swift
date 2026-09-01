@@ -159,6 +159,63 @@ struct AuthenticationViewModelTests {
     }
 
     @Test
+    func passwordRecoveryRequestTrimsEmailAndShowsNeutralNotice() async {
+        let service = AuthenticationServiceStub()
+        let viewModel = AuthenticationViewModel(
+            authenticationService: service,
+            currentUserIDStore: CurrentUserContext(),
+            profileBootstrapper: ProfileBootstrapperSpy(),
+            syncCoordinator: SyncCoordinatorSpy()
+        )
+        await viewModel.restoreSession()
+        viewModel.email = "  user@example.com  "
+
+        await viewModel.requestPasswordRecovery()
+
+        #expect(await service.lastRecoveryEmail() == "user@example.com")
+        #expect(viewModel.passwordRecoveryState == .emailSent)
+        #expect(viewModel.noticeMessage != nil)
+    }
+
+    @Test
+    func recoveryCallbackWaitsForNewPasswordBeforeAuthenticating() async throws {
+        let callbackURL = try #require(
+            URL(string: "com.zakmartsin.gigacat://password-recovery?code=test-code")
+        )
+        let account = AuthenticatedAccount(
+            id: UUID(),
+            email: "user@example.com"
+        )
+        let service = AuthenticationServiceStub(updatedAccount: account)
+        let currentUserContext = CurrentUserContext()
+        let profileBootstrapper = ProfileBootstrapperSpy()
+        let syncCoordinator = SyncCoordinatorSpy()
+        let viewModel = AuthenticationViewModel(
+            authenticationService: service,
+            currentUserIDStore: currentUserContext,
+            profileBootstrapper: profileBootstrapper,
+            syncCoordinator: syncCoordinator
+        )
+
+        await viewModel.handlePasswordRecoveryCallback(callbackURL)
+
+        #expect(await service.lastRecoveryCallbackURL() == callbackURL)
+        #expect(viewModel.passwordRecoveryState == .readyForNewPassword)
+        #expect(viewModel.sessionState == .signedOut)
+        #expect(profileBootstrapper.receivedUserIDs.isEmpty)
+        #expect(syncCoordinator.activatedUserIDs.isEmpty)
+
+        await viewModel.updatePassword("new-password")
+
+        #expect(await service.lastUpdatedPassword() == "new-password")
+        #expect(viewModel.passwordRecoveryState == .idle)
+        #expect(viewModel.sessionState == .authenticated(account))
+        #expect(await currentUserContext.currentUserID() == account.id)
+        #expect(profileBootstrapper.receivedUserIDs == [account.id])
+        #expect(syncCoordinator.activatedUserIDs == [account.id])
+    }
+
+    @Test
     func submissionFailureKeepsFormVisible() async {
         let service = AuthenticationServiceStub(signInError: .invalidCredentials)
         let viewModel = AuthenticationViewModel(
@@ -292,8 +349,14 @@ private actor AuthenticationServiceStub: AuthenticationService {
     private let signInError: AuthenticationError?
     private let callbackAccountValue: AuthenticatedAccount
     private let callbackError: AuthenticationError?
+    private let updatedAccountValue: AuthenticatedAccount
+    private let passwordRecoveryError: AuthenticationError?
+    private let updatePasswordError: AuthenticationError?
     private var receivedSignInEmail: String?
     private var receivedCallbackURL: URL?
+    private var receivedRecoveryEmail: String?
+    private var receivedRecoveryCallbackURL: URL?
+    private var receivedUpdatedPassword: String?
     private var signedOut = false
 
     init(
@@ -307,7 +370,10 @@ private actor AuthenticationServiceStub: AuthenticationService {
         ),
         signInError: AuthenticationError? = nil,
         callbackAccount: AuthenticatedAccount? = nil,
-        callbackError: AuthenticationError? = nil
+        callbackError: AuthenticationError? = nil,
+        updatedAccount: AuthenticatedAccount? = nil,
+        passwordRecoveryError: AuthenticationError? = nil,
+        updatePasswordError: AuthenticationError? = nil
     ) {
         currentAccountValue = currentAccount
         self.currentAccountError = currentAccountError
@@ -317,6 +383,9 @@ private actor AuthenticationServiceStub: AuthenticationService {
         self.signInError = signInError
         callbackAccountValue = callbackAccount ?? signInAccount
         self.callbackError = callbackError
+        updatedAccountValue = updatedAccount ?? signInAccount
+        self.passwordRecoveryError = passwordRecoveryError
+        self.updatePasswordError = updatePasswordError
     }
 
     func currentAccount() throws -> AuthenticatedAccount? {
@@ -355,6 +424,28 @@ private actor AuthenticationServiceStub: AuthenticationService {
         return signInAccountValue
     }
 
+    func requestPasswordRecovery(email: String) throws {
+        receivedRecoveryEmail = email
+        if let passwordRecoveryError {
+            throw passwordRecoveryError
+        }
+    }
+
+    func preparePasswordRecovery(from url: URL) throws {
+        receivedRecoveryCallbackURL = url
+        if let passwordRecoveryError {
+            throw passwordRecoveryError
+        }
+    }
+
+    func updatePassword(_ password: String) throws -> AuthenticatedAccount {
+        receivedUpdatedPassword = password
+        if let updatePasswordError {
+            throw updatePasswordError
+        }
+        return updatedAccountValue
+    }
+
     func signOut() {
         signedOut = true
     }
@@ -365,6 +456,18 @@ private actor AuthenticationServiceStub: AuthenticationService {
 
     func lastCallbackURL() -> URL? {
         receivedCallbackURL
+    }
+
+    func lastRecoveryEmail() -> String? {
+        receivedRecoveryEmail
+    }
+
+    func lastRecoveryCallbackURL() -> URL? {
+        receivedRecoveryCallbackURL
+    }
+
+    func lastUpdatedPassword() -> String? {
+        receivedUpdatedPassword
     }
 
     func didSignOut() -> Bool {

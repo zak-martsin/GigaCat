@@ -58,6 +58,19 @@ actor MockAuthenticationService: AuthenticationService {
         return currentAccountStorage
     }
 
+    func requestPasswordRecovery(email _: String) {}
+
+    func preparePasswordRecovery(from _: URL) {}
+
+    func updatePassword(_ password: String) throws -> AuthenticatedAccount {
+        guard !password.isEmpty,
+              let currentAccountStorage else {
+            throw AuthenticationError.weakPassword
+        }
+
+        return currentAccountStorage
+    }
+
     func signOut() {
         currentAccountStorage = nil
     }

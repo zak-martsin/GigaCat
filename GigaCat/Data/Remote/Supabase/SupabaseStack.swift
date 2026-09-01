@@ -1,6 +1,15 @@
 import Supabase
 import Foundation
 
+enum SupabaseAuthRedirect {
+    static let emailConfirmation = URL(
+        string: "com.zakmartsin.gigacat://auth-callback"
+    )
+    static let passwordRecovery = URL(
+        string: "com.zakmartsin.gigacat://password-recovery"
+    )
+}
+
 /// Owns the single Supabase client shared by remote data sources and auth services.
 final class SupabaseStack {
     let client: SupabaseClient
@@ -11,9 +20,7 @@ final class SupabaseStack {
             supabaseKey: configuration.publishableKey,
             options: SupabaseClientOptions(
                 auth: .init(
-                    redirectToURL: URL(
-                        string: "com.zakmartsin.gigacat://auth-callback"
-                    ),
+                    redirectToURL: SupabaseAuthRedirect.emailConfirmation,
                     flowType: .pkce
                 )
             )

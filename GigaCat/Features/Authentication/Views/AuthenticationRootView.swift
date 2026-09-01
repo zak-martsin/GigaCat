@@ -3,7 +3,7 @@ import SwiftUI
 struct AuthenticationRootView<Factory: RepositoryFactory>: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var viewModel: AuthenticationViewModel
-    @State private var isPasswordRecoveryNoticePresented = false
+    @State private var isPasswordRecoveryPresented = false
     private let repositoryFactory: Factory
     private let syncCoordinator: any SyncCoordinating
     private let systemCatalogSynchronizer: any SystemCatalogSyncing
@@ -41,7 +41,8 @@ struct AuthenticationRootView<Factory: RepositoryFactory>: View {
                 AuthenticationView(
                     viewModel: viewModel,
                     onForgotPassword: {
-                        isPasswordRecoveryNoticePresented = true
+                        viewModel.beginPasswordRecovery()
+                        isPasswordRecoveryPresented = true
                     }
                 )
 
@@ -73,26 +74,36 @@ struct AuthenticationRootView<Factory: RepositoryFactory>: View {
             await viewModel.restoreSession()
         }
         .onOpenURL { url in
-            guard url.scheme == "com.zakmartsin.gigacat",
-                  url.host == "auth-callback" else {
+            guard url.scheme == "com.zakmartsin.gigacat" else {
                 return
             }
 
-            Task {
-                await viewModel.handleCallback(url)
+            switch url.host {
+            case "auth-callback":
+                Task {
+                    await viewModel.handleCallback(url)
+                }
+
+            case "password-recovery":
+                isPasswordRecoveryPresented = true
+                Task {
+                    await viewModel.handlePasswordRecoveryCallback(url)
+                }
+
+            default:
+                break
             }
         }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active, authenticatedUserID != nil else { return }
             syncCoordinator.requestSync()
         }
-        .alert(
-            "Password recovery",
-            isPresented: $isPasswordRecoveryNoticePresented
-        ) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("Password recovery will be added after the core authentication flow.")
+        .onChange(of: viewModel.sessionState) { _, newState in
+            guard case .authenticated = newState else { return }
+            isPasswordRecoveryPresented = false
+        }
+        .sheet(isPresented: $isPasswordRecoveryPresented) {
+            PasswordRecoveryView(viewModel: viewModel)
         }
     }
 

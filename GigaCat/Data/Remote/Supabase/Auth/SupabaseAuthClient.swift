@@ -7,6 +7,8 @@ protocol SupabaseAuthClient: Sendable {
     func signUp(email: String, password: String) async throws -> AuthResponse
     func signIn(email: String, password: String) async throws -> Session
     func session(from url: URL) async throws -> Session
+    func requestPasswordRecovery(email: String, redirectTo: URL) async throws
+    func updatePassword(_ password: String) async throws -> Auth.User
     func signOut() async throws
 }
 
@@ -35,6 +37,22 @@ struct LiveSupabaseAuthClient: SupabaseAuthClient {
 
     func session(from url: URL) async throws -> Session {
         try await client.auth.session(from: url)
+    }
+
+    func requestPasswordRecovery(
+        email: String,
+        redirectTo: URL
+    ) async throws {
+        try await client.auth.resetPasswordForEmail(
+            email,
+            redirectTo: redirectTo
+        )
+    }
+
+    func updatePassword(_ password: String) async throws -> Auth.User {
+        try await client.auth.update(
+            user: UserAttributes(password: password)
+        )
     }
 
     func signOut() async throws {

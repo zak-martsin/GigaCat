@@ -24,6 +24,12 @@ enum AuthenticationSessionState: Equatable {
     case failed(String)
 }
 
+enum PasswordRecoveryState: Equatable {
+    case idle
+    case emailSent
+    case readyForNewPassword
+}
+
 /// Owns the email authentication form and the app's Supabase session state.
 @MainActor
 @Observable
@@ -44,9 +50,14 @@ final class AuthenticationViewModel {
     private(set) var isSubmitting = false
     private(set) var errorMessage: String?
     private(set) var noticeMessage: String?
+    private(set) var passwordRecoveryState: PasswordRecoveryState = .idle
 
     var canSubmit: Bool {
         !normalizedEmail.isEmpty && !password.isEmpty && !isSubmitting
+    }
+
+    var canRequestPasswordRecovery: Bool {
+        !normalizedEmail.isEmpty && !isSubmitting
     }
 
     // MARK: - Dependencies
@@ -109,6 +120,7 @@ final class AuthenticationViewModel {
             password = ""
             errorMessage = nil
             noticeMessage = nil
+            passwordRecoveryState = .idle
             sessionState = .signedOut
         } catch {
             sessionState = .failed(error.localizedDescription)
@@ -125,6 +137,79 @@ final class AuthenticationViewModel {
             try await completeAuthentication(with: account)
         } catch {
             sessionState = .signedOut
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// Requests a recovery email without revealing whether the account exists.
+    func requestPasswordRecovery() async {
+        guard case .signedOut = sessionState,
+              !normalizedEmail.isEmpty,
+              !isSubmitting else {
+            return
+        }
+
+        isSubmitting = true
+        errorMessage = nil
+        noticeMessage = nil
+        defer { isSubmitting = false }
+
+        do {
+            try await authenticationService.requestPasswordRecovery(
+                email: normalizedEmail
+            )
+            passwordRecoveryState = .emailSent
+            noticeMessage = "If an account exists for this email, a password reset link has been sent."
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func beginPasswordRecovery() {
+        guard case .signedOut = sessionState else { return }
+
+        passwordRecoveryState = .idle
+        errorMessage = nil
+        noticeMessage = nil
+    }
+
+    /// Prepares the SDK session used by the future new-password screen.
+    func handlePasswordRecoveryCallback(_ url: URL) async {
+        sessionState = .checking
+        errorMessage = nil
+        noticeMessage = nil
+
+        do {
+            try await authenticationService.preparePasswordRecovery(from: url)
+            passwordRecoveryState = .readyForNewPassword
+            sessionState = .signedOut
+        } catch {
+            passwordRecoveryState = .idle
+            sessionState = .signedOut
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// Updates the password through the recovery session and completes normal authentication.
+    func updatePassword(_ newPassword: String) async {
+        guard passwordRecoveryState == .readyForNewPassword,
+              !newPassword.isEmpty,
+              !isSubmitting else {
+            return
+        }
+
+        isSubmitting = true
+        errorMessage = nil
+        noticeMessage = nil
+        defer { isSubmitting = false }
+
+        do {
+            let account = try await authenticationService.updatePassword(
+                newPassword
+            )
+            try await completeAuthentication(with: account)
+            passwordRecoveryState = .idle
+        } catch {
             errorMessage = error.localizedDescription
         }
     }

@@ -16,5 +16,12 @@ protocol AuthenticationService: Sendable {
 
     func handleCallback(_ url: URL) async throws -> AuthenticatedAccount
 
+    func requestPasswordRecovery(email: String) async throws
+
+    /// Exchanges a recovery deep link for the temporary session required to change the password.
+    func preparePasswordRecovery(from url: URL) async throws
+
+    func updatePassword(_ password: String) async throws -> AuthenticatedAccount
+
     func signOut() async throws
 }

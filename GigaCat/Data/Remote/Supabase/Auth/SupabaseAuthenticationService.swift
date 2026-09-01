@@ -68,6 +68,40 @@ struct SupabaseAuthenticationService: AuthenticationService {
         }
     }
 
+    func requestPasswordRecovery(email: String) async throws {
+        guard let redirectURL = SupabaseAuthRedirect.passwordRecovery else {
+            throw AuthenticationError.serviceUnavailable
+        }
+
+        do {
+            try await authClient.requestPasswordRecovery(
+                email: email,
+                redirectTo: redirectURL
+            )
+        } catch {
+            throw Self.authenticationError(from: error)
+        }
+    }
+
+    func preparePasswordRecovery(from url: URL) async throws {
+        do {
+            _ = try await authClient.session(from: url)
+        } catch {
+            throw Self.authenticationError(from: error)
+        }
+    }
+
+    func updatePassword(
+        _ password: String
+    ) async throws -> AuthenticatedAccount {
+        do {
+            let user = try await authClient.updatePassword(password)
+            return Self.account(from: user)
+        } catch {
+            throw Self.authenticationError(from: error)
+        }
+    }
+
     func signOut() async throws {
         do {
             try await authClient.signOut()

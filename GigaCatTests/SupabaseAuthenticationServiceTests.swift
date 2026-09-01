@@ -88,6 +88,41 @@ struct SupabaseAuthenticationServiceTests {
     }
 
     @Test
+    func passwordRecoveryUsesDedicatedRedirectAndPreparesSession() async throws {
+        let callbackURL = try #require(
+            URL(string: "com.zakmartsin.gigacat://password-recovery?code=test-code")
+        )
+        let authClient = SupabaseAuthClientSpy(
+            callbackSession: makeSession(email: "user@example.com")
+        )
+        let service = SupabaseAuthenticationService(authClient: authClient)
+
+        try await service.requestPasswordRecovery(email: "user@example.com")
+        try await service.preparePasswordRecovery(from: callbackURL)
+
+        #expect(await authClient.lastRecoveryEmail() == "user@example.com")
+        #expect(
+            await authClient.lastRecoveryRedirectURL()
+                == SupabaseAuthRedirect.passwordRecovery
+        )
+        #expect(await authClient.lastCallbackURL() == callbackURL)
+    }
+
+    @Test
+    func passwordUpdateMapsSupabaseUser() async throws {
+        let user = makeSupabaseUser(email: "user@example.com")
+        let authClient = SupabaseAuthClientSpy(updatedUser: user)
+        let service = SupabaseAuthenticationService(authClient: authClient)
+
+        let account = try await service.updatePassword("new-password")
+
+        #expect(await authClient.lastUpdatedPassword() == "new-password")
+        #expect(
+            account == AuthenticatedAccount(id: user.id, email: user.email)
+        )
+    }
+
+    @Test
     func mapsCommonSupabaseErrorsToDomainErrors() {
         #expect(
             SupabaseAuthenticationService.authenticationError(
@@ -110,19 +145,25 @@ private actor SupabaseAuthClientSpy: SupabaseAuthClient {
     private let signUpResponse: AuthResponse?
     private let signInSession: Session?
     private let callbackSession: Session?
+    private let updatedUser: Auth.User?
     private var receivedCallbackURL: URL?
+    private var receivedRecoveryEmail: String?
+    private var receivedRecoveryRedirectURL: URL?
+    private var receivedUpdatedPassword: String?
     private var signedOut = false
 
     init(
         currentUser: Auth.User? = nil,
         signUpResponse: AuthResponse? = nil,
         signInSession: Session? = nil,
-        callbackSession: Session? = nil
+        callbackSession: Session? = nil,
+        updatedUser: Auth.User? = nil
     ) {
         currentUserValue = currentUser
         self.signUpResponse = signUpResponse
         self.signInSession = signInSession
         self.callbackSession = callbackSession
+        self.updatedUser = updatedUser
     }
 
     func currentUser() -> Auth.User? {
@@ -151,6 +192,22 @@ private actor SupabaseAuthClientSpy: SupabaseAuthClient {
         return signInSession
     }
 
+    func requestPasswordRecovery(
+        email: String,
+        redirectTo: URL
+    ) {
+        receivedRecoveryEmail = email
+        receivedRecoveryRedirectURL = redirectTo
+    }
+
+    func updatePassword(_ password: String) throws -> Auth.User {
+        receivedUpdatedPassword = password
+        guard let updatedUser else {
+            throw TestAuthClientError.missingStub
+        }
+        return updatedUser
+    }
+
     func signOut() {
         signedOut = true
     }
@@ -161,6 +218,18 @@ private actor SupabaseAuthClientSpy: SupabaseAuthClient {
 
     func lastCallbackURL() -> URL? {
         receivedCallbackURL
+    }
+
+    func lastRecoveryEmail() -> String? {
+        receivedRecoveryEmail
+    }
+
+    func lastRecoveryRedirectURL() -> URL? {
+        receivedRecoveryRedirectURL
+    }
+
+    func lastUpdatedPassword() -> String? {
+        receivedUpdatedPassword
     }
 }
 
