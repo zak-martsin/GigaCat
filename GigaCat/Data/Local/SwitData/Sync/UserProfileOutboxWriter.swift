@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-/// Adds or coalesces a pending profile operation in the caller's current transaction.
+/// Adds a profile operation or replaces an unsent/terminal operation in the current transaction.
 struct UserProfileOutboxWriter {
     private let context: ModelContext
 
@@ -14,13 +14,14 @@ struct UserProfileOutboxWriter {
             UserProfileSyncPayload(selectedProgramID: user.selectedProgramId)
         )
 
-        if let pendingOperation = try pendingProfileOperation(for: user.id) {
-            pendingOperation.payload = payload
-            pendingOperation.revision = user.revision
-            pendingOperation.createdAt = now
-            pendingOperation.attemptCount = 0
-            pendingOperation.nextAttemptAt = nil
-            pendingOperation.lastErrorMessage = nil
+        if let replaceableOperation = try replaceableProfileOperation(for: user.id) {
+            replaceableOperation.payload = payload
+            replaceableOperation.revision = user.revision
+            replaceableOperation.statusRawValue = SyncOperationStatus.pending.rawValue
+            replaceableOperation.createdAt = now
+            replaceableOperation.attemptCount = 0
+            replaceableOperation.nextAttemptAt = nil
+            replaceableOperation.lastErrorMessage = nil
             return
         }
 
@@ -37,16 +38,33 @@ struct UserProfileOutboxWriter {
         )
     }
 
-    private func pendingProfileOperation(for userID: UUID) throws -> SyncOperationEntity? {
+    private func replaceableProfileOperation(for userID: UUID) throws -> SyncOperationEntity? {
         let pendingStatus = SyncOperationStatus.pending.rawValue
+        let failedStatus = SyncOperationStatus.failed.rawValue
         let profileType = SyncAggregateType.userProfile.rawValue
         let descriptor = FetchDescriptor<SyncOperationEntity>(
             predicate: #Predicate {
                 $0.userId == userID
                     && $0.aggregateTypeRawValue == profileType
-                    && $0.statusRawValue == pendingStatus
-            }
+                    && (
+                        $0.statusRawValue == pendingStatus
+                            || $0.statusRawValue == failedStatus
+                    )
+            },
+            sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
         )
-        return try context.fetch(descriptor).first
+        let operations = try context.fetch(descriptor)
+        if let pendingOperation = operations.first(where: {
+            $0.statusRawValue == pendingStatus
+        }) {
+            operations
+                .filter { $0.statusRawValue == failedStatus }
+                .forEach(context.delete)
+            return pendingOperation
+        }
+
+        guard let failedOperation = operations.first else { return nil }
+        operations.dropFirst().forEach(context.delete)
+        return failedOperation
     }
 }

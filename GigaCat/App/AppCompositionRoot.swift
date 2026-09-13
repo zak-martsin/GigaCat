@@ -27,6 +27,12 @@ enum AppCompositionRoot {
             )
         )
         let syncCoordinator = SyncCoordinator(worker: syncWorker)
+        let profileSyncRecoveryService = ProfileSyncRecoveryService(
+            remoteRepository: profileRemoteRepository,
+            userRepository: repositoryFactory.userRepository,
+            outboxRepository: repositoryFactory.syncOutboxRepository,
+            syncCoordinator: syncCoordinator
+        )
         let systemCatalogSyncService = SystemCatalogSyncService(
             remoteRepository: systemCatalogRemoteRepository,
             localStore: repositoryFactory.systemCatalogStore
@@ -38,6 +44,7 @@ enum AppCompositionRoot {
                 client: supabaseStack.client
             ),
             profileBootstrapService: profileBootstrapService,
+            profileSyncRecoveryService: profileSyncRecoveryService,
             syncCoordinator: syncCoordinator,
             systemCatalogSyncService: systemCatalogSyncService,
             currentUserContext: currentUserContext
@@ -66,6 +73,7 @@ struct AppDependencies {
     let repositoryFactory: LocalRepositoryFactory
     let authenticationService: SupabaseAuthenticationService
     let profileBootstrapService: ProfileBootstrapService
+    let profileSyncRecoveryService: ProfileSyncRecoveryService
     let syncCoordinator: SyncCoordinator
     let systemCatalogSyncService: SystemCatalogSyncService
     let currentUserContext: CurrentUserContext

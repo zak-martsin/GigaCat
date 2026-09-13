@@ -7,8 +7,10 @@ actor SyncWorker {
 
     private var activeUserID: UUID?
     private var isRunning = false
+    private var isPausedForAuthentication = false
     private var needsAnotherPass = false
     private var retryTask: Task<Void, Never>?
+    private var runCompletionWaiters: [CheckedContinuation<Void, Never>] = []
 
     init(
         outboxRepository: any SyncOutboxRepository,
@@ -21,6 +23,7 @@ actor SyncWorker {
     func activate(for userID: UUID) async {
         retryTask?.cancel()
         activeUserID = userID
+        isPausedForAuthentication = false
 
         do {
             try await outboxRepository.recoverInterruptedOperations(for: userID)
@@ -31,42 +34,53 @@ actor SyncWorker {
         await requestSync()
     }
 
-    func deactivate() {
+    /// Stops accepting work for the active account and waits for its current pass to unwind.
+    func deactivate() async {
         activeUserID = nil
+        isPausedForAuthentication = false
         needsAnotherPass = false
         retryTask?.cancel()
         retryTask = nil
+
+        if isRunning {
+            await waitForCurrentRun()
+        }
     }
 
+    /// Finishes only after the run containing this request has drained all ready work.
     func requestSync() async {
-        guard let userID = activeUserID else { return }
+        guard activeUserID != nil, !isPausedForAuthentication else { return }
 
         if isRunning {
             needsAnotherPass = true
+            await waitForCurrentRun()
             return
         }
 
         isRunning = true
+        await runUntilIdle()
+        isRunning = false
+        resumeRunCompletionWaiters()
+    }
 
-        while true {
+    private func runUntilIdle() async {
+        while let userID = activeUserID {
             needsAnotherPass = false
             await drainReadyOperations(for: userID)
 
-            guard activeUserID == userID else { break }
+            guard activeUserID == userID else { continue }
+            guard !isPausedForAuthentication else { return }
 
             let hasReadyOperations = await hasReadyOperations(for: userID)
-            guard needsAnotherPass || hasReadyOperations else { break }
+            guard activeUserID == userID else { continue }
+            if needsAnotherPass || hasReadyOperations {
+                continue
+            }
+
+            await scheduleRetryIfNeeded(for: userID)
+            guard activeUserID == userID else { continue }
+            guard needsAnotherPass else { return }
         }
-
-        isRunning = false
-
-        if let activeUserID,
-           activeUserID != userID {
-            await requestSync()
-            return
-        }
-
-        await scheduleRetryIfNeeded(for: userID)
     }
 
     private func drainReadyOperations(for userID: UUID) async {
@@ -87,23 +101,64 @@ actor SyncWorker {
                 let result = try await remoteExecutor.execute(operation)
                 guard activeUserID == userID else { return }
                 try await outboxRepository.complete(operation, with: result)
-            } catch let syncError as SyncError {
-                guard activeUserID == userID else { return }
-                try? await outboxRepository.failPermanently(
-                    operation,
-                    message: syncError.localizedDescription
-                )
             } catch {
                 guard activeUserID == userID else { return }
-                let retryAt = Date().addingTimeInterval(
-                    retryDelay(after: operation.attemptCount)
-                )
-                try? await outboxRepository.fail(
-                    operation,
-                    message: error.localizedDescription,
-                    retryAt: retryAt
-                )
+                guard await handleFailure(error, for: operation) else { return }
             }
+        }
+    }
+
+    private func handleFailure(
+        _ error: any Error,
+        for operation: SyncOperation
+    ) async -> Bool {
+        switch failureDisposition(for: error) {
+        case .retry(let message):
+            let retryAt = Date().addingTimeInterval(
+                retryDelay(after: operation.attemptCount)
+            )
+            try? await outboxRepository.fail(
+                operation,
+                message: message,
+                retryAt: retryAt
+            )
+            return true
+        case .pauseForAuthentication(let message):
+            try? await outboxRepository.pauseForAuthentication(
+                operation,
+                message: message
+            )
+            isPausedForAuthentication = true
+            retryTask?.cancel()
+            retryTask = nil
+            return false
+        case .failPermanently(let message):
+            try? await outboxRepository.failPermanently(
+                operation,
+                message: message
+            )
+            return true
+        }
+    }
+
+    private func failureDisposition(
+        for error: any Error
+    ) -> OperationFailureDisposition {
+        if let syncError = error as? SyncError {
+            return .failPermanently(message: syncError.localizedDescription)
+        }
+
+        guard let executionError = error as? SyncExecutionError else {
+            return .retry(message: error.localizedDescription)
+        }
+
+        switch executionError {
+        case .transient(let message):
+            return .retry(message: message)
+        case .authenticationRequired(let message):
+            return .pauseForAuthentication(message: message)
+        case .permanent(let message):
+            return .failPermanently(message: message)
         }
     }
 
@@ -143,4 +198,22 @@ actor SyncWorker {
         let exponent = min(max(attemptCount, 0), 6)
         return min(5 * pow(2, Double(exponent)), 300)
     }
+
+    private func waitForCurrentRun() async {
+        await withCheckedContinuation { continuation in
+            runCompletionWaiters.append(continuation)
+        }
+    }
+
+    private func resumeRunCompletionWaiters() {
+        let waiters = runCompletionWaiters
+        runCompletionWaiters.removeAll()
+        waiters.forEach { $0.resume() }
+    }
+}
+
+private enum OperationFailureDisposition {
+    case retry(message: String)
+    case pauseForAuthentication(message: String)
+    case failPermanently(message: String)
 }

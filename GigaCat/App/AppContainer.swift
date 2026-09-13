@@ -10,14 +10,19 @@ final class AppContainer {
     let programDetailViewModel: ProgramDetailViewModel
     private let dataChangeCoordinator: AppDataChangeCoordinator
     private let dataChangeDispatcher: AppDataChangeDispatcher
+    private let userRepository: any UserRepository
+    private let profileBootstrapper: any ProfileBootstrapping
+    private let syncCoordinator: any SyncCoordinating
     private let systemCatalogSynchronizer: any SystemCatalogSyncing
+    private let selectedProgramReconciler: SelectedProgramReconciliationService
 
     // The composition root keeps the complete dependency graph visible in one place.
     // swiftlint:disable:next function_body_length
     init(
         repositoryFactory: some RepositoryFactory,
         syncCoordinator: any SyncCoordinating,
-        systemCatalogSynchronizer: any SystemCatalogSyncing
+        systemCatalogSynchronizer: any SystemCatalogSyncing,
+        profileBootstrapper: any ProfileBootstrapping
     ) {
         let dataChangeDispatcher = AppDataChangeDispatcher()
         let programDetailService = ProgramDetailService(
@@ -81,7 +86,10 @@ final class AppContainer {
                 await miniPlayerViewModel?.reload()
             },
             requestProfileSync: {
-                syncCoordinator.requestSync()
+                // Local mutations update the UI immediately; their cloud push remains best-effort.
+                Task(priority: .utility) {
+                    await syncCoordinator.requestSync()
+                }
             }
         )
 
@@ -92,7 +100,14 @@ final class AppContainer {
         self.programDetailViewModel = programDetailViewModel
         self.dataChangeCoordinator = dataChangeCoordinator
         self.dataChangeDispatcher = dataChangeDispatcher
+        self.userRepository = repositoryFactory.userRepository
+        self.profileBootstrapper = profileBootstrapper
+        self.syncCoordinator = syncCoordinator
         self.systemCatalogSynchronizer = systemCatalogSynchronizer
+        selectedProgramReconciler = SelectedProgramReconciliationService(
+            userRepository: repositoryFactory.userRepository,
+            workoutProgramRepository: repositoryFactory.workoutProgramRepository
+        )
 
         dataChangeDispatcher.install(handler: dataChangeCoordinator.handle)
     }
@@ -106,6 +121,43 @@ final class AppContainer {
             return true
         } catch {
             // Cached or bundled SwiftData content remains usable while offline.
+            return false
+        }
+    }
+
+    /// Runs one ordered foreground refresh and reports whether local source-of-truth data changed.
+    func refreshAfterBecomingActive(for userID: UUID) async -> Bool {
+        let selectedProgramBefore = try? await userRepository
+            .user(id: userID)?.selectedProgramId
+        let catalogDidChange = await refreshSystemCatalogWithoutDispatch()
+        let selectionWasReconciled = (
+            try? await selectedProgramReconciler.clearUnavailableSelection(
+                for: userID
+            )
+        ) ?? false
+
+        await syncCoordinator.requestSync()
+
+        let profileDidChange = (
+            try? await profileBootstrapper.refreshProfile(for: userID)
+        ) ?? false
+        let selectedProgramAfter = try? await userRepository
+            .user(id: userID)?.selectedProgramId
+
+        if catalogDidChange {
+            await dataChangeDispatcher.send(.programCatalog)
+        }
+        if selectedProgramBefore != selectedProgramAfter {
+            await dataChangeDispatcher.send(.selectedProgram)
+        }
+
+        return catalogDidChange || selectionWasReconciled || profileDidChange
+    }
+
+    private func refreshSystemCatalogWithoutDispatch() async -> Bool {
+        do {
+            return try await systemCatalogSynchronizer.refreshSystemCatalog()
+        } catch {
             return false
         }
     }

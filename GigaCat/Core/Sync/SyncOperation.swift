@@ -37,6 +37,22 @@ enum SyncExecutionResult: Equatable, Sendable {
     case userProfile(User)
 }
 
+/// Provider-independent outcome used by the worker to decide what happens to an operation.
+enum SyncExecutionError: LocalizedError, Equatable, Sendable {
+    case transient(message: String)
+    case authenticationRequired(message: String)
+    case permanent(message: String)
+
+    var errorDescription: String? {
+        switch self {
+        case .transient(let message),
+             .authenticationRequired(let message),
+             .permanent(let message):
+            message
+        }
+    }
+}
+
 enum SyncError: LocalizedError {
     case invalidStoredOperation
     case invalidPayload

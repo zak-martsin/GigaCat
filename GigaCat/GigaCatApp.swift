@@ -49,8 +49,10 @@ struct GigaCatApp: App {
             case .uiTesting(let dependencies):
                 ContentView(
                     repositoryFactory: dependencies.repositoryFactory,
+                    userID: dependencies.userID,
                     syncCoordinator: dependencies.syncCoordinator,
-                    systemCatalogSynchronizer: dependencies.systemCatalogSynchronizer
+                    systemCatalogSynchronizer: dependencies.systemCatalogSynchronizer,
+                    profileBootstrapper: dependencies.profileBootstrapper
                 )
             #endif
             case .failed(let message):

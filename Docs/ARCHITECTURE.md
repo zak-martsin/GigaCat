@@ -124,6 +124,39 @@ Profile and selected-program writes follow the existing offline-first outbox flo
 3. Update the UI immediately.
 4. Push pending operations when connectivity and authentication allow it.
 
+Profile conflict resolution in v1 follows the presence of outgoing work rather than comparing
+device and server clocks. While a profile operation is pending or syncing, its local value wins and
+remote profile pulls must not overwrite it. After the operation succeeds, the Supabase response is
+the canonical value applied to SwiftData. When no outgoing profile operation exists, the remote
+profile wins and is saved locally only when its value differs. `updatedAt` remains metadata and is
+not a conflict-resolution authority.
+
+`AppShell` owns the single active-scene signal. `AppContainer` handles that signal as one ordered
+foreground refresh: download the system catalog, clear an unavailable current selection, await the
+outbox push, then pull the profile when the outbox permits it. Only completed local changes are
+routed through `AppDataChangeDispatcher`; Views do not coordinate these storage operations.
+
+Account transitions are serialized at the authentication boundary. Signing out first awaits sync
+deactivation before removing the Supabase session and current local user ID. Authenticating an
+account first stops any previous worker, installs the new current user ID, bootstraps that profile,
+then activates sync for that ID. The authenticated application surface is shown only after this
+sequence completes. Because every outbox operation owns a user ID, one account's work cannot be
+claimed by another account's worker pass.
+
+Program availability is enforced on both sides of the offline boundary. PostgreSQL rejects profile
+writes that reference an inactive program and clears profile selections when a system program is
+deactivated. After a catalog refresh, the app mirrors that rule locally: a missing or inactive
+selection is cleared in SwiftData and queued through the normal profile outbox.
+
+Outbox failures are classified at the Supabase boundary. Network timeouts, rate limits, and server
+errors stay pending with backoff; an invalid session pauses the worker until authentication activates
+it again; malformed payloads and rejected database writes become terminal failures. Feature code sees
+only `ProfileSyncStatus`, never SwiftData outbox entities. A terminal profile change can be retried or
+discarded; discard pulls the server profile before removing the failed operation so an offline attempt
+cannot destroy the only durable local intent. Until either action is chosen, the failed operation blocks
+automatic profile pulls and keeps the local value visible. A new profile mutation replaces an older
+failed one.
+
 Workout sessions and logs are deliberately local-only in v1.
 
 Supabase trigger functions that require `SECURITY DEFINER` are internal database infrastructure.

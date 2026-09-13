@@ -26,7 +26,7 @@ struct ProfileBootstrapServiceTests {
     }
 
     @Test
-    func keepsNewerLocalProfile() async throws {
+    func bootstrapUsesRemoteProfileEvenWhenLocalTimestampIsNewer() async throws {
         let userID = UUID()
         let localProfile = User(
             id: userID,
@@ -49,7 +49,7 @@ struct ProfileBootstrapServiceTests {
 
         try await service.bootstrapProfile(for: userID)
 
-        #expect(await repository.savedUsers().isEmpty)
+        #expect(await repository.savedUsers() == [remoteProfile])
     }
 
     @Test
@@ -108,6 +108,104 @@ struct ProfileBootstrapServiceTests {
 
         #expect(await repository.savedUsers().isEmpty)
     }
+
+    @Test
+    func refreshUsesRemoteProfileEvenWhenLocalTimestampIsNewer() async throws {
+        let userID = UUID()
+        let localProfile = User(
+            id: userID,
+            selectedProgramId: nil,
+            createdAt: Date(timeIntervalSince1970: 1_000),
+            updatedAt: Date(timeIntervalSince1970: 3_000)
+        )
+        let remoteProfile = User(
+            id: userID,
+            selectedProgramId: UUID(),
+            createdAt: localProfile.createdAt,
+            updatedAt: Date(timeIntervalSince1970: 2_000)
+        )
+        let repository = UserRepositorySpy(user: localProfile)
+        let service = ProfileBootstrapService(
+            remoteRepository: UserProfileRemoteRepositoryStub(profile: remoteProfile),
+            userRepository: repository,
+            outboxRepository: SyncOutboxRepositoryStub()
+        )
+
+        let didChange = try await service.refreshProfile(for: userID)
+
+        #expect(didChange)
+        #expect(await repository.savedUsers() == [remoteProfile])
+    }
+
+    @Test
+    func refreshReturnsFalseForUnchangedProfile() async throws {
+        let profile = User(id: UUID(), selectedProgramId: UUID())
+        let repository = UserRepositorySpy(user: profile)
+        let service = ProfileBootstrapService(
+            remoteRepository: UserProfileRemoteRepositoryStub(profile: profile),
+            userRepository: repository,
+            outboxRepository: SyncOutboxRepositoryStub()
+        )
+
+        let didChange = try await service.refreshProfile(for: profile.id)
+
+        #expect(!didChange)
+        #expect(await repository.savedUsers().isEmpty)
+    }
+
+    @Test
+    func refreshReturnsFalseWhenRemoteIsUnavailable() async throws {
+        let profile = User(id: UUID(), selectedProgramId: UUID())
+        let repository = UserRepositorySpy(user: profile)
+        let service = ProfileBootstrapService(
+            remoteRepository: UserProfileRemoteRepositoryStub(error: .unavailable),
+            userRepository: repository,
+            outboxRepository: SyncOutboxRepositoryStub()
+        )
+
+        let didChange = try await service.refreshProfile(for: profile.id)
+
+        #expect(!didChange)
+        #expect(await repository.savedUsers().isEmpty)
+    }
+
+    @Test
+    func refreshDoesNotLoadRemoteProfileWhileLocalChangeIsPending() async throws {
+        let profile = User(id: UUID(), selectedProgramId: UUID())
+        let remoteRepository = UserProfileRemoteRepositorySpy(profile: profile)
+        let repository = UserRepositorySpy(user: profile)
+        let service = ProfileBootstrapService(
+            remoteRepository: remoteRepository,
+            userRepository: repository,
+            outboxRepository: SyncOutboxRepositoryStub(hasPendingProfileOperation: true)
+        )
+
+        let didChange = try await service.refreshProfile(for: profile.id)
+
+        #expect(!didChange)
+        #expect(await remoteRepository.profileRequestCount == 0)
+        #expect(await repository.savedUsers().isEmpty)
+    }
+
+    @Test
+    func refreshDoesNotOverwriteLocalProfileWhileFailureAwaitsUserDecision() async throws {
+        let profile = User(id: UUID(), selectedProgramId: UUID())
+        let remoteRepository = UserProfileRemoteRepositorySpy(profile: profile)
+        let repository = UserRepositorySpy(user: profile)
+        let service = ProfileBootstrapService(
+            remoteRepository: remoteRepository,
+            userRepository: repository,
+            outboxRepository: SyncOutboxRepositoryStub(
+                hasUnresolvedProfileOperation: true
+            )
+        )
+
+        let didChange = try await service.refreshProfile(for: profile.id)
+
+        #expect(!didChange)
+        #expect(await remoteRepository.profileRequestCount == 0)
+        #expect(await repository.savedUsers().isEmpty)
+    }
 }
 
 private struct UserProfileRemoteRepositoryStub: UserProfileRemoteRepository {
@@ -130,12 +228,36 @@ private struct UserProfileRemoteRepositoryStub: UserProfileRemoteRepository {
     }
 }
 
+private actor UserProfileRemoteRepositorySpy: UserProfileRemoteRepository {
+    private let profile: User
+    private(set) var profileRequestCount = 0
+
+    init(profile: User) {
+        self.profile = profile
+    }
+
+    func profile(for _: UUID) -> User {
+        profileRequestCount += 1
+        return profile
+    }
+
+    func updateProfile(for _: UUID, selectedProgramID _: UUID?) -> User {
+        profile
+    }
+}
+
 @MainActor
 private final class SyncOutboxRepositoryStub: SyncOutboxRepository {
     private let hasPendingProfileOperation: Bool
+    private let hasUnresolvedProfileOperation: Bool
 
-    init(hasPendingProfileOperation: Bool = false) {
+    init(
+        hasPendingProfileOperation: Bool = false,
+        hasUnresolvedProfileOperation: Bool? = nil
+    ) {
         self.hasPendingProfileOperation = hasPendingProfileOperation
+        self.hasUnresolvedProfileOperation = hasUnresolvedProfileOperation
+            ?? hasPendingProfileOperation
     }
 
     func recoverInterruptedOperations(for _: UUID) {}
@@ -147,6 +269,8 @@ private final class SyncOutboxRepositoryStub: SyncOutboxRepository {
     func complete(_: SyncOperation, with _: SyncExecutionResult) {}
 
     func fail(_: SyncOperation, message _: String, retryAt _: Date) {}
+
+    func pauseForAuthentication(_: SyncOperation, message _: String) {}
 
     func failPermanently(_: SyncOperation, message _: String) {}
 
@@ -160,6 +284,22 @@ private final class SyncOutboxRepositoryStub: SyncOutboxRepository {
 
     func hasUnfinishedProfileOperation(for _: UUID) -> Bool {
         hasPendingProfileOperation
+    }
+
+    func hasUnresolvedProfileOperation(for _: UUID) -> Bool {
+        hasUnresolvedProfileOperation
+    }
+
+    func profileSyncStatus(for _: UUID) -> ProfileSyncStatus {
+        hasPendingProfileOperation ? .waiting : .synchronized
+    }
+
+    func retryFailedProfileOperation(for _: UUID) -> Bool {
+        false
+    }
+
+    func removeFailedProfileOperations(for _: UUID) -> Bool {
+        false
     }
 }
 

@@ -1,10 +1,10 @@
 import SwiftUI
 
 struct AuthenticationRootView<Factory: RepositoryFactory>: View {
-    @Environment(\.scenePhase) private var scenePhase
     @State private var viewModel: AuthenticationViewModel
     @State private var isPasswordRecoveryPresented = false
     private let repositoryFactory: Factory
+    private let profileBootstrapper: any ProfileBootstrapping
     private let syncCoordinator: any SyncCoordinating
     private let systemCatalogSynchronizer: any SystemCatalogSyncing
 
@@ -24,6 +24,7 @@ struct AuthenticationRootView<Factory: RepositoryFactory>: View {
                 syncCoordinator: syncCoordinator
             )
         )
+        self.profileBootstrapper = profileBootstrapper
         self.syncCoordinator = syncCoordinator
         self.systemCatalogSynchronizer = systemCatalogSynchronizer
         self.repositoryFactory = repositoryFactory
@@ -46,11 +47,13 @@ struct AuthenticationRootView<Factory: RepositoryFactory>: View {
                     }
                 )
 
-            case .authenticated:
+            case .authenticated(let account):
                 ContentView(
                     repositoryFactory: repositoryFactory,
+                    userID: account.id,
                     syncCoordinator: syncCoordinator,
                     systemCatalogSynchronizer: systemCatalogSynchronizer,
+                    profileBootstrapper: profileBootstrapper,
                     onSignOut: signOut
                 )
 
@@ -94,10 +97,6 @@ struct AuthenticationRootView<Factory: RepositoryFactory>: View {
                 break
             }
         }
-        .onChange(of: scenePhase) { _, newPhase in
-            guard newPhase == .active, authenticatedUserID != nil else { return }
-            syncCoordinator.requestSync()
-        }
         .onChange(of: viewModel.sessionState) { _, newState in
             guard case .authenticated = newState else { return }
             isPasswordRecoveryPresented = false
@@ -113,10 +112,4 @@ struct AuthenticationRootView<Factory: RepositoryFactory>: View {
         }
     }
 
-    private var authenticatedUserID: UUID? {
-        guard case .authenticated(let account) = viewModel.sessionState else {
-            return nil
-        }
-        return account.id
-    }
 }

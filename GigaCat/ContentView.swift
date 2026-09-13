@@ -12,14 +12,18 @@ struct ContentView: View {
 
     init(
         repositoryFactory: some RepositoryFactory,
+        userID: UUID,
         syncCoordinator: any SyncCoordinating,
         systemCatalogSynchronizer: any SystemCatalogSyncing,
+        profileBootstrapper: any ProfileBootstrapping,
         onSignOut: @escaping () -> Void = {}
     ) {
         appShellView = AppShellView(
             repositoryFactory: repositoryFactory,
+            userID: userID,
             syncCoordinator: syncCoordinator,
             systemCatalogSynchronizer: systemCatalogSynchronizer,
+            profileBootstrapper: profileBootstrapper,
             onSignOut: onSignOut
         )
     }

@@ -86,13 +86,35 @@ final class LocalSyncOutboxRepository: SyncOutboxRepository {
         try context.save()
     }
 
+    func pauseForAuthentication(
+        _ operation: SyncOperation,
+        message: String
+    ) throws {
+        guard let entity = try findOperation(id: operation.id) else { return }
+
+        if try hasNewerProfileOperation(than: operation) {
+            context.delete(entity)
+        } else {
+            entity.statusRawValue = SyncOperationStatus.pending.rawValue
+            entity.attemptCount += 1
+            entity.nextAttemptAt = nil
+            entity.lastErrorMessage = message
+        }
+
+        try context.save()
+    }
+
     func failPermanently(_ operation: SyncOperation, message: String) throws {
         guard let entity = try findOperation(id: operation.id) else { return }
 
-        entity.statusRawValue = SyncOperationStatus.failed.rawValue
-        entity.attemptCount += 1
-        entity.nextAttemptAt = nil
-        entity.lastErrorMessage = message
+        if try hasNewerProfileOperation(than: operation) {
+            context.delete(entity)
+        } else {
+            entity.statusRawValue = SyncOperationStatus.failed.rawValue
+            entity.attemptCount += 1
+            entity.nextAttemptAt = nil
+            entity.lastErrorMessage = message
+        }
         try context.save()
     }
 
@@ -117,9 +139,70 @@ final class LocalSyncOutboxRepository: SyncOutboxRepository {
 
     func hasUnfinishedProfileOperation(for userID: UUID) throws -> Bool {
         let profileType = SyncAggregateType.userProfile.rawValue
+        let failedStatus = SyncOperationStatus.failed.rawValue
+        return try operations(for: userID).contains {
+            $0.aggregateTypeRawValue == profileType
+                && $0.statusRawValue != failedStatus
+        }
+    }
+
+    func hasUnresolvedProfileOperation(for userID: UUID) throws -> Bool {
+        let profileType = SyncAggregateType.userProfile.rawValue
         return try operations(for: userID).contains {
             $0.aggregateTypeRawValue == profileType
         }
+    }
+
+    func profileSyncStatus(for userID: UUID) throws -> ProfileSyncStatus {
+        let profileOperations = try operations(for: userID).filter {
+            $0.aggregateTypeRawValue == SyncAggregateType.userProfile.rawValue
+        }
+
+        if let failedOperation = profileOperations.last(where: {
+            $0.statusRawValue == SyncOperationStatus.failed.rawValue
+        }) {
+            return .failed(
+                message: failedOperation.lastErrorMessage
+                    ?? "The profile change could not be synchronized."
+            )
+        }
+
+        return profileOperations.isEmpty ? .synchronized : .waiting
+    }
+
+    func retryFailedProfileOperation(for userID: UUID) throws -> Bool {
+        let failedStatus = SyncOperationStatus.failed.rawValue
+        let profileType = SyncAggregateType.userProfile.rawValue
+        let failedOperations = try operations(for: userID).filter {
+            $0.aggregateTypeRawValue == profileType
+                && $0.statusRawValue == failedStatus
+        }
+
+        guard let operation = failedOperations.last else { return false }
+
+        failedOperations.dropLast().forEach(context.delete)
+        operation.statusRawValue = SyncOperationStatus.pending.rawValue
+        operation.attemptCount = 0
+        operation.nextAttemptAt = nil
+        operation.lastErrorMessage = nil
+        operation.createdAt = Date()
+        try context.save()
+        return true
+    }
+
+    func removeFailedProfileOperations(for userID: UUID) throws -> Bool {
+        let failedStatus = SyncOperationStatus.failed.rawValue
+        let profileType = SyncAggregateType.userProfile.rawValue
+        let failedOperations = try operations(for: userID).filter {
+            $0.aggregateTypeRawValue == profileType
+                && $0.statusRawValue == failedStatus
+        }
+
+        guard !failedOperations.isEmpty else { return false }
+
+        failedOperations.forEach(context.delete)
+        try context.save()
+        return true
     }
 
     func operationCount(for userID: UUID) throws -> Int {

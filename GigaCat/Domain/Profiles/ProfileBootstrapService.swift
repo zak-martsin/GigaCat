@@ -4,6 +4,8 @@ import Foundation
 @MainActor
 protocol ProfileBootstrapping {
     func bootstrapProfile(for userID: UUID) async throws
+    /// Pulls the remote profile when no local mutation still needs to be pushed.
+    func refreshProfile(for userID: UUID) async throws -> Bool
 }
 
 /// Refreshes a local profile when possible while preserving offline access.
@@ -25,8 +27,8 @@ struct ProfileBootstrapService: ProfileBootstrapping {
 
     func bootstrapProfile(for userID: UUID) async throws {
         let localProfile = try await userRepository.user(id: userID)
-        let hasPendingChange = try outboxRepository
-            .hasUnfinishedProfileOperation(for: userID)
+        let hasUnresolvedChange = try outboxRepository
+            .hasUnresolvedProfileOperation(for: userID)
         let remoteProfile: User
 
         do {
@@ -43,13 +45,29 @@ struct ProfileBootstrapService: ProfileBootstrapping {
             return
         }
 
-        guard !hasPendingChange else { return }
-
-        if let localProfile,
-           localProfile.updatedAt >= remoteProfile.updatedAt {
-            return
-        }
+        guard !hasUnresolvedChange else { return }
+        guard localProfile != remoteProfile else { return }
 
         try await userRepository.save(remoteProfile)
+    }
+
+    func refreshProfile(for userID: UUID) async throws -> Bool {
+        let localProfile = try await userRepository.user(id: userID)
+        let hasUnresolvedChange = try outboxRepository
+            .hasUnresolvedProfileOperation(for: userID)
+
+        guard !hasUnresolvedChange else { return false }
+
+        let remoteProfile: User
+        do {
+            remoteProfile = try await remoteRepository.profile(for: userID)
+        } catch {
+            return false
+        }
+
+        guard localProfile != remoteProfile else { return false }
+
+        try await userRepository.save(remoteProfile)
+        return true
     }
 }

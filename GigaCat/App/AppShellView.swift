@@ -3,6 +3,7 @@ import SwiftUI
 struct AppShellView: View {
     @Environment(\.scenePhase) private var scenePhase
     private let container: AppContainer
+    private let userID: UUID
     private let onSignOut: () -> Void
     @State private var selectedTab: AppTab = .catalog
     @State private var isProfilePresented = false
@@ -16,17 +17,21 @@ struct AppShellView: View {
 
     init(
         repositoryFactory: some RepositoryFactory,
+        userID: UUID,
         syncCoordinator: any SyncCoordinating,
         systemCatalogSynchronizer: any SystemCatalogSyncing,
+        profileBootstrapper: any ProfileBootstrapping,
         onSignOut: @escaping () -> Void = {}
     ) {
         let container = AppContainer(
             repositoryFactory: repositoryFactory,
             syncCoordinator: syncCoordinator,
-            systemCatalogSynchronizer: systemCatalogSynchronizer
+            systemCatalogSynchronizer: systemCatalogSynchronizer,
+            profileBootstrapper: profileBootstrapper
         )
 
         self.container = container
+        self.userID = userID
         self.onSignOut = onSignOut
         _workoutViewModel = State(initialValue: container.workoutViewModel)
         _progressViewModel = State(initialValue: container.progressViewModel)
@@ -157,7 +162,9 @@ struct AppShellView: View {
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else { return }
             Task {
-                let didChange = await container.refreshSystemCatalog()
+                let didChange = await container.refreshAfterBecomingActive(
+                    for: userID
+                )
                 if didChange {
                     await loadSelectedTabIfNeeded()
                 }

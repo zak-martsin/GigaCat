@@ -21,10 +21,14 @@ struct SupabaseSyncExecutor: RemoteSyncExecuting {
             throw SyncError.invalidPayload
         }
 
-        let profile = try await profileRepository.updateProfile(
-            for: operation.aggregateID,
-            selectedProgramID: payload.selectedProgramID
-        )
-        return .userProfile(profile)
+        do {
+            let profile = try await profileRepository.updateProfile(
+                for: operation.aggregateID,
+                selectedProgramID: payload.selectedProgramID
+            )
+            return .userProfile(profile)
+        } catch {
+            throw SupabaseSyncErrorClassifier.classify(error)
+        }
     }
 }

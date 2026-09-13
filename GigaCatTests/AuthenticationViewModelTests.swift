@@ -281,6 +281,7 @@ struct AuthenticationViewModelTests {
             syncCoordinator: syncCoordinator
         )
         await viewModel.restoreSession()
+        let deactivationCountBeforeSignOut = syncCoordinator.deactivationCount
         viewModel.email = "user@example.com"
         viewModel.password = "password"
 
@@ -291,7 +292,10 @@ struct AuthenticationViewModelTests {
         #expect(viewModel.password.isEmpty)
         #expect(await service.didSignOut())
         #expect(await currentUserContext.currentUserID() == nil)
-        #expect(syncCoordinator.deactivationCount == 1)
+        #expect(
+            syncCoordinator.deactivationCount
+                == deactivationCountBeforeSignOut + 1
+        )
     }
 }
 
@@ -300,16 +304,15 @@ private final class SyncCoordinatorSpy: SyncCoordinating {
     private(set) var activatedUserIDs: [UUID] = []
     private(set) var deactivationCount = 0
     private(set) var requestCount = 0
-
-    func activate(for userID: UUID) {
+    func activate(for userID: UUID) async {
         activatedUserIDs.append(userID)
     }
 
-    func deactivate() {
+    func deactivate() async {
         deactivationCount += 1
     }
 
-    func requestSync() {
+    func requestSync() async {
         requestCount += 1
     }
 }
@@ -318,7 +321,6 @@ private final class SyncCoordinatorSpy: SyncCoordinating {
 private final class ProfileBootstrapperSpy: ProfileBootstrapping {
     private(set) var receivedUserIDs: [UUID] = []
     private let error: ProfileBootstrapTestError?
-
     init(error: ProfileBootstrapTestError? = nil) {
         self.error = error
     }
@@ -329,6 +331,10 @@ private final class ProfileBootstrapperSpy: ProfileBootstrapping {
         if let error {
             throw error
         }
+    }
+
+    func refreshProfile(for _: UUID) -> Bool {
+        false
     }
 }
 

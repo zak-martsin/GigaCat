@@ -98,7 +98,7 @@ final class AuthenticationViewModel {
             if let account = try await authenticationService.currentAccount() {
                 try await completeAuthentication(with: account)
             } else {
-                syncCoordinator.deactivate()
+                await syncCoordinator.deactivate()
                 await currentUserIDStore.clearCurrentUserID()
                 sessionState = .signedOut
             }
@@ -108,13 +108,13 @@ final class AuthenticationViewModel {
     }
 
     func signOut() async {
-        guard case .authenticated = sessionState else { return }
+        guard case .authenticated(let account) = sessionState else { return }
 
         sessionState = .checking
+        await syncCoordinator.deactivate()
 
         do {
             try await authenticationService.signOut()
-            syncCoordinator.deactivate()
             await currentUserIDStore.clearCurrentUserID()
             email = ""
             password = ""
@@ -123,6 +123,7 @@ final class AuthenticationViewModel {
             passwordRecoveryState = .idle
             sessionState = .signedOut
         } catch {
+            await syncCoordinator.activate(for: account.id)
             sessionState = .failed(error.localizedDescription)
         }
     }
@@ -267,17 +268,17 @@ final class AuthenticationViewModel {
     }
 
     private func completeAuthentication(with account: AuthenticatedAccount) async throws {
+        await syncCoordinator.deactivate()
         await currentUserIDStore.setCurrentUserID(account.id)
 
         do {
             try await profileBootstrapper.bootstrapProfile(for: account.id)
         } catch {
-            syncCoordinator.deactivate()
             await currentUserIDStore.clearCurrentUserID()
             throw error
         }
 
-        syncCoordinator.activate(for: account.id)
+        await syncCoordinator.activate(for: account.id)
         password = ""
         sessionState = .authenticated(account)
     }
