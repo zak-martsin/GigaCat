@@ -5,12 +5,14 @@ import Foundation
 @MainActor
 struct UITestAppDependencies {
     static let launchArgument = "--ui-testing"
+    static let failedSyncLaunchArgument = "--ui-testing-sync-failed"
 
     let repositoryFactory: MockRepositoryFactory
     let userID: UUID
     let syncCoordinator: UITestSyncCoordinator
     let systemCatalogSynchronizer: UITestSystemCatalogSynchronizer
     let profileBootstrapper: UITestProfileBootstrapper
+    let profileSyncRecoveryService: UITestProfileSyncRecoveryService
 
     static var isRequested: Bool {
         ProcessInfo.processInfo.arguments.contains(launchArgument)
@@ -23,7 +25,12 @@ struct UITestAppDependencies {
             userID: MockSeedData.uuid("11111111-1111-1111-1111-111111111111"),
             syncCoordinator: UITestSyncCoordinator(),
             systemCatalogSynchronizer: UITestSystemCatalogSynchronizer(),
-            profileBootstrapper: UITestProfileBootstrapper()
+            profileBootstrapper: UITestProfileBootstrapper(),
+            profileSyncRecoveryService: UITestProfileSyncRecoveryService(
+                status: ProcessInfo.processInfo.arguments.contains(failedSyncLaunchArgument)
+                    ? .failed(message: "Internal database error")
+                    : .synchronized
+            )
         )
     }
 }
@@ -49,5 +56,18 @@ final class UITestProfileBootstrapper: ProfileBootstrapping {
     func refreshProfile(for _: UUID) async throws -> Bool {
         false
     }
+}
+
+@MainActor
+final class UITestProfileSyncRecoveryService: ProfileSyncRecovering {
+    let currentStatus: ProfileSyncStatus
+
+    init(status: ProfileSyncStatus) {
+        currentStatus = status
+    }
+
+    func status(for _: UUID) throws -> ProfileSyncStatus { currentStatus }
+    func retryFailedChange(for _: UUID) async throws {}
+    func discardFailedLocalChange(for _: UUID) async throws -> Bool { false }
 }
 #endif

@@ -43,6 +43,7 @@ struct GigaCatApp: App {
                     profileBootstrapper: dependencies.profileBootstrapService,
                     syncCoordinator: dependencies.syncCoordinator,
                     systemCatalogSynchronizer: dependencies.systemCatalogSyncService,
+                    profileSyncRecoveryService: dependencies.profileSyncRecoveryService,
                     repositoryFactory: dependencies.repositoryFactory
                 )
             #if DEBUG
@@ -52,7 +53,8 @@ struct GigaCatApp: App {
                     userID: dependencies.userID,
                     syncCoordinator: dependencies.syncCoordinator,
                     systemCatalogSynchronizer: dependencies.systemCatalogSynchronizer,
-                    profileBootstrapper: dependencies.profileBootstrapper
+                    profileBootstrapper: dependencies.profileBootstrapper,
+                    profileSyncRecoveryService: dependencies.profileSyncRecoveryService
                 )
             #endif
             case .failed(let message):

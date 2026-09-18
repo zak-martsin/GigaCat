@@ -16,6 +16,7 @@ struct ContentView: View {
         syncCoordinator: any SyncCoordinating,
         systemCatalogSynchronizer: any SystemCatalogSyncing,
         profileBootstrapper: any ProfileBootstrapping,
+        profileSyncRecoveryService: any ProfileSyncRecovering,
         onSignOut: @escaping () -> Void = {}
     ) {
         appShellView = AppShellView(
@@ -24,6 +25,7 @@ struct ContentView: View {
             syncCoordinator: syncCoordinator,
             systemCatalogSynchronizer: systemCatalogSynchronizer,
             profileBootstrapper: profileBootstrapper,
+            profileSyncRecoveryService: profileSyncRecoveryService,
             onSignOut: onSignOut
         )
     }

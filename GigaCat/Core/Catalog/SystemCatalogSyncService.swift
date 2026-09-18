@@ -15,12 +15,11 @@ protocol SystemCatalogLocalStore {
     func apply(_ snapshot: SystemCatalogSnapshot) throws -> Bool
 }
 
-/// Coordinates a best-effort catalog refresh without allowing overlapping refreshes.
+/// Validates and applies a server-owned catalog snapshot to the local source of truth.
 @MainActor
 final class SystemCatalogSyncService: SystemCatalogSyncing {
     private let remoteRepository: any SystemCatalogRemoteRepository
     private let localStore: any SystemCatalogLocalStore
-    private var isRefreshing = false
 
     init(
         remoteRepository: any SystemCatalogRemoteRepository,
@@ -31,11 +30,6 @@ final class SystemCatalogSyncService: SystemCatalogSyncing {
     }
 
     func refreshSystemCatalog() async throws -> Bool {
-        guard !isRefreshing else { return false }
-
-        isRefreshing = true
-        defer { isRefreshing = false }
-
         let snapshot = try await remoteRepository.fetchSystemCatalog()
         guard !snapshot.entries.isEmpty else {
             throw SystemCatalogSyncError.emptyCatalog

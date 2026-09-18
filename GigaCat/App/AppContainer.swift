@@ -1,5 +1,11 @@
 import Foundation
 
+/// Reports completed local changes without exposing synchronization storage to the UI.
+struct ForegroundRefreshResult: Equatable, Sendable {
+    let didChange: Bool
+    let selectedProgramBecameUnavailable: Bool
+}
+
 /// Owns the application-scoped feature graph and keeps dependency construction out of SwiftUI views.
 @MainActor
 final class AppContainer {
@@ -15,6 +21,7 @@ final class AppContainer {
     private let syncCoordinator: any SyncCoordinating
     private let systemCatalogSynchronizer: any SystemCatalogSyncing
     private let selectedProgramReconciler: SelectedProgramReconciliationService
+    private var foregroundRefreshTask: Task<ForegroundRefreshResult, Never>?
 
     // The composition root keeps the complete dependency graph visible in one place.
     // swiftlint:disable:next function_body_length
@@ -112,29 +119,36 @@ final class AppContainer {
         dataChangeDispatcher.install(handler: dataChangeCoordinator.handle)
     }
 
-    /// Refreshes the local catalog and routes actual source-of-truth changes through the dispatcher.
-    func refreshSystemCatalog() async -> Bool {
-        do {
-            let didChange = try await systemCatalogSynchronizer.refreshSystemCatalog()
-            guard didChange else { return false }
-            await dataChangeDispatcher.send(.programCatalog)
-            return true
-        } catch {
-            // Cached or bundled SwiftData content remains usable while offline.
-            return false
+    /// Shares an ordered foreground pass between startup and active-scene requests.
+    func refreshAfterBecomingActive(for userID: UUID) async -> ForegroundRefreshResult {
+        if let foregroundRefreshTask {
+            return await foregroundRefreshTask.value
         }
+
+        let task = Task { await performForegroundRefresh(for: userID) }
+        foregroundRefreshTask = task
+        let result = await task.value
+        foregroundRefreshTask = nil
+        return result
     }
 
-    /// Runs one ordered foreground refresh and reports whether local source-of-truth data changed.
-    func refreshAfterBecomingActive(for userID: UUID) async -> Bool {
+    private func performForegroundRefresh(for userID: UUID) async -> ForegroundRefreshResult {
         let selectedProgramBefore = try? await userRepository
             .user(id: userID)?.selectedProgramId
-        let catalogDidChange = await refreshSystemCatalogWithoutDispatch()
-        let selectionWasReconciled = (
-            try? await selectedProgramReconciler.clearUnavailableSelection(
-                for: userID
-            )
-        ) ?? false
+        let catalogDidChange: Bool
+        let catalogWasRefreshed: Bool
+        do {
+            catalogDidChange = try await systemCatalogSynchronizer.refreshSystemCatalog()
+            catalogWasRefreshed = true
+        } catch {
+            // An unsuccessful download is not evidence that a selected program disappeared.
+            catalogDidChange = false
+            catalogWasRefreshed = false
+        }
+
+        let selectionWasReconciled = catalogWasRefreshed
+            ? ((try? await selectedProgramReconciler.clearUnavailableSelection(for: userID)) ?? false)
+            : false
 
         await syncCoordinator.requestSync()
 
@@ -151,14 +165,9 @@ final class AppContainer {
             await dataChangeDispatcher.send(.selectedProgram)
         }
 
-        return catalogDidChange || selectionWasReconciled || profileDidChange
-    }
-
-    private func refreshSystemCatalogWithoutDispatch() async -> Bool {
-        do {
-            return try await systemCatalogSynchronizer.refreshSystemCatalog()
-        } catch {
-            return false
-        }
+        return ForegroundRefreshResult(
+            didChange: catalogDidChange || selectionWasReconciled || profileDidChange,
+            selectedProgramBecameUnavailable: selectionWasReconciled
+        )
     }
 }

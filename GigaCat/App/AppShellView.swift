@@ -7,11 +7,14 @@ struct AppShellView: View {
     private let onSignOut: () -> Void
     @State private var selectedTab: AppTab = .catalog
     @State private var isProfilePresented = false
+    @State private var isUnavailableNoticeVisible = false
+    @State private var isSyncFailureNoticeVisible = false
     @State private var workoutViewModel: WorkoutViewModel
     @State private var progressViewModel: ProgressViewModel
     @StateObject private var catalogViewModel: CatalogViewModel
     @StateObject private var miniPlayerViewModel: MiniPlayerViewModel
     @StateObject private var programDetailViewModel: ProgramDetailViewModel
+    @StateObject private var profileSheetViewModel: ProfileSheetViewModel
 
     // MARK: - Initialization
 
@@ -21,6 +24,7 @@ struct AppShellView: View {
         syncCoordinator: any SyncCoordinating,
         systemCatalogSynchronizer: any SystemCatalogSyncing,
         profileBootstrapper: any ProfileBootstrapping,
+        profileSyncRecoveryService: any ProfileSyncRecovering,
         onSignOut: @escaping () -> Void = {}
     ) {
         let container = AppContainer(
@@ -38,6 +42,12 @@ struct AppShellView: View {
         _catalogViewModel = StateObject(wrappedValue: container.catalogViewModel)
         _miniPlayerViewModel = StateObject(wrappedValue: container.miniPlayerViewModel)
         _programDetailViewModel = StateObject(wrappedValue: container.programDetailViewModel)
+        _profileSheetViewModel = StateObject(
+            wrappedValue: ProfileSheetViewModel(
+                recoveryService: profileSyncRecoveryService,
+                userID: userID
+            )
+        )
     }
 
     // MARK: - Layout
@@ -124,6 +134,25 @@ struct AppShellView: View {
         .overlay {
             programSelectionConflictOverlay
         }
+        .overlay(alignment: .top) {
+            VStack(spacing: AppSpacing.sm) {
+                if isUnavailableNoticeVisible {
+                    foregroundNotice(
+                        "Selected program is no longer available.",
+                        identifier: "selectedProgramUnavailableNotice"
+                    )
+                }
+                if isSyncFailureNoticeVisible {
+                    foregroundNotice(
+                        "Your program change could not sync. It is still saved on this device.",
+                        identifier: "profileSyncFailureNotice"
+                    )
+                }
+            }
+            .padding(.horizontal, AppSpacing.lg)
+            .padding(.top, AppSpacing.md)
+            .allowsHitTesting(false)
+        }
         .alert(
             "Program unavailable",
             isPresented: programDetailErrorIsPresented
@@ -135,6 +164,7 @@ struct AppShellView: View {
         .sheet(isPresented: $isProfilePresented) {
             ProfileSheetView(
                 user: catalogViewModel.profileUser,
+                viewModel: profileSheetViewModel,
                 onSignOut: signOut
             )
                 .presentationDetents([.medium, .large])
@@ -154,25 +184,54 @@ struct AppShellView: View {
             await miniPlayerViewModel.reload()
         }
         .task {
-            let didChange = await container.refreshSystemCatalog()
-            if didChange {
-                await loadSelectedTabIfNeeded()
-            }
+            await refreshAfterBecomingActive()
         }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else { return }
             Task {
-                let didChange = await container.refreshAfterBecomingActive(
-                    for: userID
-                )
-                if didChange {
-                    await loadSelectedTabIfNeeded()
-                }
+                await refreshAfterBecomingActive()
             }
+        }
+        .task(id: isUnavailableNoticeVisible) {
+            guard isUnavailableNoticeVisible else { return }
+            try? await Task.sleep(for: .seconds(4))
+            guard !Task.isCancelled else { return }
+            isUnavailableNoticeVisible = false
+        }
+        .task(id: isSyncFailureNoticeVisible) {
+            guard isSyncFailureNoticeVisible else { return }
+            try? await Task.sleep(for: .seconds(4))
+            guard !Task.isCancelled else { return }
+            isSyncFailureNoticeVisible = false
         }
     }
 
+}
+
+private extension AppShellView {
     // MARK: - Navigation and Actions
+
+    private func refreshAfterBecomingActive() async {
+        let result = await container.refreshAfterBecomingActive(for: userID)
+        if result.didChange {
+            await loadSelectedTabIfNeeded()
+        }
+        if result.selectedProgramBecameUnavailable {
+            isUnavailableNoticeVisible = true
+        }
+        if profileSheetViewModel.refreshSyncStatus() {
+            isSyncFailureNoticeVisible = true
+        }
+    }
+
+    private func foregroundNotice(_ message: String, identifier: String) -> some View {
+        Label(message, systemImage: "info.circle")
+            .font(.subheadline)
+            .foregroundStyle(AppColor.textPrimary)
+            .padding(AppSpacing.md)
+            .appCardStyle()
+            .accessibilityIdentifier(identifier)
+    }
 
     private func openWorkoutTab() {
         selectedTab = .workout
@@ -302,74 +361,6 @@ struct AppShellView: View {
 }
 
 // MARK: - Supporting Views
-
-private struct ProfileSheetView: View {
-    let user: User?
-    let onSignOut: () -> Void
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: AppSpacing.lg) {
-                Text("Profile")
-                    .font(.system(.title2, design: .rounded, weight: .bold))
-                    .foregroundStyle(AppColor.textPrimary)
-
-                if let user {
-                    profileRow(title: "User ID", value: user.id.uuidString)
-                    profileRow(
-                        title: "Selected Program ID",
-                        value: user.selectedProgramId?.uuidString ?? "No program selected"
-                    )
-                    profileRow(title: "Created At", value: formatted(user.createdAt))
-                    profileRow(title: "Updated At", value: formatted(user.updatedAt))
-                } else {
-                    Text("User profile is not available yet.")
-                        .font(.body)
-                        .foregroundStyle(AppColor.textSecondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(AppSpacing.lg)
-                        .appCardStyle()
-                }
-
-                Spacer(minLength: AppSpacing.lg)
-
-                Button(role: .destructive, action: onSignOut) {
-                    Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: AppControlSize.buttonHeight)
-                }
-                .buttonStyle(.bordered)
-            }
-            .padding(.horizontal, AppSpacing.lg)
-            .padding(.top, AppSpacing.lg)
-            .padding(.bottom, AppSpacing.xxl)
-        }
-        .background(AppColor.background.ignoresSafeArea())
-    }
-
-    private func profileRow(title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: AppSpacing.xs) {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(AppColor.textSecondary)
-
-            Text(value)
-                .font(.body)
-                .foregroundStyle(AppColor.textPrimary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(AppSpacing.lg)
-        .appCardStyle()
-    }
-
-    private func formatted(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
-    }
-}
 
 private struct ProgramMiniPlayerView: View {
     let state: MiniPlayerState
