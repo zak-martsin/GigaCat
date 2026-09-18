@@ -85,6 +85,10 @@ placeholder tabs, repositories, or actions for them.
 - Catalog refreshes are applied to SwiftData before feature caches are invalidated.
 - Network failure must not erase a previously cached catalog or block workout logging.
 - User profile and selected-program changes use the existing outbox-based synchronization flow.
+- Temporary sync failures retry automatically without blocking local use. If a refreshed catalog
+  confirms that the selected program is unavailable, clear the selection and explain why. For an
+  otherwise terminal profile failure, retain the local choice and show a non-blocking account-sync
+  status; do not silently discard it or require the user to manage outbox operations.
 - Workout history remains local-only in v1; documentation and UI must not promise cross-device
   workout sync.
 
@@ -97,5 +101,6 @@ placeholder tabs, repositories, or actions for them.
 - Catalog refresh uses one application-level invalidation path.
 - Removed product areas are absent from the active dependency graph and UI.
 - Historical workout data remains readable when a catalog item is deactivated remotely.
+- Offline profile changes remain usable locally; permanent sync failures never silently erase them.
 - Unit tests, SwiftLint, and the app build pass.
 - Architecture and feature documentation match the implemented behavior.

@@ -129,12 +129,15 @@ device and server clocks. While a profile operation is pending or syncing, its l
 remote profile pulls must not overwrite it. After the operation succeeds, the Supabase response is
 the canonical value applied to SwiftData. When no outgoing profile operation exists, the remote
 profile wins and is saved locally only when its value differs. `updatedAt` remains metadata and is
-not a conflict-resolution authority.
+not a conflict-resolution authority. A profile pull records the local revision before its network
+request and applies the response only if that revision and the local profile remain unchanged and
+no unresolved profile operation exists at the moment of the local write.
 
 `AppShell` owns the single active-scene signal. `AppContainer` handles that signal as one ordered
-foreground refresh: download the system catalog, clear an unavailable current selection, await the
-outbox push, then pull the profile when the outbox permits it. Only completed local changes are
-routed through `AppDataChangeDispatcher`; Views do not coordinate these storage operations.
+foreground refresh: download the system catalog, clear an unavailable current selection after a
+successful catalog refresh, await the outbox push, then pull the profile when the outbox permits it.
+Only completed local changes are routed through `AppDataChangeDispatcher`; Views do not coordinate
+these storage operations.
 
 Account transitions are serialized at the authentication boundary. Signing out first awaits sync
 deactivation before removing the Supabase session and current local user ID. Authenticating an
@@ -148,14 +151,24 @@ writes that reference an inactive program and clears profile selections when a s
 deactivated. After a catalog refresh, the app mirrors that rule locally: a missing or inactive
 selection is cleared in SwiftData and queued through the normal profile outbox.
 
-Outbox failures are classified at the Supabase boundary. Network timeouts, rate limits, and server
-errors stay pending with backoff; an invalid session pauses the worker until authentication activates
-it again; malformed payloads and rejected database writes become terminal failures. Feature code sees
-only `ProfileSyncStatus`, never SwiftData outbox entities. A terminal profile change can be retried or
-discarded; discard pulls the server profile before removing the failed operation so an offline attempt
-cannot destroy the only durable local intent. Until either action is chosen, the failed operation blocks
-automatic profile pulls and keeps the local value visible. A new profile mutation replaces an older
-failed one.
+Outbox failures are classified at the Supabase boundary. Network timeouts, rate limits, and 5xx server
+errors stay pending with backoff and are retried automatically; an invalid session pauses the worker
+until authentication activates it again. Neither case blocks local work or requires a user-facing
+retry action. Malformed payloads and rejected database writes become terminal failures. Feature code
+sees only `ProfileSyncStatus`, never SwiftData outbox entities.
+
+The v1 recovery flow is intentionally local-first. If a successful catalog refresh confirms that the
+selected program is unavailable, the app clears the current selection through the normal local
+mutation/outbox path and briefly explains that the program is no longer available. Historical workout
+data remains readable. If a terminal profile failure cannot be explained by the refreshed catalog,
+the app preserves the local selection, blocks remote profile pulls from overwriting it, and shows a
+non-blocking account-sync status. The message must not claim the choice is available on other devices
+or expose raw server errors. A new selection replaces the older failed operation.
+
+The recovery service can retry or discard a failed operation, but v1 does not expose outbox-management
+buttons as the default user flow. Discard, if used by a later support or product flow, must pull the
+server profile before removing the failed operation so an offline attempt cannot destroy the only
+durable local intent.
 
 Workout sessions and logs are deliberately local-only in v1.
 
