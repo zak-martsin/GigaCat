@@ -25,6 +25,10 @@ actor MockAuthenticationService: AuthenticationService {
         currentAccountStorage
     }
 
+    nonisolated func refreshedSessionUserIDs() -> AsyncStream<UUID> {
+        AsyncStream { $0.finish() }
+    }
+
     func signUp(
         email: String,
         password _: String

@@ -90,6 +90,17 @@ final class AuthenticationViewModel {
 
     // MARK: - Session
 
+    /// Resumes a worker paused by auth failure only for the account currently shown in the app.
+    func observeRefreshedSessions() async {
+        for await userID in authenticationService.refreshedSessionUserIDs() {
+            guard case .authenticated(let account) = sessionState,
+                  account.id == userID else {
+                continue
+            }
+            await syncCoordinator.activate(for: userID)
+        }
+    }
+
     /// Restores the SDK-managed session before deciding which application surface to show.
     func restoreSession() async {
         sessionState = .checking

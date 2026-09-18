@@ -7,6 +7,7 @@ struct AuthenticationRootView<Factory: RepositoryFactory>: View {
     private let profileBootstrapper: any ProfileBootstrapping
     private let syncCoordinator: any SyncCoordinating
     private let systemCatalogSynchronizer: any SystemCatalogSyncing
+    private let profileSyncRecoveryService: any ProfileSyncRecovering
 
     init(
         authenticationService: any AuthenticationService,
@@ -14,6 +15,7 @@ struct AuthenticationRootView<Factory: RepositoryFactory>: View {
         profileBootstrapper: any ProfileBootstrapping,
         syncCoordinator: any SyncCoordinating,
         systemCatalogSynchronizer: any SystemCatalogSyncing,
+        profileSyncRecoveryService: any ProfileSyncRecovering,
         repositoryFactory: Factory
     ) {
         _viewModel = State(
@@ -27,6 +29,7 @@ struct AuthenticationRootView<Factory: RepositoryFactory>: View {
         self.profileBootstrapper = profileBootstrapper
         self.syncCoordinator = syncCoordinator
         self.systemCatalogSynchronizer = systemCatalogSynchronizer
+        self.profileSyncRecoveryService = profileSyncRecoveryService
         self.repositoryFactory = repositoryFactory
     }
 
@@ -54,6 +57,7 @@ struct AuthenticationRootView<Factory: RepositoryFactory>: View {
                     syncCoordinator: syncCoordinator,
                     systemCatalogSynchronizer: systemCatalogSynchronizer,
                     profileBootstrapper: profileBootstrapper,
+                    profileSyncRecoveryService: profileSyncRecoveryService,
                     onSignOut: signOut
                 )
 
@@ -75,6 +79,9 @@ struct AuthenticationRootView<Factory: RepositoryFactory>: View {
         .task {
             guard case .checking = viewModel.sessionState else { return }
             await viewModel.restoreSession()
+        }
+        .task {
+            await viewModel.observeRefreshedSessions()
         }
         .onOpenURL { url in
             guard url.scheme == "com.zakmartsin.gigacat" else {

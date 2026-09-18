@@ -23,6 +23,10 @@ struct SupabaseAuthenticationService: AuthenticationService {
         }
     }
 
+    func refreshedSessionUserIDs() -> AsyncStream<UUID> {
+        authClient.refreshedSessionUserIDs()
+    }
+
     func signUp(
         email: String,
         password: String

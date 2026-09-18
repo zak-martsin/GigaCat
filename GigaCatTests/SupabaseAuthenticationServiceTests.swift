@@ -170,6 +170,10 @@ private actor SupabaseAuthClientSpy: SupabaseAuthClient {
         currentUserValue
     }
 
+    nonisolated func refreshedSessionUserIDs() -> AsyncStream<UUID> {
+        AsyncStream { $0.finish() }
+    }
+
     func signUp(email _: String, password _: String) throws -> AuthResponse {
         guard let signUpResponse else {
             throw TestAuthClientError.missingStub

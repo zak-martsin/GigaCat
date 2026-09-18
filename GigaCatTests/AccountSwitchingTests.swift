@@ -224,6 +224,10 @@ private actor AccountTransitionAuthenticationService: AuthenticationService {
         currentAccountValue
     }
 
+    nonisolated func refreshedSessionUserIDs() -> AsyncStream<UUID> {
+        AsyncStream { $0.finish() }
+    }
+
     func signUp(email _: String, password _: String) -> RegistrationResult {
         .emailConfirmationRequired
     }

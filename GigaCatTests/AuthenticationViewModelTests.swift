@@ -300,7 +300,7 @@ struct AuthenticationViewModelTests {
 }
 
 @MainActor
-private final class SyncCoordinatorSpy: SyncCoordinating {
+final class SyncCoordinatorSpy: SyncCoordinating {
     private(set) var activatedUserIDs: [UUID] = []
     private(set) var deactivationCount = 0
     private(set) var requestCount = 0
@@ -318,7 +318,7 @@ private final class SyncCoordinatorSpy: SyncCoordinating {
 }
 
 @MainActor
-private final class ProfileBootstrapperSpy: ProfileBootstrapping {
+final class ProfileBootstrapperSpy: ProfileBootstrapping {
     private(set) var receivedUserIDs: [UUID] = []
     private let error: ProfileBootstrapTestError?
     init(error: ProfileBootstrapTestError? = nil) {
@@ -338,7 +338,7 @@ private final class ProfileBootstrapperSpy: ProfileBootstrapping {
     }
 }
 
-private enum ProfileBootstrapTestError: LocalizedError {
+enum ProfileBootstrapTestError: LocalizedError {
     case failed
 
     var errorDescription: String? {
@@ -346,7 +346,8 @@ private enum ProfileBootstrapTestError: LocalizedError {
     }
 }
 
-private actor AuthenticationServiceStub: AuthenticationService {
+actor AuthenticationServiceStub: AuthenticationService {
+    nonisolated let refreshedSessions: AsyncStream<UUID>
     private let currentAccountValue: AuthenticatedAccount?
     private let currentAccountError: AuthenticationError?
     private let signUpResultValue: RegistrationResult
@@ -379,8 +380,10 @@ private actor AuthenticationServiceStub: AuthenticationService {
         callbackError: AuthenticationError? = nil,
         updatedAccount: AuthenticatedAccount? = nil,
         passwordRecoveryError: AuthenticationError? = nil,
-        updatePasswordError: AuthenticationError? = nil
+        updatePasswordError: AuthenticationError? = nil,
+        refreshedSessions: AsyncStream<UUID> = AsyncStream { $0.finish() }
     ) {
+        self.refreshedSessions = refreshedSessions
         currentAccountValue = currentAccount
         self.currentAccountError = currentAccountError
         signUpResultValue = signUpResult
@@ -392,6 +395,10 @@ private actor AuthenticationServiceStub: AuthenticationService {
         updatedAccountValue = updatedAccount ?? signInAccount
         self.passwordRecoveryError = passwordRecoveryError
         self.updatePasswordError = updatePasswordError
+    }
+
+    nonisolated func refreshedSessionUserIDs() -> AsyncStream<UUID> {
+        refreshedSessions
     }
 
     func currentAccount() throws -> AuthenticatedAccount? {

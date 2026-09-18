@@ -4,6 +4,7 @@ import Foundation
 /// Narrow SDK boundary used to test authentication without making network requests.
 protocol SupabaseAuthClient: Sendable {
     func currentUser() async throws -> Auth.User?
+    func refreshedSessionUserIDs() -> AsyncStream<UUID>
     func signUp(email: String, password: String) async throws -> AuthResponse
     func signIn(email: String, password: String) async throws -> Session
     func session(from url: URL) async throws -> Session
@@ -25,6 +26,23 @@ struct LiveSupabaseAuthClient: SupabaseAuthClient {
         }
 
         return try await client.auth.session.user
+    }
+
+    func refreshedSessionUserIDs() -> AsyncStream<UUID> {
+        AsyncStream { continuation in
+            let observer = Task {
+                for await (event, session) in client.auth.authStateChanges {
+                    guard event == .tokenRefreshed,
+                          let session,
+                          !session.isExpired else {
+                        continue
+                    }
+                    continuation.yield(session.user.id)
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in observer.cancel() }
+        }
     }
 
     func signUp(email: String, password: String) async throws -> AuthResponse {

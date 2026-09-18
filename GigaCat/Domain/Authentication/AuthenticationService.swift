@@ -4,6 +4,9 @@ import Foundation
 protocol AuthenticationService: Sendable {
     func currentAccount() async throws -> AuthenticatedAccount?
 
+    /// Emits only renewed, valid sessions so a paused sync worker can resume for its account.
+    func refreshedSessionUserIDs() -> AsyncStream<UUID>
+
     func signUp(
         email: String,
         password: String
