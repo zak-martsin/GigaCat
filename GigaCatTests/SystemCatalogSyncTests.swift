@@ -5,11 +5,57 @@ import Testing
 
 struct SupabaseSystemCatalogRepositoryTests {
     @Test
+    func rpcResponseDecodesAsOneSnapshot() throws {
+        let identifiers = CatalogTestIdentifiers()
+        let json = """
+        {
+          "programs": [{
+            "id": "\(identifiers.programID)", "author_id": null,
+            "target_audience": "men", "title": "Split", "description": "Three days",
+            "tags": ["gym", "strength"], "is_active": true,
+            "workout_days": [{
+              "id": "\(identifiers.dayID)", "program_id": "\(identifiers.programID)",
+              "title": "Day 1", "order_index": 0,
+              "workout_day_exercises": [{
+                "id": "\(identifiers.dayExerciseID)",
+                "workout_day_id": "\(identifiers.dayID)",
+                "exercise_id": "\(identifiers.exerciseID)",
+                "target_sets": 2, "target_reps": null, "order_index": 0
+              }]
+            }]
+          }],
+          "exercises": [{
+            "id": "\(identifiers.exerciseID)", "name": "Bench press",
+            "muscle_group": "chest"
+          }]
+        }
+        """
+
+        let snapshot = try JSONDecoder().decode(SystemCatalogSnapshotDTO.self, from: Data(json.utf8))
+
+        #expect(snapshot.programs.first?.workoutDays.first?.dayExercises.first?.targetSets == 2)
+        #expect(snapshot.exercises.first?.id == identifiers.exerciseID)
+    }
+
+    @Test
+    func malformedRpcResponseIsRejected() {
+        let json = """
+        {"programs":[],"exercises":[{"id":"not-a-uuid"}]}
+        """
+
+        #expect(throws: DecodingError.self) {
+            _ = try JSONDecoder().decode(SystemCatalogSnapshotDTO.self, from: Data(json.utf8))
+        }
+    }
+
+    @Test
     func nestedRowsBecomeOneDomainSnapshot() async throws {
         let identifiers = CatalogTestIdentifiers()
         let client = SupabaseSystemCatalogClientStub(
-            programRows: [identifiers.programDTO],
-            exerciseRows: [identifiers.exerciseDTO]
+            snapshot: SystemCatalogSnapshotDTO(
+                programs: [identifiers.programDTO],
+                exercises: [identifiers.exerciseDTO]
+            )
         )
         let repository = SupabaseSystemCatalogRepository(catalogClient: client)
 
@@ -138,15 +184,10 @@ struct LocalSystemCatalogStoreTests {
 }
 
 private struct SupabaseSystemCatalogClientStub: SupabaseSystemCatalogClient {
-    let programRows: [WorkoutProgramCatalogDTO]
-    let exerciseRows: [ExerciseCatalogDTO]
+    let snapshot: SystemCatalogSnapshotDTO
 
-    func systemPrograms() async throws -> [WorkoutProgramCatalogDTO] {
-        programRows
-    }
-
-    func exercises() async throws -> [ExerciseCatalogDTO] {
-        exerciseRows
+    func catalogSnapshot() async throws -> SystemCatalogSnapshotDTO {
+        snapshot
     }
 }
 

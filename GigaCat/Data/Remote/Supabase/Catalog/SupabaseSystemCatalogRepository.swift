@@ -3,8 +3,7 @@ import Supabase
 
 /// Narrow SDK boundary for reading the server-owned workout catalog.
 protocol SupabaseSystemCatalogClient: Sendable {
-    func systemPrograms() async throws -> [WorkoutProgramCatalogDTO]
-    func exercises() async throws -> [ExerciseCatalogDTO]
+    func catalogSnapshot() async throws -> SystemCatalogSnapshotDTO
 }
 
 struct LiveSupabaseSystemCatalogClient: SupabaseSystemCatalogClient {
@@ -14,33 +13,9 @@ struct LiveSupabaseSystemCatalogClient: SupabaseSystemCatalogClient {
         self.client = client
     }
 
-    func systemPrograms() async throws -> [WorkoutProgramCatalogDTO] {
+    func catalogSnapshot() async throws -> SystemCatalogSnapshotDTO {
         try await client
-            .from("workout_programs")
-            .select(
-                """
-                id,author_id,target_audience,title,description,tags,
-                is_active,
-                workout_days(
-                    id,program_id,title,order_index,
-                    workout_day_exercises(
-                        id,workout_day_id,exercise_id,target_sets,target_reps,order_index
-                    )
-                )
-                """
-            )
-            .is("author_id", value: nil)
-            .eq("is_active", value: true)
-            .order("title")
-            .execute()
-            .value
-    }
-
-    func exercises() async throws -> [ExerciseCatalogDTO] {
-        try await client
-            .from("exercises")
-            .select("id,name,muscle_group")
-            .order("name")
+            .rpc("get_system_catalog_v1")
             .execute()
             .value
     }
@@ -59,10 +34,8 @@ struct SupabaseSystemCatalogRepository: SystemCatalogRemoteRepository {
     }
 
     func fetchSystemCatalog() async throws -> SystemCatalogSnapshot {
-        async let programRows = catalogClient.systemPrograms()
-        async let exerciseRows = catalogClient.exercises()
-
-        let (programDTOs, exerciseDTOs) = try await (programRows, exerciseRows)
+        let dto = try await catalogClient.catalogSnapshot()
+        let programDTOs = dto.programs
 
         return try SystemCatalogSnapshot(
             entries: programDTOs.map(Self.makeEntry),
@@ -73,9 +46,14 @@ struct SupabaseSystemCatalogRepository: SystemCatalogRemoteRepository {
                 .flatMap(\.workoutDays)
                 .flatMap(\.dayExercises)
                 .map(Self.makeDayExercise),
-            exercises: exerciseDTOs.map(Self.makeExercise)
+            exercises: dto.exercises.map(Self.makeExercise)
         )
     }
+}
+
+struct SystemCatalogSnapshotDTO: Decodable, Equatable, Sendable {
+    let programs: [WorkoutProgramCatalogDTO]
+    let exercises: [ExerciseCatalogDTO]
 }
 
 private extension SupabaseSystemCatalogRepository {
