@@ -67,23 +67,27 @@ final class ProgressViewModel {
     func load() async {
         guard !isLoading else { return }
 
-        let loadingRevision = loadTracker.currentRevision
         isLoading = true
-        loadState = .loading
         defer { isLoading = false }
 
-        do {
-            let history = try await historyService.loadHistory()
-            historyContext = history
-            loadTracker.markLoaded(revision: loadingRevision)
-            rebuildWeekPages()
-            loadState = history.sessions.isEmpty ? .empty : .loaded
-        } catch {
-            historyContext = nil
-            weekViewData = nil
-            weekPages = []
-            loadState = .failed
-        }
+        repeat {
+            let loadingRevision = loadTracker.currentRevision
+            loadState = .loading
+
+            do {
+                let history = try await historyService.loadHistory()
+                historyContext = history
+                loadTracker.markLoaded(revision: loadingRevision)
+                rebuildWeekPages()
+                loadState = history.sessions.isEmpty ? .empty : .loaded
+            } catch {
+                historyContext = nil
+                weekViewData = nil
+                weekPages = []
+                loadState = .failed
+                return
+            }
+        } while loadTracker.needsLoading
     }
 
     /// Marks cached history as stale while preserving the current presentation until re-entry.

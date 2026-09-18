@@ -5,16 +5,14 @@ import Testing
 struct ProgramDetailViewModelTests {
     @Test
     func presentsRepositoryBackedDetailForGlobalMiniPlayer() async throws {
-        let factory = MockRepositoryFactory()
+        let factory = try MockRepositoryFactory()
         let user = try #require(try await factory.userRepository.currentUser())
         let programID = try #require(user.selectedProgramId)
         let viewModel = ProgramDetailViewModel(
             userRepository: factory.userRepository,
-            libraryRepository: factory.workoutProgramLibraryRepository,
             service: ProgramDetailService(
                 userRepository: factory.userRepository,
-                programCatalogRepository: factory.programCatalogRepository,
-                libraryRepository: factory.workoutProgramLibraryRepository,
+                defaultProgramCatalogRepository: factory.defaultProgramCatalogRepository,
                 workoutProgramRepository: factory.workoutProgramRepository,
                 workoutRepository: factory.workoutRepository
             )
@@ -27,41 +25,26 @@ struct ProgramDetailViewModelTests {
     }
 
     @Test
-    func savesPresentedProgramAndNotifiesLibrary() async throws {
-        let factory = MockRepositoryFactory()
+    func selectingPresentedProgramNotifiesApplication() async throws {
+        let factory = try MockRepositoryFactory()
         let user = try #require(try await factory.userRepository.currentUser())
-        let catalog = try await factory.programCatalogRepository.fetchProgramCatalog()
-        let savedPrograms = try await factory.workoutProgramLibraryRepository.fetchSavedPrograms(for: user.id)
-        let savedIDs = Set(savedPrograms.map(\.id))
-        let program = try #require(catalog.map(\.program).first { !savedIDs.contains($0.id) })
+        let programID = try #require(user.selectedProgramId)
         var changes: [AppDataChange] = []
         let viewModel = ProgramDetailViewModel(
             userRepository: factory.userRepository,
-            libraryRepository: factory.workoutProgramLibraryRepository,
             service: ProgramDetailService(
                 userRepository: factory.userRepository,
-                programCatalogRepository: factory.programCatalogRepository,
-                libraryRepository: factory.workoutProgramLibraryRepository,
+                defaultProgramCatalogRepository: factory.defaultProgramCatalogRepository,
                 workoutProgramRepository: factory.workoutProgramRepository,
                 workoutRepository: factory.workoutRepository
             ),
             onDataChanged: { changes.append($0) }
         )
 
-        await viewModel.present(programID: program.id)
-        #expect(viewModel.presentedDetail?.isSavedToLibrary == false)
-        await viewModel.addPresentedProgramToLibrary()
+        await viewModel.present(programID: programID)
+        await viewModel.selectPresentedProgram()
 
-        let updatedPrograms = try await factory.workoutProgramLibraryRepository.fetchSavedPrograms(for: user.id)
-        #expect(updatedPrograms.contains { $0.id == program.id })
-        #expect(changes == [.library])
-        #expect(viewModel.presentedDetail?.isSavedToLibrary == true)
-
-        await viewModel.removePresentedProgramFromLibrary()
-
-        let programsAfterRemoval = try await factory.workoutProgramLibraryRepository.fetchSavedPrograms(for: user.id)
-        #expect(!programsAfterRemoval.contains { $0.id == program.id })
-        #expect(changes == [.library, .library])
-        #expect(viewModel.presentedDetail?.isSavedToLibrary == false)
+        #expect(changes == [.selectedProgram])
+        #expect(viewModel.presentedDetail == nil)
     }
 }

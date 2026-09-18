@@ -4,8 +4,12 @@ import Foundation
 protocol WorkoutRepository {
     func activeSession(for userId: UUID) async throws -> WorkoutSession?
     func startSession(userId: UUID, workoutDayId: UUID, startedAt: Date) async throws -> WorkoutSession
-    func completeSession(sessionId: UUID, completedAt: Date) async throws -> WorkoutSession
-    func deleteSession(sessionId: UUID) async throws
+    func completeSession(
+        sessionId: UUID,
+        userId: UUID,
+        completedAt: Date
+    ) async throws -> WorkoutSession
+    func deleteSession(sessionId: UUID, userId: UUID) async throws
     func completeSessionAndSelectProgram(
         sessionId: UUID,
         completedAt: Date,

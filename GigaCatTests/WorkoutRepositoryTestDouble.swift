@@ -44,16 +44,18 @@ actor WorkoutRepositoryTestDouble: WorkoutRepository {
 
     func completeSession(
         sessionId: UUID,
+        userId: UUID,
         completedAt: Date
     ) async throws -> WorkoutSession {
         try await base.completeSession(
             sessionId: sessionId,
+            userId: userId,
             completedAt: completedAt
         )
     }
 
-    func deleteSession(sessionId: UUID) async throws {
-        try await base.deleteSession(sessionId: sessionId)
+    func deleteSession(sessionId: UUID, userId: UUID) async throws {
+        try await base.deleteSession(sessionId: sessionId, userId: userId)
     }
 
     func completeSessionAndSelectProgram(

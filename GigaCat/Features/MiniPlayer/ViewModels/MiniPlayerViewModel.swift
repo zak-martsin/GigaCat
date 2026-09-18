@@ -73,6 +73,7 @@ final class MiniPlayerViewModel: ObservableObject {
         do {
             _ = try await workoutRepository.completeSession(
                 sessionId: session.id,
+                userId: session.userId,
                 completedAt: Date()
             )
             expiredSessionAlert = nil
@@ -86,7 +87,10 @@ final class MiniPlayerViewModel: ObservableObject {
         guard case let .activeSession(session, _, _, _) = context else { return }
 
         do {
-            try await workoutRepository.deleteSession(sessionId: session.id)
+            try await workoutRepository.deleteSession(
+                sessionId: session.id,
+                userId: session.userId
+            )
             expiredSessionAlert = nil
             await onDataChanged(.workoutSession)
         } catch {

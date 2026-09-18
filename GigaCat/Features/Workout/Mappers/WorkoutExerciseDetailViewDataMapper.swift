@@ -54,7 +54,7 @@ struct WorkoutExerciseDetailViewDataMapper {
                 setNumber: setNumber,
                 savedRepsText: savedLog.map { String($0.reps) },
                 savedWeightText: savedLog.map { formattedWeight($0.weight) },
-                suggestedRepsPlaceholder: String(suggestedReps),
+                suggestedRepsPlaceholder: suggestedReps.map(String.init) ?? "",
                 suggestedWeightPlaceholder: suggestedWeight.map(formattedWeight),
                 isSaved: savedLog != nil,
                 isSaving: logContext.setSaveState == .saving(setNumber: setNumber),
@@ -66,14 +66,18 @@ struct WorkoutExerciseDetailViewDataMapper {
     // MARK: - Formatting
 
     private func makeTargetSummary(from dayExercise: WorkoutDayExercise) -> String {
-        let setUnit = dayExercise.targetSets == 1 ? "set" : "sets"
-        let repUnit = dayExercise.targetReps == 1 ? "rep" : "reps"
-        let components = [
-            "\(dayExercise.targetSets) \(setUnit)",
-            "\(dayExercise.targetReps) \(repUnit)"
-        ]
-
-        return components.joined(separator: " · ")
+        switch (dayExercise.targetSets, dayExercise.targetReps) {
+        case let (targetSets?, targetReps?):
+            let setUnit = targetSets == 1 ? "set" : "sets"
+            let repUnit = targetReps == 1 ? "rep" : "reps"
+            return "\(targetSets) \(setUnit) · \(targetReps) \(repUnit)"
+        case let (targetSets?, nil):
+            return "\(targetSets) \(targetSets == 1 ? "set" : "sets")"
+        case let (nil, targetReps?):
+            return "\(targetReps) \(targetReps == 1 ? "rep" : "reps")"
+        case (nil, nil):
+            return "No targets"
+        }
     }
 
     private func formattedWeight(_ weight: Double) -> String {

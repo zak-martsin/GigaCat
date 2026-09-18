@@ -18,7 +18,6 @@ struct SwiftDataBootstrapService {
 
         if try insertMissingExercises() { didInsert = true }
         if try insertMissingPrograms() { didInsert = true }
-        if try insertMissingMetadata() { didInsert = true }
         if try insertMissingWorkoutDays() { didInsert = true }
         if try insertMissingDayExercises() { didInsert = true }
 
@@ -46,27 +45,6 @@ private extension SwiftDataBootstrapService {
         )
         let missing = catalog.programs.filter { !existingIDs.contains($0.id) }
         missing.forEach { context.insert(WorkoutProgramMapper.toEntity($0)) }
-        return !missing.isEmpty
-    }
-
-    func insertMissingMetadata() throws -> Bool {
-        let existingIDs = Set(
-            try context.fetch(FetchDescriptor<ProgramCatalogMetadataEntity>()).map(\.programId)
-        )
-        let missing = catalog.metadataByProgramID.filter {
-            !existingIDs.contains($0.key)
-        }
-
-        missing.forEach { programID, metadata in
-            context.insert(
-                ProgramCatalogMetadataEntity(
-                    programId: programID,
-                    isRecommended: metadata.isRecommended,
-                    isPopular: metadata.isPopular,
-                    rateScore: metadata.rateScore
-                )
-            )
-        }
         return !missing.isEmpty
     }
 

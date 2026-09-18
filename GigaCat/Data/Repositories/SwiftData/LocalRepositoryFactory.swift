@@ -8,26 +8,30 @@
 /// Creates local repositories that share one SwiftData container and main context.
 @MainActor
 struct LocalRepositoryFactory: RepositoryFactory {
-    let programCatalogRepository: ProgramCatalogRepository
+    let defaultProgramCatalogRepository: DefaultProgramCatalogRepository
     let userRepository: UserRepository
     let workoutProgramRepository: WorkoutProgramRepository
-    let workoutProgramLibraryRepository: WorkoutProgramLibraryRepository
     let workoutRepository: WorkoutRepository
+    let syncOutboxRepository: LocalSyncOutboxRepository
+    let systemCatalogStore: LocalSystemCatalogStore
 
     private let stack: SwiftDataStack
 
-    /// Uses a mock store only until authenticated-user lookup has a dedicated provider.
-    init(stack: SwiftDataStack, currentUserStore: MockDataStore) {
+    init(
+        stack: SwiftDataStack,
+        currentUserIDProvider: any CurrentUserIDProviding
+    ) {
         self.stack = stack
 
         let context = stack.mainContext
-        programCatalogRepository = LocalProgramCatalogRepository(context: context)
+        defaultProgramCatalogRepository = LocalDefaultProgramCatalogRepository(context: context)
         userRepository = LocalUserRepository(
             context: context,
-            store: currentUserStore
+            currentUserIDProvider: currentUserIDProvider
         )
         workoutProgramRepository = LocalWorkoutProgramRepository(context: context)
-        workoutProgramLibraryRepository = LocalWorkoutProgramLibraryRepository(context: context)
         workoutRepository = LocalWorkoutRepository(context: context)
+        syncOutboxRepository = LocalSyncOutboxRepository(context: context)
+        systemCatalogStore = LocalSystemCatalogStore(context: context)
     }
 }

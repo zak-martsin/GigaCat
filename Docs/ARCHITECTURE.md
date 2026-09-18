@@ -1,419 +1,226 @@
 # GigaCat Architecture
 
-This document describes a practical architecture for GigaCat as a solo-developed iOS app.
+GigaCat is an offline-first SwiftUI application using MVVM, repository boundaries, SwiftData,
+Supabase, and dependency injection. This document describes the v1 architecture that the code is
+required to follow.
 
-The goal is to keep the codebase simple, testable, and ready for future offline-first sync without introducing unnecessary complexity too early.
-
-## 1. High-Level Layer Diagram
+## Layer Boundaries
 
 ```text
 SwiftUI Views
     ↓
-ViewModels (@Observable)
+@Observable ViewModels
     ↓
-Feature services for multi-repository workflows
+Focused feature services and mappers
     ↓
-Repositories (protocol-based)
+Domain repository protocols
     ↓
-Local Data Source (SwiftData later)
-    +
-Remote Data Source (Supabase later)
+SwiftData repositories          Supabase adapters
+local source of truth           auth, catalog download, profile sync
 ```
 
-### Direction Rules
+- Views render state and forward user actions.
+- Views never read SwiftData or call Supabase.
+- ViewModels depend on repositories or focused services, not persistence implementations.
+- Feature services coordinate multi-repository reads and mutations.
+- Data-layer mappers isolate persistence and transport models from domain models.
+- `AppCompositionRoot` and `AppContainer` own dependency construction.
 
-- Views talk only to ViewModels.
-- ViewModels do not access SwiftData directly.
-- ViewModels do not access Supabase directly.
-- ViewModels talk to repositories.
-- Repositories decide how local and remote data are coordinated.
-
-## Application Composition and Data Changes
-
-`AppContainer` is the composition root. It creates repositories, services, feature ViewModels,
-and the application-scoped coordinators used by `AppShellView`. Views do not construct the
-dependency graph.
-
-Successful mutations emit an `AppDataChange` through `AppDataChangeDispatcher`. The
-`AppDataChangeCoordinator` then:
-
-- invalidates only feature caches affected by the changed domain data
-- reloads the app-level mini player immediately when selection, session, catalog, or user data changes
-- leaves screen ViewModels independent of one another
-
-Feature caches use `DataLoadTracker` revisions. A load records the revision it started with, so an
-invalidation received while that load is running remains pending for the next `loadIfNeeded()`.
-This prevents an older response from accidentally marking newer data as fresh.
-
-The mini player is an app-level feature because it remains visible across tabs. `MiniPlayerService`
-builds its repository-backed presentation, while `MiniPlayerViewModel` owns its actions and alert
-state. It does not depend on Home.
-
-## 2. Responsibility of Each Layer
-
-## SwiftUI Views
-
-Purpose:
-Render UI and send user actions upward.
-
-Responsibilities:
-
-- Show lists, forms, buttons, loading states, and error states.
-- Bind user input to ViewModel state.
-- Trigger actions such as start session, save set, complete workout.
-
-Must not:
-
-- Read or write SwiftData.
-- Call Supabase.
-- Contain business rules.
-
-## ViewModels
-
-Purpose:
-Prepare screen state for the UI and coordinate user actions.
-
-Responsibilities:
-
-- Expose screen state using Observation.
-- Convert repository results into UI-friendly state.
-- Handle loading, empty, success, and error states.
-- Trigger domain actions such as loading a program or saving an exercise log.
-
-Must not:
-
-- Know storage details.
-- Contain sync implementation.
-- Grow into large "god objects".
-
-## Use Cases Later
-
-Purpose:
-Do not introduce a separate use case layer yet. For now, GigaCat can stay simpler with ViewModels calling repositories directly.
-
-Add use cases later only when:
-
-- Business logic becomes hard to read inside a ViewModel.
-- One action needs coordination across multiple repositories.
-- Validation or workflow rules become substantial enough to deserve their own unit tests.
-
-Until then, prefer small ViewModels and clear repository APIs.
-
-## Repositories
-
-Purpose:
-Provide the domain-facing API for reading and writing app data.
-
-Responsibilities:
-
-- Expose simple methods in domain terms.
-- Hide whether data comes from local storage, remote sync, or both.
-- Make offline-first behavior predictable.
-- Map between persistence models and domain models later when SwiftData is introduced.
-
-## Local Data Source
-
-Purpose:
-Store the app's working data on device.
-
-Current status:
-
-- Planned for later.
-- SwiftData will become the local source of truth.
-
-Responsibilities later:
-
-- Persist users, programs, workout sessions, and exercise logs.
-- Support fast reads for UI.
-- Support offline usage without network availability.
-
-## Remote Data Source
-
-Purpose:
-Handle authentication and cloud sync.
-
-Current status:
-
-- Planned for later.
-- Supabase will be used for auth and sync.
-
-Responsibilities later:
-
-- Manage authenticated user identity.
-- Sync user-owned records to cloud.
-- Pull remote updates back to local storage.
-
-## 3. Feature Folder Structure
-
-Keep the project feature-first, not layer-first at the top level. This makes it easier for a junior solo developer to find related files quickly.
+## v1 Feature Topology
 
 ```text
-GigaCat/
-  App/
-    GigaCatApp.swift
-    AppContainer.swift
-    AppDataChangeCoordinator.swift
-    AppDataChangeDispatcher.swift
-
-  Core/
-    Extensions/
-    Utilities/
-    DesignSystem/
-
-  Domain/
-    Entities/
-      User.swift
-      WorkoutProgram.swift
-      WorkoutDay.swift
-      WorkoutDayExercise.swift
-      Exercise.swift
-      WorkoutSession.swift
-      ExerciseLog.swift
-    Repositories/
-      UserRepository.swift
-      ProgramCatalogRepository.swift
-      WorkoutProgramRepository.swift
-      WorkoutRepository.swift
-
-  Data/
-    Repositories/
-      DefaultUserRepository.swift
-      DefaultWorkoutProgramRepository.swift
-      DefaultWorkoutRepository.swift
-    Local/
-      SwiftData/
-    Remote/
-      Supabase/
-    Mappers/
-
-  Features/
-    Authentication/
-      Views/
-      ViewModels/
-    Programs/
-      Views/
-      ViewModels/
-    WorkoutSession/
-      Views/
-      ViewModels/
-    History/
-      Views/
-      ViewModels/
-    Progress/
-      Views/
-      ViewModels/
-    MiniPlayer/
-      Mappers/
-      Services/
-      State/
-      ViewModels/
-    ProgramDetail/
-      Models/
-      Services/
-      ViewData/
-      ViewModels/
-      Views/
-
-  PreviewSupport/
-  Resources/
+AuthenticationRoot
+    ↓ authenticated
+AppShell
+    ├── Catalog
+    │   ├── Profile sheet
+    │   └── Program detail sheet
+    ├── Workout
+    │   └── Exercise logger
+    ├── Progress
+    │   └── Full calendar
+    └── App-level mini player
 ```
 
-### Structure Notes
+Library, Nutrition, custom program creation, catalog search, and marketplace ranking do not belong
+to the v1 dependency graph.
 
-- `Domain` should stay stable and framework-light.
-- `Data` contains implementation details.
-- `Features` contains screen-specific UI and ViewModels.
-- Do not create too many folders before they are needed.
-- If a feature is still small, one View and one ViewModel file is enough.
+## Local Source of Truth
 
-## 4. Data Flow for Saving ExerciseLog
+SwiftData is the only persistence source read by feature repositories. Workout mutations are saved
+locally first and never wait for network availability.
 
-This flow should stay simple and offline-first.
+The local model separates:
+
+- catalog structure: program, day, planned exercise, reusable exercise
+- user state: selected program
+- workout history: session and exercise log
+- sync infrastructure: outbox operations
+
+The production app uses one shared SwiftData store on the device. `CurrentUserContext` identifies
+the authenticated account inside that store; user-owned reads and writes are scoped by its stable
+`userId`. System catalog rows are shared reference data rather than user-owned data, so default
+catalog queries do not depend on the current user.
+
+The v1 SwiftData schema contains only active catalog, profile, workout-history, and sync models.
+Legacy Library membership and marketplace metadata were removed before release. Existing development
+installations created with the old schema must reset their local app data; future post-release schema
+changes require an explicit versioned migration plan.
+
+## System Catalog Flow
+
+System programs have no author and are remotely maintained. The catalog refresh flow is:
 
 ```text
-User enters reps/weight/set in SwiftUI screen
+App becomes usable or active
     ↓
-WorkoutSessionViewModel validates input
+SystemCatalogSyncService downloads one consistent snapshot
     ↓
-WorkoutRepository.saveSet(...)
+LocalSystemCatalogStore applies it transactionally to SwiftData
     ↓
-Save to local source of truth first
+AppDataChange.programCatalog is emitted only when local values changed
     ↓
-Return updated state to ViewModel
-    ↓
-UI updates immediately
-    ↓
-Remote sync happens later when available
+affected ViewModels and the mini player are invalidated; the visible tab reloads
 ```
 
-### Practical Rule
+The UI always reloads through local repositories; it never renders Supabase DTOs. Failed downloads
+leave the last valid local snapshot untouched. A bundled default snapshot supplies first-launch
+offline content. An empty or malformed remote snapshot is not allowed to replace usable local data.
 
-- Save locally first.
-- Never block workout logging on network availability.
-- Sync to Supabase later in the background.
+The bundled snapshot is production data owned by `Data/Local/SwitData/Bootstrap`; production
+composition must never depend on `PreviewSupport` or `MockSeedData`. Its stable identifiers and
+catalog content mirror the Supabase seed so the first successful refresh updates the same records
+instead of replacing preview-only programs. `MockSeedData` may add users, sessions, and logs for
+previews and tests, but it consumes the production catalog rather than defining another one.
 
-### What the ViewModel Should Care About
+Fixture construction is deterministic and fail-fast: callers may supply a fixed date, and invalid
+domain values throw instead of being silently removed with `try?`.
 
-- Current session id
-- Selected exercise
-- Set number
-- Reps
-- Weight
-- Save result state
+`DefaultProgramCatalogRepository` returns only active system programs. `WorkoutProgramRepository`
+provides stable identifier and structure lookups, including inactive rows referenced by completed
+sessions and exercise logs. It does not duplicate the catalog-list query.
 
-### What the Repository Should Care About
+Normal authenticated users receive read-only catalog access through Supabase RLS. Catalog writes are
+an administrative migration/content operation, not an app-client capability.
 
-- Writing the log to local storage
-- Attaching it to the correct `WorkoutSession`
-- Marking it for future sync when remote sync exists
+The bundled catalog and every repository implementation share the same visibility contract: the
+default catalog contains only active programs whose `authorId` is `nil`. Intentional baseline
+changes require a catalog migration, an updated bundled snapshot, a remote comparison, and an
+explicit update of the full-snapshot test fingerprint.
 
-## 5. WorkoutSession Lifecycle
+## User Sync
 
-`WorkoutSession` needs lifecycle tracking because a workout may begin before it is completed.
+Supabase Auth supplies the provider-independent user identifier. `CurrentUserContext` exposes only
+that domain ID to repositories. `UserRepository.currentUser()` resolves the matching local profile;
+workout sessions, exercise logs, selected-program changes, and outbox operations must remain scoped
+to that user. Switching accounts changes the current ID without changing the shared system catalog.
+Every session mutation validates that the requested session belongs to the supplied user before any
+session, log, profile, revision, or outbox state changes.
 
-Suggested states:
+Profile and selected-program writes follow the existing offline-first outbox flow:
 
-- `inProgress`: User has started the workout and can save exercise logs.
-- `completed`: Workout finished successfully.
+1. Save the mutation to SwiftData.
+2. Queue its outbox operation in the same local transaction.
+3. Update the UI immediately.
+4. Push pending operations when connectivity and authentication allow it.
 
-For MVP, the minimum practical flow is:
+Profile conflict resolution in v1 follows the presence of outgoing work rather than comparing
+device and server clocks. While a profile operation is pending or syncing, its local value wins and
+remote profile pulls must not overwrite it. After the operation succeeds, the Supabase response is
+the canonical value applied to SwiftData. When no outgoing profile operation exists, the remote
+profile wins and is saved locally only when its value differs. `updatedAt` remains metadata and is
+not a conflict-resolution authority. A profile pull records the local revision before its network
+request and applies the response only if that revision and the local profile remain unchanged and
+no unresolved profile operation exists at the moment of the local write.
 
-```text
-No active session
-    ↓
-User saves the first performed set
-    ↓
-WorkoutSession and ExerciseLog saved together
-with status = inProgress and startedAt = performedAt
-    ↓
-User saves more ExerciseLog entries
-    ↓
-User completes workout
-    ↓
-WorkoutSession updated with status = completed and completedAt
-```
+`AppShell` owns the single active-scene signal. `AppContainer` handles that signal as one ordered
+foreground refresh: download the system catalog, clear an unavailable current selection after a
+successful catalog refresh, await the outbox push, then pull the profile when the outbox permits it.
+Only completed local changes are routed through `AppDataChangeDispatcher`; Views do not coordinate
+these storage operations.
 
-### Lifecycle Rules
+Account transitions are serialized at the authentication boundary. Signing out first awaits sync
+deactivation before removing the Supabase session and current local user ID. Authenticating an
+account first stops any previous worker, installs the new current user ID, bootstraps that profile,
+then activates sync for that ID. The authenticated application surface is shown only after this
+sequence completes. Because every outbox operation owns a user ID, one account's work cannot be
+claimed by another account's worker pass.
 
-- Only one active `inProgress` session per workout flow unless a future feature requires otherwise.
-- Opening Workout does not create a session; the first successfully saved set does.
-- Creating the first session and saving its first log must be one local atomic operation.
+Program availability is enforced on both sides of the offline boundary. PostgreSQL rejects profile
+writes that reference an inactive program and clears profile selections when a system program is
+deactivated. After a catalog refresh, the app mirrors that rule locally: a missing or inactive
+selection is cleared in SwiftData and queued through the normal profile outbox.
 
-## 6. PreviewSupport and Mock Data
+Outbox failures are classified at the Supabase boundary. Network timeouts, rate limits, and 5xx server
+errors stay pending with backoff and are retried automatically; an invalid session pauses the worker
+until authentication activates it again. Neither case blocks local work or requires a user-facing
+retry action. Malformed payloads and rejected database writes become terminal failures. Feature code
+sees only `ProfileSyncStatus`, never SwiftData outbox entities.
 
-`PreviewSupport` is allowed to stay simpler than production data infrastructure, but it should still follow clear boundaries.
+The v1 recovery flow is intentionally local-first. If a successful catalog refresh confirms that the
+selected program is unavailable, the app clears the current selection through the normal local
+mutation/outbox path and briefly explains that the program is no longer available. Historical workout
+data remains readable. If a terminal profile failure cannot be explained by the refreshed catalog,
+the app preserves the local selection, blocks remote profile pulls from overwriting it, and shows a
+non-blocking account-sync status. The message must not claim the choice is available on other devices
+or expose raw server errors. A new selection replaces the older failed operation.
 
-Current approach:
+The recovery service can retry or discard a failed operation, but v1 does not expose outbox-management
+buttons as the default user flow. Discard, if used by a later support or product flow, must pull the
+server profile before removing the failed operation so an offline attempt cannot destroy the only
+durable local intent.
 
-- `MockSeedData.makeStore()` is the single entry point for building seeded in-memory app data.
-- `MockDataStore` acts as the shared in-memory source for mock repositories.
-- Mock repository implementations read from the same seeded store so previews and tests stay coherent.
+Workout sessions and logs are deliberately local-only in v1.
 
-### Organization Rule
+Supabase trigger functions that require `SECURITY DEFINER` are internal database infrastructure.
+They must not grant `EXECUTE` to Data API roles such as `anon`, `authenticated`, or `service_role`.
+Privilege migrations must be verified against the remote ACL and Supabase security advisors.
 
-Keep `MockSeedData` readable by separating fixture builders by concern:
+## Deterministic UI Tests
 
-- users and programs
-- workout structure
-- sessions and exercise logs
+Debug builds accept the internal `--ui-testing` launch argument. That mode bypasses Authentication,
+uses the bundled catalog with an in-memory mock repository graph, and installs no-op synchronizers.
+It must never read production SwiftData, call Supabase, or be available in Release builds.
 
-Use `extension MockSeedData` in separate files when the fixture set grows large, instead of introducing many new mock-specific types too early.
+Functional UI tests always use this mode so their account, selected program, sessions, and logs do
+not depend on simulator state or network availability.
 
-### Practical Rule
+## Cache Invalidation
 
-- Keep `makeStore()` short and orchestration-focused.
-- Keep fixture helpers grouped by domain meaning, not by arbitrary code size alone.
-- Prefer one shared seeded store over disconnected mock values so feature flows behave consistently in previews and tests.
-- `startedAt` is set when the workout begins.
-- `completedAt` is set only when the session is completed.
-- `ExerciseLog` records belong to a session, not directly to a workout day.
+Mutations emit domain-level `AppDataChange` values through one dispatcher. Features never call other
+feature ViewModels directly.
 
-## 6. Repository Responsibilities
+`DataLoadTracker` uses revisions so an invalidation received during an in-flight load remains pending;
+feature loaders consume that pending revision before their current load finishes. Catalog refresh must
+use the same dispatcher; a parallel revision counter in Authentication or a View is not permitted.
+Reapplying an identical server snapshot is a no-op and must not disturb an active Workout screen.
 
-Repositories should be small and explicit. They are not generic database wrappers.
+Expected v1 invalidation:
 
-## UserRepository
+| Change | Catalog | Workout | Progress | Mini player |
+| --- | --- | --- | --- | --- |
+| selected program | yes | yes | yes | immediate reload |
+| workout session/log | yes | yes | yes | immediate reload |
+| system catalog | yes | yes | yes | immediate reload |
 
-Responsibilities:
+Account changes are lifecycle boundaries, not data invalidations: Authentication recreates the app
+shell for the newly resolved `CurrentUserContext`, so `AppDataChange` has no unused current-user case.
 
-- Load current user
-- Save or update user
-- Change selected program
-- Later coordinate user auth identity with local profile state
+## Historical Integrity
 
-## ProgramCatalogRepository
+Remote catalog entries may be deactivated but workout history must remain readable. Catalog sync may
+hide inactive content from discovery while preserving referenced local rows. Repositories therefore
+need separate semantics for active catalog lists and stable identifier-based historical lookups.
 
-Responsibilities:
+Destructive catalog replacement is not acceptable when it can orphan `WorkoutSession` or
+`ExerciseLog` records.
 
-- Fetch the curated program catalog
-- Expose recommendation, popularity, and rating metadata
-- Serve discovery and workout entry flows without coupling them to Home
+## Dependency Rules
 
-## WorkoutProgramRepository
-
-Responsibilities:
-
-- Fetch available workout programs
-- Fetch workout days for a program
-- Fetch exercises for a workout day
-- Later cache program data locally
-
-## WorkoutRepository
-
-Responsibilities:
-
-- Fetch workout days for a program
-- Fetch exercises for a workout day
-- Start a workout session when its first set is saved
-- Load active session
-- Update session status
-- Complete a session
-- Fetch session history for a user
-- Save an exercise log
-- Load logs for a session
-- Load previous performance for an exercise
-- Update or delete logs if editing is supported later
-
-### Repository Design Rules
-
-- Define repository protocols in `Domain`.
-- Implement concrete repositories in `Data`.
-- Keep methods named in business language, not storage language.
-- Do not let Views or ViewModels know whether the repository uses memory, SwiftData, or Supabase.
-
-## 7. What Is Intentionally Not Implemented Yet
-
-The architecture should acknowledge future plans without building them too early.
-
-Not implemented yet:
-
-- SwiftData persistence implementation
-- Supabase authentication implementation
-- Supabase sync engine
-- Conflict resolution strategy for sync
-- Background sync scheduler details
-- Full AI architecture
-- Analytics layer
-- Modularization into separate Swift packages
-- Advanced caching abstractions
-- Generic base repository abstractions
-
-### Why
-
-- The app is being built by a solo junior developer.
-- The current priority is a clean structure for workout programs and workout logging.
-- Over-engineering early would slow development and make the project harder to understand.
-- A separate use case layer is intentionally postponed until the business logic justifies it.
-
-## Recommended Starting Point
-
-Build in this order:
-
-1. Domain entities and repository protocols.
-2. Feature Views and small ViewModels.
-3. In-memory or simple temporary repository implementations.
-4. Workout session flow and exercise logging flow.
-5. SwiftData local persistence.
-6. Supabase auth and sync.
-
-This keeps GigaCat practical: simple now, but ready to grow into a true offline-first app later.
+- Prefer protocols for repositories and external services.
+- Keep concrete SwiftData and Supabase types in `Data`.
+- Keep domain entities framework-light.
+- Keep ViewModels focused; move multi-repository workflows to services.
+- Do not add a use-case abstraction unless it clarifies reusable business logic.
+- Use the internal DesignSystem instead of feature-local spacing, colors, and radii.
+- Add tests at repository, service, mapper, and ViewModel boundaries where behavior changes.

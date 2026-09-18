@@ -179,6 +179,47 @@ struct WorkoutExerciseDetailViewDataMapperTests {
         ])
         #expect(viewData.targetSummary == "1 set · 12 reps")
     }
+
+    @Test
+    func mapsExerciseWithoutTargets() throws {
+        let content = try makeExerciseContent()
+
+        let viewData = WorkoutExerciseDetailViewDataMapper().map(
+            selectedExercise: content,
+            selectedExerciseIndex: 0,
+            totalCount: 1,
+            logContext: WorkoutExerciseLogContext(
+                savedLogsBySetNumber: [:],
+                latestExerciseLog: nil,
+                displayedSetCount: 1,
+                setSaveState: .ready
+            )
+        )
+
+        #expect(viewData.targetSummary == "No targets")
+        #expect(viewData.sets.first?.suggestedRepsPlaceholder == "")
+    }
+
+    @Test
+    func mapsExerciseWithOnlySetTarget() throws {
+        let content = try makeExerciseContent(targetSets: 2)
+
+        let viewData = WorkoutExerciseDetailViewDataMapper().map(
+            selectedExercise: content,
+            selectedExerciseIndex: 0,
+            totalCount: 1,
+            logContext: WorkoutExerciseLogContext(
+                savedLogsBySetNumber: [:],
+                latestExerciseLog: nil,
+                displayedSetCount: 2,
+                setSaveState: .ready
+            )
+        )
+
+        #expect(viewData.targetSummary == "2 sets")
+        #expect(viewData.sets.count == 2)
+        #expect(viewData.sets.first?.suggestedRepsPlaceholder == "")
+    }
 }
 
 private extension WorkoutExerciseDetailViewDataMapperTests {
@@ -187,8 +228,8 @@ private extension WorkoutExerciseDetailViewDataMapperTests {
     }
 
     func makeExerciseContent(
-        targetSets: Int,
-        targetReps: Int
+        targetSets: Int? = nil,
+        targetReps: Int? = nil
     ) throws -> WorkoutExerciseContent {
         let dayID = UUID()
         let exercise = try Exercise(name: "Bench Press", muscleGroup: .chest)

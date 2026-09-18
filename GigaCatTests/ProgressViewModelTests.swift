@@ -133,6 +133,33 @@ struct ProgressViewModelTests {
     }
 
     @Test
+    func invalidationDuringLoadIsConsumedBeforeLoadingFinishes() async throws {
+        let initialHistory = try Fixture.makeHistory(dates: [])
+        let refreshedHistory = try Fixture.makeHistory(dates: [
+            Fixture.date(year: 2026, month: 7, day: 27, hour: 8)
+        ])
+        let service = SuspendedProgressHistoryService(
+            results: [initialHistory, refreshedHistory]
+        )
+        let fixture = Fixture(
+            history: initialHistory,
+            historyService: service
+        )
+
+        let loadTask = Task {
+            await fixture.viewModel.load()
+        }
+        await service.waitForFirstLoadToStart()
+        fixture.viewModel.invalidate()
+        await service.resumeFirstLoad()
+        await loadTask.value
+
+        #expect(await service.loadCallCount == 2)
+        #expect(fixture.viewModel.loadState == .loaded)
+        #expect(fixture.viewModel.weekViewData?.days.first?.hasWorkout == true)
+    }
+
+    @Test
     func calendarViewModelRequiresLoadedHistory() throws {
         let fixture = try Fixture(historyDates: [])
 
@@ -291,6 +318,44 @@ private extension ProgressViewModelTests {
             }
 
             return try results.removeFirst().get()
+        }
+    }
+
+    actor SuspendedProgressHistoryService: ProgressHistoryServicing {
+        private var results: [ProgressHistoryContext]
+        private var firstLoadStarted = false
+        private var firstLoadContinuation: CheckedContinuation<Void, Never>?
+        private(set) var loadCallCount = 0
+
+        init(results: [ProgressHistoryContext]) {
+            self.results = results
+        }
+
+        func loadHistory() async throws -> ProgressHistoryContext {
+            loadCallCount += 1
+
+            if loadCallCount == 1 {
+                firstLoadStarted = true
+                await withCheckedContinuation { continuation in
+                    firstLoadContinuation = continuation
+                }
+            }
+
+            guard !results.isEmpty else {
+                throw ProgressHistoryError.currentUserNotFound
+            }
+            return results.removeFirst()
+        }
+
+        func waitForFirstLoadToStart() async {
+            while !firstLoadStarted {
+                await Task.yield()
+            }
+        }
+
+        func resumeFirstLoad() {
+            firstLoadContinuation?.resume()
+            firstLoadContinuation = nil
         }
     }
 }

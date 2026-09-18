@@ -10,7 +10,7 @@ enum ProgramDetailConflictResolution {
     case cancelSession
 }
 
-/// Shared program-detail operations used without coupling the presenting feature to Home.
+/// Shared program-detail operations used without coupling the presenting feature to Catalog.
 protocol ProgramDetailServicing {
     func makeDetail(for programID: UUID, user: User) async throws -> ProgramDetail
     func selectProgram(_ programID: UUID, for user: User) async throws -> ProgramDetailSelectionResult
@@ -26,21 +26,18 @@ protocol ProgramDetailServicing {
 /// Coordinates repository data and mutations required by the reusable program-detail flow.
 struct ProgramDetailService: ProgramDetailServicing {
     private let userRepository: UserRepository
-    private let programCatalogRepository: ProgramCatalogRepository
-    private let libraryRepository: WorkoutProgramLibraryRepository
+    private let defaultProgramCatalogRepository: DefaultProgramCatalogRepository
     private let workoutProgramRepository: WorkoutProgramRepository
     private let workoutRepository: WorkoutRepository
 
     init(
         userRepository: UserRepository,
-        programCatalogRepository: ProgramCatalogRepository,
-        libraryRepository: WorkoutProgramLibraryRepository,
+        defaultProgramCatalogRepository: DefaultProgramCatalogRepository,
         workoutProgramRepository: WorkoutProgramRepository,
         workoutRepository: WorkoutRepository
     ) {
         self.userRepository = userRepository
-        self.programCatalogRepository = programCatalogRepository
-        self.libraryRepository = libraryRepository
+        self.defaultProgramCatalogRepository = defaultProgramCatalogRepository
         self.workoutProgramRepository = workoutProgramRepository
         self.workoutRepository = workoutRepository
     }
@@ -48,13 +45,28 @@ struct ProgramDetailService: ProgramDetailServicing {
     // MARK: - Presentation
 
     func makeDetail(for programID: UUID, user: User) async throws -> ProgramDetail {
-        let catalog = try await programCatalogRepository.fetchProgramCatalog()
-        guard let entry = catalog.first(where: { $0.id == programID }) else {
+        let catalog = try await defaultProgramCatalogRepository.fetchProgramCatalog()
+        let catalogProgram = catalog.first(where: { $0.id == programID })?.program
+        let program: WorkoutProgram
+        if let catalogProgram {
+            program = catalogProgram
+        } else if let storedProgram = try await workoutProgramRepository.fetchProgram(
+            id: programID
+        ) {
+            program = storedProgram
+        } else {
             throw RepositoryError.workoutProgramNotFound
         }
 
-        let days = try await workoutProgramRepository.fetchWorkoutDays(programId: programID)
-        let exerciseCount = try await totalExerciseCount(for: days)
+        let isVisibleInCatalog = catalogProgram != nil
+        let days = try await workoutDays(
+            programID: programID,
+            includeInactive: !isVisibleInCatalog
+        )
+        let exerciseCount = try await totalExerciseCount(
+            for: days,
+            includeInactive: !isVisibleInCatalog
+        )
         let activeSessionContext = try await activeSessionContext(for: user.id)
         let hasActiveSession = activeSessionContext?.programID == programID
         let progressText = try await progressText(
@@ -62,27 +74,21 @@ struct ProgramDetailService: ProgramDetailServicing {
             presentedProgramID: programID
         )
         let isSelected = user.selectedProgramId == programID
-        let isSavedToLibrary = try await libraryRepository.isProgramSaved(
-            programID,
-            for: user.id
-        )
 
         return ProgramDetail(
-            id: entry.program.id,
-            title: entry.program.title,
-            description: entry.program.description,
+            id: program.id,
+            title: program.title,
+            description: program.description,
             dayCount: days.count,
             exerciseCount: exerciseCount,
-            rateScore: entry.rateScore,
             isSelected: isSelected,
-            isSavedToLibrary: isSavedToLibrary,
             primaryAction: primaryAction(
                 isSelected: isSelected,
                 hasActiveSession: hasActiveSession
             ),
             progressText: progressText,
             hasActiveSession: hasActiveSession,
-            tags: entry.program.tags,
+            tags: program.tags,
             workoutDayTitles: days.map(\.title)
         )
     }
@@ -157,6 +163,7 @@ struct ProgramDetailService: ProgramDetailServicing {
 
         _ = try await workoutRepository.completeSession(
             sessionId: context.session.id,
+            userId: userID,
             completedAt: Date()
         )
         return true
@@ -171,19 +178,42 @@ struct ProgramDetailService: ProgramDetailServicing {
             return false
         }
 
-        try await workoutRepository.deleteSession(sessionId: context.session.id)
+        try await workoutRepository.deleteSession(
+            sessionId: context.session.id,
+            userId: userID
+        )
         return true
     }
 
     // MARK: - Helpers
 
-    private func totalExerciseCount(for days: [WorkoutDay]) async throws -> Int {
+    private func workoutDays(
+        programID: UUID,
+        includeInactive: Bool
+    ) async throws -> [WorkoutDay] {
+        if includeInactive {
+            return try await workoutProgramRepository.fetchWorkoutDaysForHistory(
+                programId: programID
+            )
+        }
+        return try await workoutProgramRepository.fetchWorkoutDays(programId: programID)
+    }
+
+    private func totalExerciseCount(
+        for days: [WorkoutDay],
+        includeInactive: Bool
+    ) async throws -> Int {
         var count = 0
 
         for day in days {
-            let exercises = try await workoutProgramRepository.fetchWorkoutDayExercises(
-                workoutDayId: day.id
-            )
+            let exercises: [WorkoutDayExercise]
+            if includeInactive {
+                exercises = try await workoutProgramRepository
+                    .fetchWorkoutDayExercisesForHistory(workoutDayId: day.id)
+            } else {
+                exercises = try await workoutProgramRepository
+                    .fetchWorkoutDayExercises(workoutDayId: day.id)
+            }
             count += exercises.count
         }
 
@@ -214,7 +244,7 @@ struct ProgramDetailService: ProgramDetailServicing {
             return nil
         }
 
-        let plannedExercises = try await workoutProgramRepository.fetchWorkoutDayExercises(
+        let plannedExercises = try await workoutProgramRepository.fetchWorkoutDayExercisesForHistory(
             workoutDayId: context.workoutDay.id
         )
         let logs = try await workoutRepository.fetchExerciseLogs(sessionId: context.session.id)
@@ -241,7 +271,9 @@ struct ProgramDetailService: ProgramDetailServicing {
         logs: [ExerciseLog]
     ) -> Int? {
         let plannedSetCounts = Dictionary(
-            uniqueKeysWithValues: plannedExercises.map { ($0.id, $0.targetSets) }
+            uniqueKeysWithValues: plannedExercises.compactMap { exercise in
+                exercise.targetSets.map { (exercise.id, $0) }
+            }
         )
         let totalPlannedSets = plannedSetCounts.values.reduce(0, +)
         guard totalPlannedSets > 0 else { return nil }

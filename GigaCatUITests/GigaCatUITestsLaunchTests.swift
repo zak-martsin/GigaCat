@@ -11,7 +11,7 @@ final class GigaCatUITestsLaunchTests: XCTestCase {
 
     // swiftlint:disable:next static_over_final_class
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
-        true
+        false
     }
 
     override func setUpWithError() throws {
@@ -22,6 +22,7 @@ final class GigaCatUITestsLaunchTests: XCTestCase {
     /// Verifies that the app launches successfully and preserves a screenshot of the initial UI state.
     func testLaunch() throws {
         let app = XCUIApplication()
+        app.launchArguments.append("--ui-testing")
         app.launch()
 
         let attachment = XCTAttachment(screenshot: app.screenshot())

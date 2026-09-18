@@ -1,0 +1,489 @@
+import Foundation
+import Testing
+@testable import GigaCat
+
+@MainActor
+struct AuthenticationViewModelTests {
+
+    @Test
+    func restoreSessionShowsAuthenticatedAppForExistingAccount() async {
+        let account = AuthenticatedAccount(
+            id: UUID(),
+            email: "user@example.com"
+        )
+        let service = AuthenticationServiceStub(currentAccount: account)
+        let currentUserContext = CurrentUserContext()
+        let profileBootstrapper = ProfileBootstrapperSpy()
+        let syncCoordinator = SyncCoordinatorSpy()
+        let viewModel = AuthenticationViewModel(
+            authenticationService: service,
+            currentUserIDStore: currentUserContext,
+            profileBootstrapper: profileBootstrapper,
+            syncCoordinator: syncCoordinator
+        )
+
+        await viewModel.restoreSession()
+
+        #expect(viewModel.sessionState == .authenticated(account))
+        #expect(await currentUserContext.currentUserID() == account.id)
+        #expect(profileBootstrapper.receivedUserIDs == [account.id])
+        #expect(syncCoordinator.activatedUserIDs == [account.id])
+    }
+
+    @Test
+    func restoreSessionShowsAuthenticationFormWithoutAccount() async {
+        let currentUserContext = CurrentUserContext(userID: UUID())
+        let viewModel = AuthenticationViewModel(
+            authenticationService: AuthenticationServiceStub(),
+            currentUserIDStore: currentUserContext,
+            profileBootstrapper: ProfileBootstrapperSpy(),
+            syncCoordinator: SyncCoordinatorSpy()
+        )
+
+        await viewModel.restoreSession()
+
+        #expect(viewModel.sessionState == .signedOut)
+        #expect(await currentUserContext.currentUserID() == nil)
+    }
+
+    @Test
+    func signInTrimsEmailAndAuthenticatesAccount() async {
+        let account = AuthenticatedAccount(
+            id: UUID(),
+            email: "user@example.com"
+        )
+        let service = AuthenticationServiceStub(signInAccount: account)
+        let currentUserContext = CurrentUserContext()
+        let profileBootstrapper = ProfileBootstrapperSpy()
+        let syncCoordinator = SyncCoordinatorSpy()
+        let viewModel = AuthenticationViewModel(
+            authenticationService: service,
+            currentUserIDStore: currentUserContext,
+            profileBootstrapper: profileBootstrapper,
+            syncCoordinator: syncCoordinator
+        )
+        await viewModel.restoreSession()
+        viewModel.email = "  user@example.com  "
+        viewModel.password = "password"
+
+        await viewModel.submit()
+
+        #expect(viewModel.sessionState == .authenticated(account))
+        #expect(viewModel.password.isEmpty)
+        #expect(await service.lastSignInEmail() == "user@example.com")
+        #expect(await currentUserContext.currentUserID() == account.id)
+        #expect(profileBootstrapper.receivedUserIDs == [account.id])
+        #expect(syncCoordinator.activatedUserIDs == [account.id])
+    }
+
+    @Test
+    func signUpShowsConfirmationNoticeAndReturnsToSignInMode() async {
+        let service = AuthenticationServiceStub(
+            signUpResult: .emailConfirmationRequired
+        )
+        let viewModel = AuthenticationViewModel(
+            authenticationService: service,
+            currentUserIDStore: CurrentUserContext(),
+            profileBootstrapper: ProfileBootstrapperSpy(),
+            syncCoordinator: SyncCoordinatorSpy()
+        )
+        await viewModel.restoreSession()
+        viewModel.mode = .signUp
+        viewModel.email = "user@example.com"
+        viewModel.password = "password"
+
+        await viewModel.submit()
+
+        #expect(viewModel.sessionState == .signedOut)
+        #expect(viewModel.mode == .signIn)
+        #expect(viewModel.password.isEmpty)
+        #expect(viewModel.noticeMessage != nil)
+    }
+
+    @Test
+    func callbackAuthenticatesAccountAndStartsUserServices() async throws {
+        let callbackURL = try #require(
+            URL(string: "com.zakmartsin.gigacat://auth-callback?code=test-code")
+        )
+        let account = AuthenticatedAccount(
+            id: UUID(),
+            email: "user@example.com"
+        )
+        let service = AuthenticationServiceStub(callbackAccount: account)
+        let currentUserContext = CurrentUserContext()
+        let profileBootstrapper = ProfileBootstrapperSpy()
+        let syncCoordinator = SyncCoordinatorSpy()
+        let viewModel = AuthenticationViewModel(
+            authenticationService: service,
+            currentUserIDStore: currentUserContext,
+            profileBootstrapper: profileBootstrapper,
+            syncCoordinator: syncCoordinator
+        )
+
+        await viewModel.handleCallback(callbackURL)
+
+        #expect(await service.lastCallbackURL() == callbackURL)
+        #expect(viewModel.sessionState == .authenticated(account))
+        #expect(await currentUserContext.currentUserID() == account.id)
+        #expect(profileBootstrapper.receivedUserIDs == [account.id])
+        #expect(syncCoordinator.activatedUserIDs == [account.id])
+    }
+
+    @Test
+    func callbackFailureKeepsAuthenticationFormVisible() async throws {
+        let callbackURL = try #require(
+            URL(string: "com.zakmartsin.gigacat://auth-callback?code=invalid-code")
+        )
+        let currentUserContext = CurrentUserContext()
+        let profileBootstrapper = ProfileBootstrapperSpy()
+        let syncCoordinator = SyncCoordinatorSpy()
+        let viewModel = AuthenticationViewModel(
+            authenticationService: AuthenticationServiceStub(
+                callbackError: .serviceUnavailable
+            ),
+            currentUserIDStore: currentUserContext,
+            profileBootstrapper: profileBootstrapper,
+            syncCoordinator: syncCoordinator
+        )
+
+        await viewModel.handleCallback(callbackURL)
+
+        #expect(viewModel.sessionState == .signedOut)
+        #expect(
+            viewModel.errorMessage
+                == AuthenticationError.serviceUnavailable.localizedDescription
+        )
+        #expect(await currentUserContext.currentUserID() == nil)
+        #expect(profileBootstrapper.receivedUserIDs.isEmpty)
+        #expect(syncCoordinator.activatedUserIDs.isEmpty)
+    }
+
+    @Test
+    func passwordRecoveryRequestTrimsEmailAndShowsNeutralNotice() async {
+        let service = AuthenticationServiceStub()
+        let viewModel = AuthenticationViewModel(
+            authenticationService: service,
+            currentUserIDStore: CurrentUserContext(),
+            profileBootstrapper: ProfileBootstrapperSpy(),
+            syncCoordinator: SyncCoordinatorSpy()
+        )
+        await viewModel.restoreSession()
+        viewModel.email = "  user@example.com  "
+
+        await viewModel.requestPasswordRecovery()
+
+        #expect(await service.lastRecoveryEmail() == "user@example.com")
+        #expect(viewModel.passwordRecoveryState == .emailSent)
+        #expect(viewModel.noticeMessage != nil)
+    }
+
+    @Test
+    func recoveryCallbackWaitsForNewPasswordBeforeAuthenticating() async throws {
+        let callbackURL = try #require(
+            URL(string: "com.zakmartsin.gigacat://password-recovery?code=test-code")
+        )
+        let account = AuthenticatedAccount(
+            id: UUID(),
+            email: "user@example.com"
+        )
+        let service = AuthenticationServiceStub(updatedAccount: account)
+        let currentUserContext = CurrentUserContext()
+        let profileBootstrapper = ProfileBootstrapperSpy()
+        let syncCoordinator = SyncCoordinatorSpy()
+        let viewModel = AuthenticationViewModel(
+            authenticationService: service,
+            currentUserIDStore: currentUserContext,
+            profileBootstrapper: profileBootstrapper,
+            syncCoordinator: syncCoordinator
+        )
+
+        await viewModel.handlePasswordRecoveryCallback(callbackURL)
+
+        #expect(await service.lastRecoveryCallbackURL() == callbackURL)
+        #expect(viewModel.passwordRecoveryState == .readyForNewPassword)
+        #expect(viewModel.sessionState == .signedOut)
+        #expect(profileBootstrapper.receivedUserIDs.isEmpty)
+        #expect(syncCoordinator.activatedUserIDs.isEmpty)
+
+        await viewModel.updatePassword("new-password")
+
+        #expect(await service.lastUpdatedPassword() == "new-password")
+        #expect(viewModel.passwordRecoveryState == .idle)
+        #expect(viewModel.sessionState == .authenticated(account))
+        #expect(await currentUserContext.currentUserID() == account.id)
+        #expect(profileBootstrapper.receivedUserIDs == [account.id])
+        #expect(syncCoordinator.activatedUserIDs == [account.id])
+    }
+
+    @Test
+    func submissionFailureKeepsFormVisible() async {
+        let service = AuthenticationServiceStub(signInError: .invalidCredentials)
+        let viewModel = AuthenticationViewModel(
+            authenticationService: service,
+            currentUserIDStore: CurrentUserContext(),
+            profileBootstrapper: ProfileBootstrapperSpy(),
+            syncCoordinator: SyncCoordinatorSpy()
+        )
+        await viewModel.restoreSession()
+        viewModel.email = "user@example.com"
+        viewModel.password = "wrong-password"
+
+        await viewModel.submit()
+
+        #expect(viewModel.sessionState == .signedOut)
+        #expect(viewModel.errorMessage == AuthenticationError.invalidCredentials.localizedDescription)
+        #expect(viewModel.password == "wrong-password")
+    }
+
+    @Test
+    func profileBootstrapFailureDoesNotExposeAuthenticatedFeatures() async {
+        let account = AuthenticatedAccount(
+            id: UUID(),
+            email: "user@example.com"
+        )
+        let currentUserContext = CurrentUserContext()
+        let syncCoordinator = SyncCoordinatorSpy()
+        let viewModel = AuthenticationViewModel(
+            authenticationService: AuthenticationServiceStub(signInAccount: account),
+            currentUserIDStore: currentUserContext,
+            profileBootstrapper: ProfileBootstrapperSpy(error: .failed),
+            syncCoordinator: syncCoordinator
+        )
+        await viewModel.restoreSession()
+        let deactivationCountBeforeSubmission = syncCoordinator.deactivationCount
+        viewModel.email = "user@example.com"
+        viewModel.password = "password"
+
+        await viewModel.submit()
+
+        #expect(viewModel.sessionState == .signedOut)
+        #expect(viewModel.errorMessage == ProfileBootstrapTestError.failed.localizedDescription)
+        #expect(await currentUserContext.currentUserID() == nil)
+        #expect(
+            syncCoordinator.deactivationCount
+                == deactivationCountBeforeSubmission + 1
+        )
+    }
+
+    @Test
+    func signOutClearsSessionAndReturnsToAuthenticationForm() async {
+        let account = AuthenticatedAccount(
+            id: UUID(),
+            email: "user@example.com"
+        )
+        let service = AuthenticationServiceStub(currentAccount: account)
+        let currentUserContext = CurrentUserContext()
+        let syncCoordinator = SyncCoordinatorSpy()
+        let viewModel = AuthenticationViewModel(
+            authenticationService: service,
+            currentUserIDStore: currentUserContext,
+            profileBootstrapper: ProfileBootstrapperSpy(),
+            syncCoordinator: syncCoordinator
+        )
+        await viewModel.restoreSession()
+        let deactivationCountBeforeSignOut = syncCoordinator.deactivationCount
+        viewModel.email = "user@example.com"
+        viewModel.password = "password"
+
+        await viewModel.signOut()
+
+        #expect(viewModel.sessionState == .signedOut)
+        #expect(viewModel.email.isEmpty)
+        #expect(viewModel.password.isEmpty)
+        #expect(await service.didSignOut())
+        #expect(await currentUserContext.currentUserID() == nil)
+        #expect(
+            syncCoordinator.deactivationCount
+                == deactivationCountBeforeSignOut + 1
+        )
+    }
+}
+
+@MainActor
+final class SyncCoordinatorSpy: SyncCoordinating {
+    private(set) var activatedUserIDs: [UUID] = []
+    private(set) var deactivationCount = 0
+    private(set) var requestCount = 0
+    func activate(for userID: UUID) async {
+        activatedUserIDs.append(userID)
+    }
+
+    func deactivate() async {
+        deactivationCount += 1
+    }
+
+    func requestSync() async {
+        requestCount += 1
+    }
+}
+
+@MainActor
+final class ProfileBootstrapperSpy: ProfileBootstrapping {
+    private(set) var receivedUserIDs: [UUID] = []
+    private let error: ProfileBootstrapTestError?
+    init(error: ProfileBootstrapTestError? = nil) {
+        self.error = error
+    }
+
+    func bootstrapProfile(for userID: UUID) throws {
+        receivedUserIDs.append(userID)
+
+        if let error {
+            throw error
+        }
+    }
+
+    func refreshProfile(for _: UUID) -> Bool {
+        false
+    }
+}
+
+enum ProfileBootstrapTestError: LocalizedError {
+    case failed
+
+    var errorDescription: String? {
+        "Unable to prepare the local profile."
+    }
+}
+
+actor AuthenticationServiceStub: AuthenticationService {
+    nonisolated let refreshedSessions: AsyncStream<UUID>
+    private let currentAccountValue: AuthenticatedAccount?
+    private let currentAccountError: AuthenticationError?
+    private let signUpResultValue: RegistrationResult
+    private let signUpError: AuthenticationError?
+    private let signInAccountValue: AuthenticatedAccount
+    private let signInError: AuthenticationError?
+    private let callbackAccountValue: AuthenticatedAccount
+    private let callbackError: AuthenticationError?
+    private let updatedAccountValue: AuthenticatedAccount
+    private let passwordRecoveryError: AuthenticationError?
+    private let updatePasswordError: AuthenticationError?
+    private var receivedSignInEmail: String?
+    private var receivedCallbackURL: URL?
+    private var receivedRecoveryEmail: String?
+    private var receivedRecoveryCallbackURL: URL?
+    private var receivedUpdatedPassword: String?
+    private var signedOut = false
+
+    init(
+        currentAccount: AuthenticatedAccount? = nil,
+        currentAccountError: AuthenticationError? = nil,
+        signUpResult: RegistrationResult = .emailConfirmationRequired,
+        signUpError: AuthenticationError? = nil,
+        signInAccount: AuthenticatedAccount = AuthenticatedAccount(
+            id: UUID(),
+            email: "user@example.com"
+        ),
+        signInError: AuthenticationError? = nil,
+        callbackAccount: AuthenticatedAccount? = nil,
+        callbackError: AuthenticationError? = nil,
+        updatedAccount: AuthenticatedAccount? = nil,
+        passwordRecoveryError: AuthenticationError? = nil,
+        updatePasswordError: AuthenticationError? = nil,
+        refreshedSessions: AsyncStream<UUID> = AsyncStream { $0.finish() }
+    ) {
+        self.refreshedSessions = refreshedSessions
+        currentAccountValue = currentAccount
+        self.currentAccountError = currentAccountError
+        signUpResultValue = signUpResult
+        self.signUpError = signUpError
+        signInAccountValue = signInAccount
+        self.signInError = signInError
+        callbackAccountValue = callbackAccount ?? signInAccount
+        self.callbackError = callbackError
+        updatedAccountValue = updatedAccount ?? signInAccount
+        self.passwordRecoveryError = passwordRecoveryError
+        self.updatePasswordError = updatePasswordError
+    }
+
+    nonisolated func refreshedSessionUserIDs() -> AsyncStream<UUID> {
+        refreshedSessions
+    }
+
+    func currentAccount() throws -> AuthenticatedAccount? {
+        if let currentAccountError {
+            throw currentAccountError
+        }
+        return currentAccountValue
+    }
+
+    func signUp(
+        email _: String,
+        password _: String
+    ) throws -> RegistrationResult {
+        if let signUpError {
+            throw signUpError
+        }
+        return signUpResultValue
+    }
+
+    func handleCallback(_ url: URL) throws -> AuthenticatedAccount {
+        receivedCallbackURL = url
+        if let callbackError {
+            throw callbackError
+        }
+        return callbackAccountValue
+    }
+
+    func signIn(
+        email: String,
+        password _: String
+    ) throws -> AuthenticatedAccount {
+        receivedSignInEmail = email
+        if let signInError {
+            throw signInError
+        }
+        return signInAccountValue
+    }
+
+    func requestPasswordRecovery(email: String) throws {
+        receivedRecoveryEmail = email
+        if let passwordRecoveryError {
+            throw passwordRecoveryError
+        }
+    }
+
+    func preparePasswordRecovery(from url: URL) throws {
+        receivedRecoveryCallbackURL = url
+        if let passwordRecoveryError {
+            throw passwordRecoveryError
+        }
+    }
+
+    func updatePassword(_ password: String) throws -> AuthenticatedAccount {
+        receivedUpdatedPassword = password
+        if let updatePasswordError {
+            throw updatePasswordError
+        }
+        return updatedAccountValue
+    }
+
+    func signOut() {
+        signedOut = true
+    }
+
+    func lastSignInEmail() -> String? {
+        receivedSignInEmail
+    }
+
+    func lastCallbackURL() -> URL? {
+        receivedCallbackURL
+    }
+
+    func lastRecoveryEmail() -> String? {
+        receivedRecoveryEmail
+    }
+
+    func lastRecoveryCallbackURL() -> URL? {
+        receivedRecoveryCallbackURL
+    }
+
+    func lastUpdatedPassword() -> String? {
+        receivedUpdatedPassword
+    }
+
+    func didSignOut() -> Bool {
+        signedOut
+    }
+}

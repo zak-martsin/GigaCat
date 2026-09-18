@@ -2,17 +2,19 @@ import Foundation
 
 /// Creates a coherent set of mock repositories backed by shared in-memory data.
 struct MockRepositoryFactory: RepositoryFactory {
-    let programCatalogRepository: ProgramCatalogRepository
+    let defaultProgramCatalogRepository: DefaultProgramCatalogRepository
     let userRepository: UserRepository
     let workoutProgramRepository: WorkoutProgramRepository
-    let workoutProgramLibraryRepository: WorkoutProgramLibraryRepository
     let workoutRepository: WorkoutRepository
 
-    init(store: MockDataStore = MockSeedData.makeStore()) {
-        programCatalogRepository = MockProgramCatalogRepository(store: store)
+    init(store: MockDataStore) {
+        defaultProgramCatalogRepository = MockDefaultProgramCatalogRepository(store: store)
         userRepository = MockUserRepository(store: store)
         workoutProgramRepository = MockWorkoutProgramRepository(store: store)
-        workoutProgramLibraryRepository = MockWorkoutProgramLibraryRepository(store: store)
         workoutRepository = MockWorkoutRepository(store: store)
+    }
+
+    init() throws {
+        self.init(store: try MockSeedData.makeStore())
     }
 }

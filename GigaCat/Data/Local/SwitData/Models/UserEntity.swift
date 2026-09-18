@@ -11,22 +11,22 @@ import SwiftData
 @Model
 final class UserEntity: Identifiable {
     @Attribute(.unique) var id: UUID
-    var appleUserId: String
     var selectedProgramId: UUID?
     var createdAt: Date
     var updatedAt: Date
+    var revision: Int = 0
 
     init(
         id: UUID,
-        appleUserId: String,
         selectedProgramId: UUID?,
         createdAt: Date,
-        updatedAt: Date
+        updatedAt: Date,
+        revision: Int = 0
     ) {
         self.id = id
-        self.appleUserId = appleUserId
         self.selectedProgramId = selectedProgramId
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        self.revision = revision
     }
 }

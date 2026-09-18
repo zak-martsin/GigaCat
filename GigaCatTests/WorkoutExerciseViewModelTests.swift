@@ -339,7 +339,7 @@ private extension WorkoutExerciseViewModelTests {
             savedSetNumber: Int? = nil,
             hasPreviousLog: Bool = false
         ) throws {
-            user = try User(appleUserId: "workout-exercise-view-model-user")
+            user = User()
             let programID = UUID()
             let day = try WorkoutDay(
                 programId: programID,

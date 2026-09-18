@@ -100,10 +100,14 @@ Implemented:
 Not implemented yet:
 
 - weekly workout target
+- lifted-volume summaries
+- workout streaks
 
 ## 5. Deferred Progress Areas
 
 - weekly workout target
+- lifted-volume summaries
+- workout streaks
 - body weight entries and charts
 - exercise performance trends and personal records
 - body measurements

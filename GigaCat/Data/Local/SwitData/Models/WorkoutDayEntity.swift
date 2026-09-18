@@ -14,16 +14,19 @@ final class WorkoutDayEntity: Identifiable {
     var programId: UUID
     var title: String
     var orderIndex: Int
+    var isActive: Bool = true
 
     init(
         id: UUID,
         programId: UUID,
         title: String,
-        orderIndex: Int
+        orderIndex: Int,
+        isActive: Bool = true
     ) {
         self.id = id
         self.programId = programId
         self.title = title
         self.orderIndex = orderIndex
+        self.isActive = isActive
     }
 }

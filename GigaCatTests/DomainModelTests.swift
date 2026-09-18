@@ -66,6 +66,31 @@ struct DomainModelTests {
     }
 
     @Test
+    func workoutDayExerciseAllowsMissingTargets() throws {
+        let assignment = try WorkoutDayExercise(
+            workoutDayId: UUID(),
+            exerciseId: UUID(),
+            orderIndex: 0
+        )
+
+        #expect(assignment.targetSets == nil)
+        #expect(assignment.targetReps == nil)
+    }
+
+    @Test
+    func workoutDayExerciseAllowsSetTargetWithoutRepetitionTarget() throws {
+        let assignment = try WorkoutDayExercise(
+            workoutDayId: UUID(),
+            exerciseId: UUID(),
+            targetSets: 2,
+            orderIndex: 0
+        )
+
+        #expect(assignment.targetSets == 2)
+        #expect(assignment.targetReps == nil)
+    }
+
+    @Test
     func workoutProgramPreservesTags() throws {
         let program = try WorkoutProgram(
             title: "Home Strength",
@@ -74,5 +99,23 @@ struct DomainModelTests {
         )
 
         #expect(program.tags == [.home, .strength, .bodyweight])
+    }
+
+    @Test
+    func workoutProgramDeterminesItsCatalogOwnershipFromAuthor() throws {
+        let defaultProgram = try WorkoutProgram(
+            title: "Default Program",
+            description: "Provided by the application catalog."
+        )
+        let authoredProgram = try WorkoutProgram(
+            authorId: UUID(),
+            audience: .men,
+            title: "Custom Program",
+            description: "Created by an application user."
+        )
+
+        #expect(defaultProgram.isDefaultCatalogProgram)
+        #expect(authoredProgram.isDefaultCatalogProgram == false)
+        #expect(authoredProgram.audience == .men)
     }
 }

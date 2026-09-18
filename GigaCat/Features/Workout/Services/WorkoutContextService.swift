@@ -2,7 +2,7 @@ import Foundation
 
 /// Resolves the program and workout day that should be shown when Workout opens.
 protocol WorkoutContextServicing {
-    func loadContext() async throws -> WorkoutContext
+    func loadContext() async throws -> WorkoutContext?
 }
 
 enum WorkoutContextError: Error, Equatable {
@@ -15,25 +15,22 @@ enum WorkoutContextError: Error, Equatable {
 
 struct WorkoutContextService: WorkoutContextServicing {
     private let userRepository: UserRepository
-    private let programCatalogRepository: ProgramCatalogRepository
     private let workoutProgramRepository: WorkoutProgramRepository
     private let workoutRepository: WorkoutRepository
 
     init(
         userRepository: UserRepository,
-        programCatalogRepository: ProgramCatalogRepository,
         workoutProgramRepository: WorkoutProgramRepository,
         workoutRepository: WorkoutRepository
     ) {
         self.userRepository = userRepository
-        self.programCatalogRepository = programCatalogRepository
         self.workoutProgramRepository = workoutProgramRepository
         self.workoutRepository = workoutRepository
     }
 
     // MARK: - Context Loading
 
-    func loadContext() async throws -> WorkoutContext {
+    func loadContext() async throws -> WorkoutContext? {
         guard let user = try await userRepository.currentUser() else {
             throw WorkoutContextError.currentUserNotFound
         }
@@ -45,16 +42,21 @@ struct WorkoutContextService: WorkoutContextServicing {
             )
         }
 
+        guard let selectedProgramID = user.selectedProgramId else {
+            return nil
+        }
+        guard let program = try await workoutProgramRepository.fetchProgram(
+            id: selectedProgramID
+        ) else {
+            throw WorkoutContextError.programNotFound
+        }
+
         let completedSessions = try await workoutRepository.fetchSessions(for: user.id)
             .filter { $0.status == .completed }
             .sorted(by: Self.isMoreRecent)
         let latestSession = completedSessions.first
         let latestWorkoutDay = try await workoutDay(for: latestSession)
-        let program = try await resolveProgram(
-            selectedProgramID: user.selectedProgramId,
-            latestWorkoutDay: latestWorkoutDay
-        )
-        let days = try await orderedDays(for: program.id)
+        let days = try await orderedDays(for: program.id, includeInactive: false)
         let initialDay = Self.initialDay(
             in: days,
             latestWorkoutDay: latestWorkoutDay
@@ -86,11 +88,11 @@ struct WorkoutContextService: WorkoutContextServicing {
             throw WorkoutContextError.programNotFound
         }
 
-        let days = try await orderedDays(for: program.id)
+        let days = try await orderedDays(for: program.id, includeInactive: true)
         guard days.contains(where: { $0.id == activeWorkoutDay.id }) else {
             throw WorkoutContextError.workoutDayNotFound
         }
-        let dayContents = try await makeDayContents(from: days)
+        let dayContents = try await makeDayContents(from: days, includeInactive: true)
 
         return WorkoutContext(
             userID: userID,
@@ -103,36 +105,26 @@ struct WorkoutContextService: WorkoutContextServicing {
 
     // MARK: - Program and Day Resolution
 
-    private func resolveProgram(
-        selectedProgramID: UUID?,
-        latestWorkoutDay: WorkoutDay?
-    ) async throws -> WorkoutProgram {
-        if let selectedProgramID,
-           let selectedProgram = try await workoutProgramRepository.fetchProgram(id: selectedProgramID) {
-            return selectedProgram
-        }
-
-        if let latestWorkoutDay,
-           let latestProgram = try await workoutProgramRepository.fetchProgram(id: latestWorkoutDay.programId) {
-            return latestProgram
-        }
-
-        let catalog = try await programCatalogRepository.fetchProgramCatalog()
-        guard let recommendedProgram = catalog.first(where: \.isRecommended)?.program else {
-            throw WorkoutContextError.programNotFound
-        }
-
-        return recommendedProgram
-    }
-
     private func workoutDay(for session: WorkoutSession?) async throws -> WorkoutDay? {
         guard let session else { return nil }
         return try await workoutProgramRepository.fetchWorkoutDay(id: session.workoutDayId)
     }
 
-    private func orderedDays(for programID: UUID) async throws -> [WorkoutDay] {
-        let days = try await workoutProgramRepository.fetchWorkoutDays(programId: programID)
-            .sorted { $0.orderIndex < $1.orderIndex }
+    private func orderedDays(
+        for programID: UUID,
+        includeInactive: Bool
+    ) async throws -> [WorkoutDay] {
+        let fetchedDays: [WorkoutDay]
+        if includeInactive {
+            fetchedDays = try await workoutProgramRepository.fetchWorkoutDaysForHistory(
+                programId: programID
+            )
+        } else {
+            fetchedDays = try await workoutProgramRepository.fetchWorkoutDays(
+                programId: programID
+            )
+        }
+        let days = fetchedDays.sorted { $0.orderIndex < $1.orderIndex }
 
         guard !days.isEmpty else {
             throw WorkoutContextError.programHasNoWorkoutDays
@@ -143,13 +135,21 @@ struct WorkoutContextService: WorkoutContextServicing {
 
     // MARK: - Day Content
 
-    private func makeDayContents(from days: [WorkoutDay]) async throws -> [WorkoutDayContent] {
+    private func makeDayContents(
+        from days: [WorkoutDay],
+        includeInactive: Bool = false
+    ) async throws -> [WorkoutDayContent] {
         var dayContents: [WorkoutDayContent] = []
 
         for day in days {
-            let dayExercises = try await workoutProgramRepository.fetchWorkoutDayExercises(
-                workoutDayId: day.id
-            )
+            let dayExercises: [WorkoutDayExercise]
+            if includeInactive {
+                dayExercises = try await workoutProgramRepository
+                    .fetchWorkoutDayExercisesForHistory(workoutDayId: day.id)
+            } else {
+                dayExercises = try await workoutProgramRepository
+                    .fetchWorkoutDayExercises(workoutDayId: day.id)
+            }
             var exerciseContents: [WorkoutExerciseContent] = []
 
             for dayExercise in dayExercises.sorted(by: { $0.orderIndex < $1.orderIndex }) {

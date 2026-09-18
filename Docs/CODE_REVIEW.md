@@ -183,12 +183,16 @@ Check that:
 - Repository behavior can be tested later.
 - ViewModels can be tested without UI.
 - Complex logic is separated enough to validate independently.
+- Functional UI tests launch with deterministic local fixtures rather than a real Auth session,
+  network request, or previously installed simulator data.
+- Debug-only test composition cannot be activated in Release builds.
 
 Warning signs:
 
 - Logic only works through manual tapping in UI
 - Important rules exist only inside view code
 - Tight coupling makes isolated testing difficult
+- UI tests depend on a real account or refer to removed tabs
 
 ## 8. Documentation Checks
 

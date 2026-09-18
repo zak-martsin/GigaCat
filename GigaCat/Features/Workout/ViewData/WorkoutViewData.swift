@@ -27,6 +27,6 @@ struct SelectedWorkoutDayViewData: Identifiable, Equatable, Sendable {
 struct WorkoutExerciseViewData: Identifiable, Equatable, Sendable {
     let id: UUID
     let name: String
-    let targetSets: Int
-    let targetReps: Int
+    let targetSets: Int?
+    let targetReps: Int?
 }

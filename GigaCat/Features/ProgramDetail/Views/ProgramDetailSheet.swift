@@ -3,20 +3,14 @@ import SwiftUI
 struct ProgramDetailSheet: View {
     let detail: ProgramDetail
     let onSelectProgram: () -> Void
-    let onAddToLibrary: () -> Void
-    let onRemoveFromLibrary: () -> Void
     let onCompleteSession: () -> Void
     let onDeleteSession: () -> Void
     let onOpenWorkout: () -> Void
 
-    @State private var isRemoveConfirmationPresented = false
-
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppSpacing.lg) {
-                ProgramArtworkPlaceholderView(height: 240) {
-                    artworkOverlay
-                }
+                ProgramArtworkPlaceholderView(height: 240)
 
                 VStack(alignment: .leading, spacing: AppSpacing.sm) {
                     Text(detail.title)
@@ -129,51 +123,7 @@ struct ProgramDetailSheet: View {
             .padding(.top, AppSpacing.lg)
             .padding(.bottom, AppSpacing.xxl)
         }
+        .accessibilityIdentifier("programDetail.sheet")
         .background(AppColor.background.ignoresSafeArea())
-        .alert(
-            "Remove from Library?",
-            isPresented: $isRemoveConfirmationPresented
-        ) {
-            Button("Cancel", role: .cancel) {}
-            Button("Remove", role: .destructive, action: onRemoveFromLibrary)
-        } message: {
-            Text("“\(detail.title)” will no longer appear in your Library.")
-        }
-    }
-
-    private var artworkOverlay: some View {
-        VStack {
-            HStack(alignment: .top, spacing: AppSpacing.md) {
-                Button {
-                    if detail.isSavedToLibrary {
-                        isRemoveConfirmationPresented = true
-                    } else {
-                        onAddToLibrary()
-                    }
-                } label: {
-                    Text(detail.isSavedToLibrary ? "Remove" : "Add")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(AppColor.textPrimary)
-                        .padding(.horizontal, AppSpacing.md)
-                        .frame(height: AppControlSize.iconButton)
-                }
-                .buttonStyle(.glass)
-                .buttonBorderShape(.capsule)
-
-                Spacer()
-
-                if let rateScore = detail.rateScore {
-                    Text(String(format: "%.1f", rateScore))
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(AppColor.surface)
-                        .padding(.horizontal, AppSpacing.md)
-                        .padding(.vertical, AppSpacing.sm)
-                        .background(AppColor.surface.opacity(0.24), in: Capsule())
-                }
-            }
-            .padding(AppSpacing.md)
-
-            Spacer()
-        }
     }
 }

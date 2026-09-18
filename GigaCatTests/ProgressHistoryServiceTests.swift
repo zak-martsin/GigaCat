@@ -66,8 +66,7 @@ private extension ProgressHistoryServiceTests {
                 title: "Push and Pull",
                 description: "Strength training program"
             )
-            user = try User(
-                appleUserId: "progress-history-user",
+            user = User(
                 createdAt: now.addingTimeInterval(-10_000),
                 updatedAt: now
             )

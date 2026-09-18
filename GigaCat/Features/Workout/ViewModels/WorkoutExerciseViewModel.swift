@@ -62,7 +62,7 @@ final class WorkoutExerciseViewModel {
         self.onDataChanged = onDataChanged
         setCountByDayExerciseID = Dictionary(
             uniqueKeysWithValues: orderedExercises.map {
-                ($0.dayExercise.id, $0.dayExercise.targetSets)
+                ($0.dayExercise.id, $0.dayExercise.targetSets ?? 1)
             }
         )
         selectedDayExerciseID = orderedExercises.contains {
@@ -145,6 +145,7 @@ final class WorkoutExerciseViewModel {
         let dayExercise = selectedExercise.dayExercise
         let currentCount = setCountByDayExerciseID[dayExercise.id]
             ?? dayExercise.targetSets
+            ?? 1
         guard currentCount < Self.maximumSetCount else { return }
 
         setCountByDayExerciseID[dayExercise.id] = currentCount + 1

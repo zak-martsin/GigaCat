@@ -11,7 +11,7 @@ struct WorkoutContextServiceTests {
             sessionState: .activeFirstProgramSecondDay
         )
 
-        let context = try await fixture.service.loadContext()
+        let context = try #require(try await fixture.service.loadContext())
 
         #expect(context.program.id == fixture.firstProgram.id)
         #expect(context.initialDayID == fixture.firstProgramDays[1].id)
@@ -25,7 +25,7 @@ struct WorkoutContextServiceTests {
             sessionState: .completedFirstProgramFirstDay
         )
 
-        let context = try await fixture.service.loadContext()
+        let context = try #require(try await fixture.service.loadContext())
 
         #expect(context.program.id == fixture.firstProgram.id)
         #expect(context.initialDayID == fixture.firstProgramDays[1].id)
@@ -39,14 +39,14 @@ struct WorkoutContextServiceTests {
             sessionState: .completedFirstProgramFirstDay
         )
 
-        let context = try await fixture.service.loadContext()
+        let context = try #require(try await fixture.service.loadContext())
 
         #expect(context.program.id == fixture.secondProgram.id)
         #expect(context.initialDayID == fixture.secondProgramDays[0].id)
     }
 
     @Test
-    func missingSelectionContinuesTheLastUsedProgram() async throws {
+    func missingSelectionDoesNotReuseTheLastProgram() async throws {
         let fixture = try Fixture(
             selection: .none,
             sessionState: .completedFirstProgramFirstDay
@@ -54,25 +54,23 @@ struct WorkoutContextServiceTests {
 
         let context = try await fixture.service.loadContext()
 
-        #expect(context.program.id == fixture.firstProgram.id)
-        #expect(context.initialDayID == fixture.firstProgramDays[1].id)
+        #expect(context == nil)
     }
 
     @Test
-    func missingSelectionAndHistoryUseFirstRecommendedProgram() async throws {
+    func missingSelectionWithoutHistoryProducesNoWorkoutContext() async throws {
         let fixture = try Fixture(selection: .none, sessionState: .none)
 
         let context = try await fixture.service.loadContext()
 
-        #expect(context.program.id == fixture.secondProgram.id)
-        #expect(context.initialDayID == fixture.secondProgramDays[0].id)
+        #expect(context == nil)
     }
 
     @Test
     func contextContainsDaysWithTheirExerciseDefinitionsAndTargets() async throws {
         let fixture = try Fixture(selection: .firstProgram, sessionState: .none)
 
-        let context = try await fixture.service.loadContext()
+        let context = try #require(try await fixture.service.loadContext())
 
         #expect(context.dayContents.map(\.day) == fixture.firstProgramDays)
         #expect(
@@ -142,10 +140,6 @@ private extension WorkoutContextServiceTests {
             let store = MockDataStore(
                 users: [user],
                 programs: [firstProgram, secondProgram],
-                programCatalogMetadataByProgramID: [
-                    identifiers.firstProgramID: ProgramCatalogMetadata(isRecommended: false),
-                    identifiers.secondProgramID: ProgramCatalogMetadata(isRecommended: true)
-                ],
                 workoutDays: firstProgramDays + secondProgramDays,
                 dayExercises: [firstDayExercise],
                 exercises: [firstExercise],
@@ -155,7 +149,6 @@ private extension WorkoutContextServiceTests {
             let factory = MockRepositoryFactory(store: store)
             service = WorkoutContextService(
                 userRepository: factory.userRepository,
-                programCatalogRepository: factory.programCatalogRepository,
                 workoutProgramRepository: factory.workoutProgramRepository,
                 workoutRepository: factory.workoutRepository
             )
@@ -171,8 +164,8 @@ private extension WorkoutContextServiceTests {
             )
             let second = try WorkoutProgram(
                 id: identifiers.secondProgramID,
-                title: "Beta Recommended",
-                description: "The recommended fallback program."
+                title: "Beta Program",
+                description: "Another program available for explicit selection."
             )
             return (first, second)
         }
@@ -241,9 +234,8 @@ private extension WorkoutContextServiceTests {
                 nil
             }
 
-            return try User(
+            return User(
                 id: identifiers.userID,
-                appleUserId: "workout-context-user",
                 selectedProgramId: selectedProgramID,
                 createdAt: now.addingTimeInterval(-1_000),
                 updatedAt: now

@@ -1,28 +1,53 @@
 import SwiftUI
 
 struct AppShellView: View {
+    @Environment(\.scenePhase) private var scenePhase
     private let container: AppContainer
-    @State private var selectedTab: AppTab = .home
+    private let userID: UUID
+    private let onSignOut: () -> Void
+    @State private var selectedTab: AppTab = .catalog
     @State private var isProfilePresented = false
+    @State private var isUnavailableNoticeVisible = false
+    @State private var isSyncFailureNoticeVisible = false
     @State private var workoutViewModel: WorkoutViewModel
-    @State private var libraryViewModel: LibraryViewModel
     @State private var progressViewModel: ProgressViewModel
-    @StateObject private var homeViewModel: HomeViewModel
+    @StateObject private var catalogViewModel: CatalogViewModel
     @StateObject private var miniPlayerViewModel: MiniPlayerViewModel
     @StateObject private var programDetailViewModel: ProgramDetailViewModel
+    @StateObject private var profileSheetViewModel: ProfileSheetViewModel
 
     // MARK: - Initialization
 
-    init(repositoryFactory: some RepositoryFactory) {
-        let container = AppContainer(repositoryFactory: repositoryFactory)
+    init(
+        repositoryFactory: some RepositoryFactory,
+        userID: UUID,
+        syncCoordinator: any SyncCoordinating,
+        systemCatalogSynchronizer: any SystemCatalogSyncing,
+        profileBootstrapper: any ProfileBootstrapping,
+        profileSyncRecoveryService: any ProfileSyncRecovering,
+        onSignOut: @escaping () -> Void = {}
+    ) {
+        let container = AppContainer(
+            repositoryFactory: repositoryFactory,
+            syncCoordinator: syncCoordinator,
+            systemCatalogSynchronizer: systemCatalogSynchronizer,
+            profileBootstrapper: profileBootstrapper
+        )
 
         self.container = container
+        self.userID = userID
+        self.onSignOut = onSignOut
         _workoutViewModel = State(initialValue: container.workoutViewModel)
-        _libraryViewModel = State(initialValue: container.libraryViewModel)
         _progressViewModel = State(initialValue: container.progressViewModel)
-        _homeViewModel = StateObject(wrappedValue: container.homeViewModel)
+        _catalogViewModel = StateObject(wrappedValue: container.catalogViewModel)
         _miniPlayerViewModel = StateObject(wrappedValue: container.miniPlayerViewModel)
         _programDetailViewModel = StateObject(wrappedValue: container.programDetailViewModel)
+        _profileSheetViewModel = StateObject(
+            wrappedValue: ProfileSheetViewModel(
+                recoveryService: profileSyncRecoveryService,
+                userID: userID
+            )
+        )
     }
 
     // MARK: - Layout
@@ -30,49 +55,36 @@ struct AppShellView: View {
     var body: some View {
 
         TabView(selection: $selectedTab) {
-            HomeView(
-                viewModel: homeViewModel,
+            CatalogView(
+                viewModel: catalogViewModel,
                 onOpenWorkout: openWorkoutTab,
-                onHeaderAction: handleHeaderAction
+                onOpenProfile: { isProfilePresented = true }
             )
-            .tag(AppTab.home)
+            .tag(AppTab.catalog)
             .tabItem {
-                Label(AppTab.home.title, systemImage: AppTab.home.systemImage)
+                Label(AppTab.catalog.title, systemImage: AppTab.catalog.systemImage)
             }
-
-            ProgressView(
-                viewModel: progressViewModel,
-                onHeaderAction: handleHeaderAction
-            )
-                .tag(AppTab.progress)
-                .tabItem {
-                    Label(AppTab.progress.title, systemImage: AppTab.progress.systemImage)
-                }
 
             WorkoutView(
                 viewModel: workoutViewModel,
-                onHeaderAction: handleHeaderAction
+                isActive: selectedTab == .workout,
+                onHeaderAction: handleHeaderAction,
+                onOpenCatalog: openCatalogTab,
+                onProgramInfo: openProgramDetail
             )
             .tag(AppTab.workout)
             .tabItem {
                 Label(AppTab.workout.title, systemImage: AppTab.workout.systemImage)
             }
 
-            NutritionView(onHeaderAction: handleHeaderAction)
-                .tag(AppTab.nutrition)
-                .tabItem {
-                    Label(AppTab.nutrition.title, systemImage: AppTab.nutrition.systemImage)
-                }
-
-            LibraryView(
-                viewModel: libraryViewModel,
-                onOpenWorkout: openWorkoutTab,
+            ProgressView(
+                viewModel: progressViewModel,
                 onHeaderAction: handleHeaderAction
             )
-                .tag(AppTab.library)
-                .tabItem {
-                    Label(AppTab.library.title, systemImage: AppTab.library.systemImage)
-                }
+            .tag(AppTab.progress)
+            .tabItem {
+                Label(AppTab.progress.title, systemImage: AppTab.progress.systemImage)
+            }
         }
         .tabViewBottomAccessory(isEnabled: selectedTab != .workout) {
             ProgramMiniPlayerView(
@@ -103,22 +115,43 @@ struct AppShellView: View {
             Button("Finish") {
                 Task {
                     await miniPlayerViewModel.completeExpiredSession()
+                    await loadSelectedTabIfNeeded()
                 }
             }
 
             Button("Discard", role: .destructive) {
                 Task {
                     await miniPlayerViewModel.deleteExpiredSession()
+                    await loadSelectedTabIfNeeded()
                 }
             }
         } message: { alert in
             Text(alert.message)
         }
-        .sheet(item: presentedProgramDetail) { detail in
+        .sheet(item: $programDetailViewModel.presentedDetail) { detail in
             appProgramDetailSheet(detail)
         }
         .overlay {
             programSelectionConflictOverlay
+        }
+        .overlay(alignment: .top) {
+            VStack(spacing: AppSpacing.sm) {
+                if isUnavailableNoticeVisible {
+                    foregroundNotice(
+                        "Selected program is no longer available.",
+                        identifier: "selectedProgramUnavailableNotice"
+                    )
+                }
+                if isSyncFailureNoticeVisible {
+                    foregroundNotice(
+                        "Your program change could not sync. It is still saved on this device.",
+                        identifier: "profileSyncFailureNotice"
+                    )
+                }
+            }
+            .padding(.horizontal, AppSpacing.lg)
+            .padding(.top, AppSpacing.md)
+            .allowsHitTesting(false)
         }
         .alert(
             "Program unavailable",
@@ -129,33 +162,94 @@ struct AppShellView: View {
             Text(programDetailViewModel.errorMessage ?? "Please try again.")
         }
         .sheet(isPresented: $isProfilePresented) {
-            ProfileSheetView(user: homeViewModel.profileUser)
+            ProfileSheetView(
+                user: catalogViewModel.profileUser,
+                viewModel: profileSheetViewModel,
+                onSignOut: signOut
+            )
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
         .task(id: selectedTab) {
             switch selectedTab {
-            case .home:
-                await homeViewModel.loadIfNeeded()
+            case .catalog:
+                await catalogViewModel.loadIfNeeded()
             case .workout:
                 await workoutViewModel.loadIfNeeded()
             case .progress:
                 await progressViewModel.loadIfNeeded()
-            case .library:
-                await libraryViewModel.loadIfNeeded()
-            case .nutrition:
-                break
             }
         }
         .task {
             await miniPlayerViewModel.reload()
         }
+        .task {
+            await refreshAfterBecomingActive()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active else { return }
+            Task {
+                await refreshAfterBecomingActive()
+            }
+        }
+        .task(id: isUnavailableNoticeVisible) {
+            guard isUnavailableNoticeVisible else { return }
+            try? await Task.sleep(for: .seconds(4))
+            guard !Task.isCancelled else { return }
+            isUnavailableNoticeVisible = false
+        }
+        .task(id: isSyncFailureNoticeVisible) {
+            guard isSyncFailureNoticeVisible else { return }
+            try? await Task.sleep(for: .seconds(4))
+            guard !Task.isCancelled else { return }
+            isSyncFailureNoticeVisible = false
+        }
     }
 
+}
+
+private extension AppShellView {
     // MARK: - Navigation and Actions
+
+    private func refreshAfterBecomingActive() async {
+        let result = await container.refreshAfterBecomingActive(for: userID)
+        if result.didChange {
+            await loadSelectedTabIfNeeded()
+        }
+        if result.selectedProgramBecameUnavailable {
+            isUnavailableNoticeVisible = true
+        }
+        if profileSheetViewModel.refreshSyncStatus() {
+            isSyncFailureNoticeVisible = true
+        }
+    }
+
+    private func foregroundNotice(_ message: String, identifier: String) -> some View {
+        Label(message, systemImage: "info.circle")
+            .font(.subheadline)
+            .foregroundStyle(AppColor.textPrimary)
+            .padding(AppSpacing.md)
+            .appCardStyle()
+            .accessibilityIdentifier(identifier)
+    }
 
     private func openWorkoutTab() {
         selectedTab = .workout
+    }
+
+    private func openCatalogTab() {
+        selectedTab = .catalog
+    }
+
+    private func loadSelectedTabIfNeeded() async {
+        switch selectedTab {
+        case .catalog:
+            await catalogViewModel.loadIfNeeded()
+        case .workout:
+            await workoutViewModel.loadIfNeeded()
+        case .progress:
+            await progressViewModel.loadIfNeeded()
+        }
     }
 
     private func handleMiniPlayerAction() {
@@ -169,14 +263,21 @@ struct AppShellView: View {
         switch action {
         case .profile:
             isProfilePresented = true
-        case .search, .add, .more:
-            break
         }
+    }
+
+    private func signOut() {
+        isProfilePresented = false
+        onSignOut()
     }
 
     private func openMiniPlayerProgramDetail() {
         guard let programID = miniPlayerViewModel.programID else { return }
 
+        openProgramDetail(programID)
+    }
+
+    private func openProgramDetail(_ programID: UUID) {
         Task {
             await programDetailViewModel.present(programID: programID)
         }
@@ -188,26 +289,19 @@ struct AppShellView: View {
             onSelectProgram: {
                 Task {
                     await programDetailViewModel.selectPresentedProgram()
-                }
-            },
-            onAddToLibrary: {
-                Task {
-                    await programDetailViewModel.addPresentedProgramToLibrary()
-                }
-            },
-            onRemoveFromLibrary: {
-                Task {
-                    await programDetailViewModel.removePresentedProgramFromLibrary()
+                    await loadSelectedTabIfNeeded()
                 }
             },
             onCompleteSession: {
                 Task {
                     await programDetailViewModel.completeActiveSession()
+                    await loadSelectedTabIfNeeded()
                 }
             },
             onDeleteSession: {
                 Task {
                     await programDetailViewModel.cancelActiveSession()
+                    await loadSelectedTabIfNeeded()
                 }
             },
             onOpenWorkout: {
@@ -227,11 +321,13 @@ struct AppShellView: View {
                 onFinishSession: {
                     Task {
                         await programDetailViewModel.finishSessionAndSelectPendingProgram()
+                        await loadSelectedTabIfNeeded()
                     }
                 },
                 onCancelSession: {
                     Task {
                         await programDetailViewModel.cancelSessionAndSelectPendingProgram()
+                        await loadSelectedTabIfNeeded()
                     }
                 },
                 onDismiss: programDetailViewModel.cancelSelectionConflict
@@ -252,13 +348,6 @@ struct AppShellView: View {
         )
     }
 
-    private var presentedProgramDetail: Binding<ProgramDetail?> {
-        Binding(
-            get: { programDetailViewModel.presentedDetail },
-            set: { programDetailViewModel.presentedDetail = $0 }
-        )
-    }
-
     private var programDetailErrorIsPresented: Binding<Bool> {
         Binding(
             get: { programDetailViewModel.errorMessage != nil },
@@ -272,64 +361,6 @@ struct AppShellView: View {
 }
 
 // MARK: - Supporting Views
-
-private struct ProfileSheetView: View {
-    let user: User?
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: AppSpacing.lg) {
-                Text("Profile")
-                    .font(.system(.title2, design: .rounded, weight: .bold))
-                    .foregroundStyle(AppColor.textPrimary)
-
-                if let user {
-                    profileRow(title: "Apple User ID", value: user.appleUserId)
-                    profileRow(title: "User ID", value: user.id.uuidString)
-                    profileRow(
-                        title: "Selected Program ID",
-                        value: user.selectedProgramId?.uuidString ?? "No program selected"
-                    )
-                    profileRow(title: "Created At", value: formatted(user.createdAt))
-                    profileRow(title: "Updated At", value: formatted(user.updatedAt))
-                } else {
-                    Text("User profile is not available yet.")
-                        .font(.body)
-                        .foregroundStyle(AppColor.textSecondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(AppSpacing.lg)
-                        .appCardStyle()
-                }
-            }
-            .padding(.horizontal, AppSpacing.lg)
-            .padding(.top, AppSpacing.lg)
-            .padding(.bottom, AppSpacing.xxl)
-        }
-        .background(AppColor.background.ignoresSafeArea())
-    }
-
-    private func profileRow(title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: AppSpacing.xs) {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(AppColor.textSecondary)
-
-            Text(value)
-                .font(.body)
-                .foregroundStyle(AppColor.textPrimary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(AppSpacing.lg)
-        .appCardStyle()
-    }
-
-    private func formatted(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
-    }
-}
 
 private struct ProgramMiniPlayerView: View {
     let state: MiniPlayerState

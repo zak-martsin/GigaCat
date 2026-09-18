@@ -1,176 +1,95 @@
 # GigaCat Domain Model
 
-This document defines the core domain entities for GigaCat. It focuses on business meaning and relationships, not storage-specific implementation details.
-
-## Modeling Principles
-
-- Keep the domain centered on workout planning and workout logging.
-- Use stable identifiers for every entity.
-- Model ordering explicitly where sequence matters.
-- Separate planned workout structure from completed workout history.
-- Associate user-owned records with a single `User`.
+The v1 domain separates remotely curated workout structure from user-owned workout activity.
+Persistence and transport details are not part of domain entities.
 
 ## User
 
-### Purpose
+The authenticated person using the app.
 
-Represents the authenticated person using the app. The user owns workout history and other personal data.
+- `id`: provider-independent Supabase Auth identity
+- `selectedProgramId`: optional explicitly selected `WorkoutProgram`
+- `createdAt`, `updatedAt`: lifecycle timestamps
 
-### Fields
-
-- `id`: Stable internal identifier.
-- `appleUserId`: External identity from Sign in with Apple.
-- `selectedProgramId`: Identifier of the currently selected `WorkoutProgram`.
-- `createdAt`: When the user record was created.
-- `updatedAt`: When the user record was last updated.
-
-### Relationships
-
-- Each `User` can reference one selected `WorkoutProgram`.
-- One `User` has many `WorkoutSession` records.
+A user owns many workout sessions and can select one system program.
 
 ## WorkoutProgram
 
-### Purpose
+A reusable training plan.
 
-Represents a predefined training program that organizes workouts into reusable training days.
+- `id`: stable catalog identifier
+- `authorId`: nil for a system/default program; reserved for possible future user programs
+- `audience`: intended audience metadata used by catalog content
+- `title`, `description`: display content
+- `tags`: catalog filter categories
+- `isActive`: whether the program is visible in the active catalog
 
-### Fields
-
-- `id`: Stable program identifier.
-- `title`: Program name shown to the user.
-- `description`: Short summary of the program.
-- `tags`: User-facing categories such as gym, home, cardio, strength, or mobility that help filter and surface the program.
-
-### Relationships
-
-- One `WorkoutProgram` has many `WorkoutDay` records.
-- One `WorkoutProgram` can be saved by many users through `SavedWorkoutProgram`.
-
-## SavedWorkoutProgram
-
-### Purpose
-
-Represents a user's explicit decision to add a predefined workout program to their library.
-It is independent from the user's currently selected program.
-
-### Fields
-
-- `id`: Stable saved-program relationship identifier.
-- `userId`: Identifier of the user who saved the program.
-- `programId`: Identifier of the catalog program.
-- `savedAt`: When the program was added to the user's library.
-
-### Relationships
-
-- Each `SavedWorkoutProgram` belongs to one `User`.
-- Each `SavedWorkoutProgram` references one `WorkoutProgram`.
+Only active programs with a nil `authorId` appear in v1 Catalog. Stable ID lookups can still resolve
+inactive programs referenced by history.
 
 ## WorkoutDay
 
-### Purpose
+An ordered planned training day inside a program.
 
-Represents a single planned training day inside a workout program, such as Push, Pull, or Legs.
+- `id`, `programId`
+- `title`
+- `orderIndex`
 
-### Fields
-
-- `id`: Stable workout day identifier.
-- `programId`: Identifier of the parent `WorkoutProgram`.
-- `title`: User-facing name of the workout day.
-- `orderIndex`: Position of the day within the program.
-
-### Relationships
-
-- Each `WorkoutDay` belongs to one `WorkoutProgram`.
-- One `WorkoutDay` has many `WorkoutDayExercise` records.
-- One `WorkoutDay` can be referenced by many `WorkoutSession` records over time.
+SwiftData keeps an additional `isActive` compatibility flag used to hide removed catalog days while
+preserving stable historical lookups.
 
 ## WorkoutDayExercise
 
-### Purpose
+The ordered relationship between a workout day and a reusable exercise.
 
-Represents an exercise assignment within a planned workout day. This entity exists to model the ordered link between a day and an exercise, and to store planned training parameters separately from the reusable `Exercise` definition.
+- `id`, `workoutDayId`, `exerciseId`
+- optional `targetSets`, `targetReps`
+- `orderIndex`
 
-### Fields
-
-- `id`: Stable workout day exercise identifier.
-- `workoutDayId`: Identifier of the parent `WorkoutDay`.
-- `exerciseId`: Identifier of the referenced `Exercise`.
-- `targetSets`: Planned number of sets for the exercise on that workout day.
-- `targetReps`: Planned repetition target for the exercise on that workout day.
-- `orderIndex`: Position of the exercise within the workout day.
-
-### Relationships
-
-- Each `WorkoutDayExercise` belongs to one `WorkoutDay`.
-- Each `WorkoutDayExercise` references one `Exercise`.
+Targets are optional because catalog content may intentionally omit them. Historical ID lookups must
+remain able to resolve assignments marked inactive by the SwiftData catalog store.
 
 ## Exercise
 
-### Purpose
+A reusable exercise definition.
 
-Represents a reusable exercise definition that can appear in workout plans. It should contain exercise identity information, not session-specific or plan-specific performance values.
-
-### Fields
-
-- `id`: Stable exercise identifier.
-- `name`: Exercise name.
-- `muscleGroup`: Primary muscle group associated with the exercise.
-
-### Relationships
-
-- One `Exercise` can appear in many `WorkoutDayExercise` records.
+- `id`
+- `name`
+- `muscleGroup`
 
 ## WorkoutSession
 
-### Purpose
+A user-owned performance of one workout day.
 
-Represents a workout session performed by a user for a specific workout day. The session lifecycle must support status tracking, including sessions that are in progress and sessions that are completed.
+- `id`, `userId`, `workoutDayId`
+- `status`: in progress or completed
+- `startedAt`, optional `completedAt`
 
-### Fields
-
-- `id`: Stable workout session identifier.
-- `userId`: Identifier of the `User` who performed the session.
-- `workoutDayId`: Identifier of the planned `WorkoutDay` being executed.
-- `status`: Current session state, used to track lifecycle progress.
-- `startedAt`: Timestamp when the workout session began.
-- `completedAt`: Timestamp when the workout was completed.
-
-### Relationships
-
-- Each `WorkoutSession` belongs to one `User`.
-- Each `WorkoutSession` references one `WorkoutDay`.
-- One `WorkoutSession` has many `ExerciseLog` records.
+At most one session may be in progress for a user.
 
 ## ExerciseLog
 
-### Purpose
+One performed set inside a session.
 
-Represents a single logged set for an exercise during a workout session. This keeps actual performed values separate from the planned values stored on `WorkoutDayExercise`.
+- `id`, `sessionId`, `workoutDayExerciseId`
+- `weight`, `reps`, `setNumber`, `performedAt`
 
-### Fields
+The pair of planned exercise and set number is logically unique within a session. Saving it again
+updates the existing set.
 
-- `id`: Stable exercise log identifier.
-- `sessionId`: Identifier of the parent `WorkoutSession`.
-- `workoutDayExerciseId`: Identifier of the planned `WorkoutDayExercise` entry being performed.
-- `weight`: Weight used for the set.
-- `reps`: Number of repetitions completed.
-- `setNumber`: Sequence number of the set within that planned workout day exercise for the session.
-- `performedAt`: Timestamp when the set was logged, used to reconstruct workout activity over time.
+## Supporting Persistence Models
 
-### Relationships
+Sync outbox records queue user mutations for remote delivery. They are infrastructure models, not a
+feature-facing domain concept. The v1 persistence schema has no saved-program or marketplace-metadata
+entities because Library membership, rankings, ratings, and recommendations are outside the product
+scope.
 
-- Each `ExerciseLog` belongs to one `WorkoutSession`.
-- Each `ExerciseLog` references one `WorkoutDayExercise`.
+## Relationships
 
-## Relationship Summary
-
-- `User` 1 -> many `WorkoutSession`
-- `User` 1 -> many `SavedWorkoutProgram`
-- `WorkoutProgram` 1 -> many `SavedWorkoutProgram`
-- `WorkoutProgram` 1 -> many `WorkoutDay`
-- `WorkoutDay` 1 -> many `WorkoutDayExercise`
-- `WorkoutDay` 1 -> many `WorkoutSession`
-- `Exercise` 1 -> many `WorkoutDayExercise`
-- `WorkoutDayExercise` 1 -> many `ExerciseLog`
-- `WorkoutSession` 1 -> many `ExerciseLog`
+- `User` 1 → many `WorkoutSession`
+- `WorkoutProgram` 1 → many `WorkoutDay`
+- `WorkoutDay` 1 → many `WorkoutDayExercise`
+- `WorkoutDay` 1 → many `WorkoutSession`
+- `Exercise` 1 → many `WorkoutDayExercise`
+- `WorkoutSession` 1 → many `ExerciseLog`
+- `WorkoutDayExercise` 1 → many `ExerciseLog`

@@ -10,9 +10,11 @@ import SwiftData
 
 struct LocalWorkoutRepository: WorkoutRepository {
     private let context: ModelContext
+    private let outboxWriter: UserProfileOutboxWriter
 
     init(context: ModelContext) {
         self.context = context
+        outboxWriter = UserProfileOutboxWriter(context: context)
     }
 
     func activeSession(for userId: UUID) async throws -> WorkoutSession? {
@@ -51,10 +53,15 @@ struct LocalWorkoutRepository: WorkoutRepository {
         return session
     }
 
-    func completeSession(sessionId: UUID, completedAt: Date) async throws -> WorkoutSession {
+    func completeSession(
+        sessionId: UUID,
+        userId: UUID,
+        completedAt: Date
+    ) async throws -> WorkoutSession {
         guard let entity = try findSession(id: sessionId) else {
             throw RepositoryError.workoutSessionNotFound
         }
+        try validateOwnership(of: entity, userId: userId)
 
         let session = try WorkoutSessionMapper.toDomain(entity)
         let completedSession = try session.markCompleted(at: completedAt)
@@ -64,10 +71,11 @@ struct LocalWorkoutRepository: WorkoutRepository {
         return completedSession
     }
 
-    func deleteSession(sessionId: UUID) async throws {
+    func deleteSession(sessionId: UUID, userId: UUID) async throws {
         guard let session = try findSession(id: sessionId) else {
             throw RepositoryError.workoutSessionNotFound
         }
+        try validateOwnership(of: session, userId: userId)
 
         try deleteExerciseLogs(sessionId: sessionId)
         context.delete(session)
@@ -83,6 +91,7 @@ struct LocalWorkoutRepository: WorkoutRepository {
         guard let sessionEntity = try findSession(id: sessionId) else {
             throw RepositoryError.workoutSessionNotFound
         }
+        try validateOwnership(of: sessionEntity, userId: userId)
 
         let completedSession = try WorkoutSessionMapper.toDomain(sessionEntity)
             .markCompleted(at: completedAt)
@@ -93,6 +102,8 @@ struct LocalWorkoutRepository: WorkoutRepository {
 
         update(sessionEntity, from: completedSession)
         UserMapper.update(userEntity, from: updatedUser)
+        userEntity.revision += 1
+        try outboxWriter.enqueueProfileUpdate(for: userEntity)
         try context.save()
 
         return updatedUser
@@ -106,6 +117,7 @@ struct LocalWorkoutRepository: WorkoutRepository {
         guard let sessionEntity = try findSession(id: sessionId) else {
             throw RepositoryError.workoutSessionNotFound
         }
+        try validateOwnership(of: sessionEntity, userId: userId)
 
         let (userEntity, updatedUser) = try userSelectingProgram(
             userId: userId,
@@ -115,6 +127,8 @@ struct LocalWorkoutRepository: WorkoutRepository {
         try deleteExerciseLogs(sessionId: sessionId)
         context.delete(sessionEntity)
         UserMapper.update(userEntity, from: updatedUser)
+        userEntity.revision += 1
+        try outboxWriter.enqueueProfileUpdate(for: userEntity)
         try context.save()
 
         return updatedUser
@@ -347,6 +361,15 @@ private extension LocalWorkoutRepository {
 
     // MARK: - Mutation Helpers
 
+    private func validateOwnership(
+        of session: WorkoutSessionEntity,
+        userId: UUID
+    ) throws {
+        guard session.userId == userId else {
+            throw RepositoryError.workoutSessionOwnershipMismatch
+        }
+    }
+
     private func userSelectingProgram(
         userId: UUID,
         programId: UUID
@@ -359,7 +382,7 @@ private extension LocalWorkoutRepository {
             throw RepositoryError.workoutProgramNotFound
         }
 
-        let user = try UserMapper.toDomain(userEntity)
+        let user = UserMapper.toDomain(userEntity)
         return (userEntity, user.selectingProgram(programId))
     }
 

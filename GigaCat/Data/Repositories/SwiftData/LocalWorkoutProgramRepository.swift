@@ -15,15 +15,6 @@ struct LocalWorkoutProgramRepository: WorkoutProgramRepository {
         self.context = context
     }
 
-    func fetchPrograms() async throws -> [WorkoutProgram] {
-        let descriptor = FetchDescriptor<WorkoutProgramEntity>(
-            sortBy: [SortDescriptor(\.title)]
-        )
-        let programs = try context.fetch(descriptor)
-
-        return try programs.map { try WorkoutProgramMapper.toDomain($0) }
-    }
-
     func fetchProgram(id: UUID) async throws -> WorkoutProgram? {
 
         guard let program = try findProgram(id: id) else {
@@ -33,6 +24,17 @@ struct LocalWorkoutProgramRepository: WorkoutProgramRepository {
     }
 
     func fetchWorkoutDays(programId: UUID) async throws -> [WorkoutDay] {
+        try await fetchWorkoutDays(programId: programId, includeInactive: false)
+    }
+
+    func fetchWorkoutDaysForHistory(programId: UUID) async throws -> [WorkoutDay] {
+        try await fetchWorkoutDays(programId: programId, includeInactive: true)
+    }
+
+    private func fetchWorkoutDays(
+        programId: UUID,
+        includeInactive: Bool
+    ) async throws -> [WorkoutDay] {
         guard try findProgram(id: programId) != nil else {
             throw RepositoryError.workoutProgramNotFound
         }
@@ -47,7 +49,10 @@ struct LocalWorkoutProgramRepository: WorkoutProgramRepository {
 
         let days = try context.fetch(descriptor)
 
-        return try days.map { try WorkoutDayMapper.toDomain($0) }
+        let visibleDays = includeInactive ? days : days.filter(\.isActive)
+
+        return try visibleDays
+            .map { try WorkoutDayMapper.toDomain($0) }
     }
 
     func fetchWorkoutDay(id: UUID) async throws -> WorkoutDay? {
@@ -66,6 +71,25 @@ struct LocalWorkoutProgramRepository: WorkoutProgramRepository {
     }
 
     func fetchWorkoutDayExercises(workoutDayId: UUID) async throws -> [WorkoutDayExercise] {
+        try await fetchWorkoutDayExercises(
+            workoutDayId: workoutDayId,
+            includeInactive: false
+        )
+    }
+
+    func fetchWorkoutDayExercisesForHistory(
+        workoutDayId: UUID
+    ) async throws -> [WorkoutDayExercise] {
+        try await fetchWorkoutDayExercises(
+            workoutDayId: workoutDayId,
+            includeInactive: true
+        )
+    }
+
+    private func fetchWorkoutDayExercises(
+        workoutDayId: UUID,
+        includeInactive: Bool
+    ) async throws -> [WorkoutDayExercise] {
         guard try findWorkoutDay(id: workoutDayId) != nil else {
             throw RepositoryError.workoutDayNotFound
         }
@@ -78,7 +102,10 @@ struct LocalWorkoutProgramRepository: WorkoutProgramRepository {
         )
         let entities = try context.fetch(descriptor)
 
-        return try entities.map { try WorkoutDayExerciseMapper.toDomain($0) }
+        let visibleEntities = includeInactive ? entities : entities.filter(\.isActive)
+
+        return try visibleEntities
+            .map { try WorkoutDayExerciseMapper.toDomain($0) }
     }
 
     func fetchExercise(id: UUID) async throws -> Exercise? {

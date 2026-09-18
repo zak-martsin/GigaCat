@@ -8,7 +8,8 @@ The feature lets the user inspect the selected program, navigate its workout day
 
 `Workout` is responsible for:
 
-- selecting the correct program and workout day when the feature opens
+- loading the user's explicitly selected program and the correct workout day
+- presenting a no-program state when the user has not selected one
 - showing all days and exercises in the selected program
 - showing the previous performance for each exercise
 - creating a session when the first set is saved
@@ -41,7 +42,8 @@ Shared local data source
 ### Main Components
 
 - `WorkoutContextService`
-  Collects the current user, selected or fallback program, ordered program days, exercises, and active session into `WorkoutContext`.
+  Collects the current user, active session or explicitly selected program, ordered program days,
+  and exercises into `WorkoutContext`.
 
 - `WorkoutViewModel`
   Owns the program-level screen state, selected day, session actions, and creation of the exercise ViewModel.
@@ -60,11 +62,10 @@ Shared local data source
 
 ## 3. Workout Entry Rules
 
-`WorkoutContextService` resolves the program in this order:
-
-1. The user's selected program.
-2. The program used by the latest session.
-3. The first recommended program.
+`WorkoutContextService` first preserves an existing active session. Without an active session, it
+uses only the user's explicitly selected program. It does not silently fall back to the latest
+historical or first recommended program. When no program is selected, the feature shows an empty
+state that sends the user to Catalog.
 
 The initial workout day is resolved in this order:
 
@@ -81,6 +82,7 @@ Program days and exercises are kept ordered by `orderIndex`.
 The main screen shows:
 
 - the selected program
+- a program-information action that opens the shared app-level Program Detail sheet
 - a ready or active status
 - ordered day chips such as `Day 1`, `Day 2`, and `Day 3`
 - an active-session badge on the relevant day
@@ -145,6 +147,9 @@ Cancelling a workout:
 
 Both actions require confirmation in the UI.
 
+Completion and cancellation always carry the current user ID to the repository. The repository
+rejects the mutation before changing any local state when the session belongs to another account.
+
 ## 6. Exercise Logging
 
 Each `ExerciseLog` represents one performed set and is identified within a session by:
@@ -203,48 +208,44 @@ View data remains outside the ViewModels. Views map current ViewModel state thro
 
 ## 9. Cross-Feature Invalidation
 
-Home caches presentation state such as the mini player and workout progress. Successful Workout mutations therefore mark Home as stale.
+Successful Workout mutations emit `AppDataChange.workoutSession` through the application dispatcher.
 
 ```text
 Workout mutation succeeds
     ↓
-onWorkoutDataChanged()
+AppDataChange.workoutSession
     ↓
-AppShellView
-    ↓
-HomeViewModel.invalidate()
-    ↓
-User returns to Home
-    ↓
-loadIfNeeded() reloads repository state
+AppDataChangeCoordinator
+    ├── invalidates Catalog
+    ├── invalidates Workout
+    ├── invalidates Progress
+    └── reloads the mini player
 ```
 
-The callback is emitted after:
+The change is emitted after:
 
 - saving or updating a set
 - finishing a workout
 - cancelling a workout
 
-Failed or blocked mutations do not invalidate Home.
+Failed or blocked mutations do not emit a data change.
 
-`WorkoutViewModel` and `WorkoutExerciseViewModel` know only about the callback. They do not know that `HomeViewModel` exists. `AppShellView` owns the cross-feature connection.
+Workout ViewModels know only about the injected mutation callback. They do not reference another
+feature ViewModel.
 
 ## 10. Current Persistence
 
-The feature currently uses repository protocols backed by a shared `MockDataStore`.
+Production repositories use SwiftData as the disk-backed local source of truth. Session creation and
+the first exercise log are saved atomically, and all subsequent mutations are local-first.
 
-This preserves the intended production boundary:
-
-- Views and ViewModels depend on repositories.
-- Repositories hide the data source.
-- SwiftData can replace the mock local store without changing screen responsibilities.
-- Supabase synchronization can be added behind the repository layer later.
+Workout sessions and exercise logs are intentionally not synchronized to Supabase in v1. Tests and
+previews may use repository mocks without changing feature responsibilities.
 
 ## 11. Testing Coverage
 
 Current tests cover:
 
-- initial program and day resolution
+- explicit selected-program and initial-day resolution
 - day selection
 - exercise ordering and navigation
 - loading current and previous logs
@@ -257,8 +258,10 @@ Current tests cover:
 - additional set restoration and the 10-set limit
 - blocking logs for another active day
 - finishing and cancelling sessions
+- rejecting completion, cancellation, and selection-conflict resolution for another user's session
+- opening the shared Program Detail sheet from the Workout program card
 - successful mutation callbacks
-- Home reload after invalidation
+- cross-feature invalidation callbacks
 
 ## 12. Deferred Improvements
 
@@ -270,5 +273,4 @@ The following items are intentionally deferred:
 - exercise history screen
 - timers
 - exercise descriptions and media
-- production SwiftData persistence
-- Supabase synchronization
+- cross-device workout synchronization

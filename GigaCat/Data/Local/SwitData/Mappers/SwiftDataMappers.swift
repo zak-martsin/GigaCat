@@ -6,18 +6,16 @@
 //
 
 enum UserMapper {
-    static func toDomain(_ entity: UserEntity) throws -> User {
-        try User(id: entity.id,
-                 appleUserId: entity.appleUserId,
-                 selectedProgramId: entity.selectedProgramId,
-                 createdAt: entity.createdAt,
-                 updatedAt: entity.updatedAt,
+    static func toDomain(_ entity: UserEntity) -> User {
+        User(id: entity.id,
+             selectedProgramId: entity.selectedProgramId,
+             createdAt: entity.createdAt,
+             updatedAt: entity.updatedAt
         )
     }
 
     static func toEntity(_ domain: User) -> UserEntity {
         UserEntity(id: domain.id,
-                   appleUserId: domain.appleUserId,
                    selectedProgramId: domain.selectedProgramId,
                    createdAt: domain.createdAt,
                    updatedAt: domain.updatedAt
@@ -25,8 +23,8 @@ enum UserMapper {
     }
 
     static func update(_ entity: UserEntity, from domain: User) {
-        entity.appleUserId = domain.appleUserId
         entity.selectedProgramId = domain.selectedProgramId
+        entity.createdAt = domain.createdAt
         entity.updatedAt = domain.updatedAt
     }
 }
@@ -78,25 +76,12 @@ enum ExerciseLogMapper {
     }
 }
 
-enum SavedWorkoutProgramMapper {
-    static func toDomain(_ entity: SavedWorkoutProgramEntity) -> SavedWorkoutProgram {
-        SavedWorkoutProgram(id: entity.id,
-                            userId: entity.userId,
-                            programId: entity.programId,
-                            savedAt: entity.savedAt)
-    }
-
-    static func toEntity(_ domain: SavedWorkoutProgram) -> SavedWorkoutProgramEntity {
-        SavedWorkoutProgramEntity(id: domain.id,
-                                  userId: domain.userId,
-                                  programId: domain.programId,
-                                  savedAt: domain.savedAt)
-    }
-}
-
 enum WorkoutProgramMapper {
     static func toDomain(_ entity: WorkoutProgramEntity) throws -> WorkoutProgram {
         try  WorkoutProgram(id: entity.id,
+                            authorId: entity.authorId,
+                            audience: entity.audience,
+                            isActive: entity.isActive,
                             title: entity.title,
                             description: entity.programDescription,
                             tags: entity.tags)
@@ -104,9 +89,21 @@ enum WorkoutProgramMapper {
 
     static func toEntity(_ domain: WorkoutProgram) -> WorkoutProgramEntity {
         WorkoutProgramEntity(id: domain.id,
+                             authorId: domain.authorId,
+                             audience: domain.audience,
+                             isActive: domain.isActive,
                              title: domain.title,
                              description: domain.description,
                              tags: domain.tags)
+    }
+
+    static func update(_ entity: WorkoutProgramEntity, from domain: WorkoutProgram) {
+        entity.authorId = domain.authorId
+        entity.audience = domain.audience
+        entity.isActive = domain.isActive
+        entity.title = domain.title
+        entity.programDescription = domain.description
+        entity.tags = domain.tags
     }
 }
 
@@ -128,6 +125,18 @@ enum WorkoutDayExerciseMapper {
                                  targetReps: domain.targetReps,
                                  orderIndex: domain.orderIndex)
     }
+
+    static func update(
+        _ entity: WorkoutDayExerciseEntity,
+        from domain: WorkoutDayExercise
+    ) {
+        entity.workoutDayId = domain.workoutDayId
+        entity.exerciseId = domain.exerciseId
+        entity.targetSets = domain.targetSets
+        entity.targetReps = domain.targetReps
+        entity.orderIndex = domain.orderIndex
+        entity.isActive = true
+    }
 }
 
 enum WorkoutDayMapper {
@@ -146,6 +155,13 @@ enum WorkoutDayMapper {
             title: domain.title,
             orderIndex: domain.orderIndex)
     }
+
+    static func update(_ entity: WorkoutDayEntity, from domain: WorkoutDay) {
+        entity.programId = domain.programId
+        entity.title = domain.title
+        entity.orderIndex = domain.orderIndex
+        entity.isActive = true
+    }
 }
 
 enum ExerciseMapper {
@@ -161,5 +177,10 @@ enum ExerciseMapper {
             id: domain.id,
             name: domain.name,
             muscleGroup: domain.muscleGroup)
+    }
+
+    static func update(_ entity: ExerciseEntity, from domain: Exercise) {
+        entity.name = domain.name
+        entity.muscleGroup = domain.muscleGroup
     }
 }

@@ -19,8 +19,7 @@ final class SwiftDataStack {
         ExerciseEntity.self,
         WorkoutSessionEntity.self,
         ExerciseLogEntity.self,
-        SavedWorkoutProgramEntity.self,
-        ProgramCatalogMetadataEntity.self
+        SyncOperationEntity.self
     ])
 
     let container: ModelContainer
