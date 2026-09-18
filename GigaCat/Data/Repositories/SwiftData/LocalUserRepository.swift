@@ -8,6 +8,7 @@
 import Foundation
 import SwiftData
 
+@MainActor
 struct LocalUserRepository: UserRepository {
     private let context: ModelContext
     private let currentUserIDProvider: any CurrentUserIDProviding
@@ -51,6 +52,42 @@ struct LocalUserRepository: UserRepository {
             context.insert(UserMapper.toEntity(user))
         }
         try context.save()
+    }
+
+    func profileSnapshot(for userID: UUID) async throws -> LocalProfileSnapshot {
+        let entity = try findUser(id: userID)
+        return LocalProfileSnapshot(
+            userID: userID,
+            user: entity.map(UserMapper.toDomain),
+            revision: entity?.revision
+        )
+    }
+
+    func applyFetchedProfile(
+        _ user: User,
+        ifUnchangedSince snapshot: LocalProfileSnapshot
+    ) async throws -> Bool {
+        guard user.id == snapshot.userID else { return false }
+
+        // Keep the version/outbox check and the write in one actor-isolated operation.
+        let entity = try findUser(id: user.id)
+        let currentUser = entity.map(UserMapper.toDomain)
+        let hasUnresolvedChange = try LocalSyncOutboxRepository(context: context)
+            .hasUnresolvedProfileOperation(for: user.id)
+        guard entity?.revision == snapshot.revision,
+              currentUser == snapshot.user,
+              !hasUnresolvedChange else {
+            return false
+        }
+
+        guard currentUser != user else { return false }
+        if let entity {
+            UserMapper.update(entity, from: user)
+        } else {
+            context.insert(UserMapper.toEntity(user))
+        }
+        try context.save()
+        return true
     }
 
     func updateSelectedProgram(for userId: UUID, programId: UUID?) async throws -> User {

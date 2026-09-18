@@ -22,7 +22,7 @@ struct ProfileBootstrapServiceTests {
 
         try await service.bootstrapProfile(for: remoteProfile.id)
 
-        #expect(await repository.savedUsers() == [remoteProfile])
+        #expect(repository.savedUsers() == [remoteProfile])
     }
 
     @Test
@@ -49,7 +49,7 @@ struct ProfileBootstrapServiceTests {
 
         try await service.bootstrapProfile(for: userID)
 
-        #expect(await repository.savedUsers() == [remoteProfile])
+        #expect(repository.savedUsers() == [remoteProfile])
     }
 
     @Test
@@ -64,7 +64,7 @@ struct ProfileBootstrapServiceTests {
 
         try await service.bootstrapProfile(for: userID)
 
-        let savedUser = try #require(await repository.savedUsers().first)
+        let savedUser = try #require(repository.savedUsers().first)
         #expect(savedUser.id == userID)
         #expect(savedUser.selectedProgramId == nil)
     }
@@ -81,7 +81,7 @@ struct ProfileBootstrapServiceTests {
 
         try await service.bootstrapProfile(for: localProfile.id)
 
-        #expect(await repository.savedUsers().isEmpty)
+        #expect(repository.savedUsers().isEmpty)
     }
 
     @Test
@@ -106,7 +106,7 @@ struct ProfileBootstrapServiceTests {
 
         try await service.bootstrapProfile(for: userID)
 
-        #expect(await repository.savedUsers().isEmpty)
+        #expect(repository.savedUsers().isEmpty)
     }
 
     @Test
@@ -134,7 +134,7 @@ struct ProfileBootstrapServiceTests {
         let didChange = try await service.refreshProfile(for: userID)
 
         #expect(didChange)
-        #expect(await repository.savedUsers() == [remoteProfile])
+        #expect(repository.savedUsers() == [remoteProfile])
     }
 
     @Test
@@ -150,7 +150,7 @@ struct ProfileBootstrapServiceTests {
         let didChange = try await service.refreshProfile(for: profile.id)
 
         #expect(!didChange)
-        #expect(await repository.savedUsers().isEmpty)
+        #expect(repository.savedUsers().isEmpty)
     }
 
     @Test
@@ -166,7 +166,7 @@ struct ProfileBootstrapServiceTests {
         let didChange = try await service.refreshProfile(for: profile.id)
 
         #expect(!didChange)
-        #expect(await repository.savedUsers().isEmpty)
+        #expect(repository.savedUsers().isEmpty)
     }
 
     @Test
@@ -184,7 +184,7 @@ struct ProfileBootstrapServiceTests {
 
         #expect(!didChange)
         #expect(await remoteRepository.profileRequestCount == 0)
-        #expect(await repository.savedUsers().isEmpty)
+        #expect(repository.savedUsers().isEmpty)
     }
 
     @Test
@@ -204,8 +204,111 @@ struct ProfileBootstrapServiceTests {
 
         #expect(!didChange)
         #expect(await remoteRepository.profileRequestCount == 0)
-        #expect(await repository.savedUsers().isEmpty)
+        #expect(repository.savedUsers().isEmpty)
     }
+
+    @Test
+    func refreshDoesNotOverwriteSelectionMadeDuringRemoteFetch() async throws {
+        let fixture = try LocalProfileFixture()
+        let factory = fixture.factory
+        let userID = fixture.userID
+        let programID = fixture.programID
+        let oldProfile = try #require(await factory.userRepository.user(id: userID))
+        let remote = BlockingUserProfileRemoteRepository(
+            profile: staleRemoteProfile(after: oldProfile)
+        )
+        let service = ProfileBootstrapService(
+            remoteRepository: remote,
+            userRepository: factory.userRepository,
+            outboxRepository: factory.syncOutboxRepository
+        )
+
+        let refresh = Task { try await service.refreshProfile(for: userID) }
+        await remote.waitUntilFetchStarts()
+        _ = try await factory.userRepository.updateSelectedProgram(
+            for: userID,
+            programId: programID
+        )
+        await remote.releaseFetch()
+
+        #expect(try await !refresh.value)
+        #expect(try await factory.userRepository.user(id: userID)?.selectedProgramId == programID)
+        #expect(try factory.syncOutboxRepository.operationCount(for: userID) == 1)
+    }
+
+    @Test
+    func refreshRejectsOldResponseEvenWhenNewOutboxOperationAlreadyCompleted() async throws {
+        let fixture = try LocalProfileFixture()
+        let factory = fixture.factory
+        let userID = fixture.userID
+        let programID = fixture.programID
+        let oldProfile = try #require(await factory.userRepository.user(id: userID))
+        let remote = BlockingUserProfileRemoteRepository(
+            profile: staleRemoteProfile(after: oldProfile)
+        )
+        let service = ProfileBootstrapService(
+            remoteRepository: remote,
+            userRepository: factory.userRepository,
+            outboxRepository: factory.syncOutboxRepository
+        )
+
+        let refresh = Task { try await service.refreshProfile(for: userID) }
+        await remote.waitUntilFetchStarts()
+        let selectedProfile = try await factory.userRepository.updateSelectedProgram(
+            for: userID,
+            programId: programID
+        )
+        let operation = try #require(
+            try factory.syncOutboxRepository.claimNextReadyOperation(for: userID, now: Date())
+        )
+        try factory.syncOutboxRepository.complete(
+            operation,
+            with: .userProfile(selectedProfile)
+        )
+        await remote.releaseFetch()
+
+        #expect(try await !refresh.value)
+        #expect(try await factory.userRepository.user(id: userID)?.selectedProgramId == programID)
+        #expect(try factory.syncOutboxRepository.operationCount(for: userID) == 0)
+    }
+
+    @Test
+    func bootstrapDoesNotOverwriteSelectionMadeDuringRemoteFetch() async throws {
+        let fixture = try LocalProfileFixture()
+        let factory = fixture.factory
+        let userID = fixture.userID
+        let programID = fixture.programID
+        let oldProfile = try #require(await factory.userRepository.user(id: userID))
+        let remote = BlockingUserProfileRemoteRepository(
+            profile: staleRemoteProfile(after: oldProfile)
+        )
+        let service = ProfileBootstrapService(
+            remoteRepository: remote,
+            userRepository: factory.userRepository,
+            outboxRepository: factory.syncOutboxRepository
+        )
+
+        let bootstrap = Task { try await service.bootstrapProfile(for: userID) }
+        await remote.waitUntilFetchStarts()
+        _ = try await factory.userRepository.updateSelectedProgram(
+            for: userID,
+            programId: programID
+        )
+        await remote.releaseFetch()
+        try await bootstrap.value
+
+        #expect(try await factory.userRepository.user(id: userID)?.selectedProgramId == programID)
+    }
+
+    private func staleRemoteProfile(after profile: User) -> User {
+        User(
+            id: profile.id,
+            selectedProgramId: profile.selectedProgramId,
+            createdAt: profile.createdAt,
+            updatedAt: profile.updatedAt.addingTimeInterval(1)
+        )
+    }
+
 }
 
 private struct UserProfileRemoteRepositoryStub: UserProfileRemoteRepository {
@@ -303,12 +406,15 @@ private final class SyncOutboxRepositoryStub: SyncOutboxRepository {
     }
 }
 
-private actor UserRepositorySpy: UserRepository {
+@MainActor
+private final class UserRepositorySpy: UserRepository {
     private var storedUser: User?
     private var receivedUsers: [User] = []
+    private var revision: Int?
 
     init(user: User? = nil) {
         storedUser = user
+        revision = user == nil ? nil : 0
     }
 
     func currentUser() -> User? {
@@ -322,7 +428,30 @@ private actor UserRepositorySpy: UserRepository {
 
     func save(_ user: User) {
         storedUser = user
+        revision = revision ?? 0
         receivedUsers.append(user)
+    }
+
+    func profileSnapshot(for userID: UUID) -> LocalProfileSnapshot {
+        LocalProfileSnapshot(
+            userID: userID,
+            user: storedUser?.id == userID ? storedUser : nil,
+            revision: storedUser?.id == userID ? revision : nil
+        )
+    }
+
+    func applyFetchedProfile(
+        _ user: User,
+        ifUnchangedSince snapshot: LocalProfileSnapshot
+    ) -> Bool {
+        guard user.id == snapshot.userID,
+              revision == snapshot.revision,
+              storedUser == snapshot.user,
+              storedUser != user else {
+            return false
+        }
+        save(user)
+        return true
     }
 
     func updateSelectedProgram(for userId: UUID, programId: UUID?) throws -> User {
@@ -333,6 +462,7 @@ private actor UserRepositorySpy: UserRepository {
 
         let updatedUser = storedUser.selectingProgram(programId)
         self.storedUser = updatedUser
+        revision = (revision ?? 0) + 1
         return updatedUser
     }
 

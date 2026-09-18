@@ -26,7 +26,7 @@ struct ProfileBootstrapService: ProfileBootstrapping {
     }
 
     func bootstrapProfile(for userID: UUID) async throws {
-        let localProfile = try await userRepository.user(id: userID)
+        let localSnapshot = try await userRepository.profileSnapshot(for: userID)
         let hasUnresolvedChange = try outboxRepository
             .hasUnresolvedProfileOperation(for: userID)
         let remoteProfile: User
@@ -34,25 +34,27 @@ struct ProfileBootstrapService: ProfileBootstrapping {
         do {
             remoteProfile = try await remoteRepository.profile(for: userID)
         } catch {
-            guard localProfile == nil else { return }
-            try await userRepository.save(
+            guard localSnapshot.user == nil else { return }
+            _ = try await userRepository.applyFetchedProfile(
                 User(
                     id: userID,
                     createdAt: .distantPast,
                     updatedAt: .distantPast
-                )
+                ),
+                ifUnchangedSince: localSnapshot
             )
             return
         }
 
         guard !hasUnresolvedChange else { return }
-        guard localProfile != remoteProfile else { return }
-
-        try await userRepository.save(remoteProfile)
+        _ = try await userRepository.applyFetchedProfile(
+            remoteProfile,
+            ifUnchangedSince: localSnapshot
+        )
     }
 
     func refreshProfile(for userID: UUID) async throws -> Bool {
-        let localProfile = try await userRepository.user(id: userID)
+        let localSnapshot = try await userRepository.profileSnapshot(for: userID)
         let hasUnresolvedChange = try outboxRepository
             .hasUnresolvedProfileOperation(for: userID)
 
@@ -65,9 +67,9 @@ struct ProfileBootstrapService: ProfileBootstrapping {
             return false
         }
 
-        guard localProfile != remoteProfile else { return false }
-
-        try await userRepository.save(remoteProfile)
-        return true
+        return try await userRepository.applyFetchedProfile(
+            remoteProfile,
+            ifUnchangedSince: localSnapshot
+        )
     }
 }

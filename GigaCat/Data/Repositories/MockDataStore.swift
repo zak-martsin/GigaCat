@@ -5,6 +5,7 @@ actor MockDataStore {
     // MARK: - Stored State
 
     private(set) var usersByID: [UUID: User]
+    private var userRevisionsByID: [UUID: Int]
     private(set) var programsByID: [UUID: WorkoutProgram]
     private(set) var workoutDaysByID: [UUID: WorkoutDay]
     private(set) var dayExercisesByID: [UUID: WorkoutDayExercise]
@@ -26,6 +27,7 @@ actor MockDataStore {
         currentUserID: UUID? = nil
     ) {
         self.usersByID = Dictionary(uniqueKeysWithValues: users.map { ($0.id, $0) })
+        self.userRevisionsByID = Dictionary(uniqueKeysWithValues: users.map { ($0.id, 0) })
         self.programsByID = Dictionary(uniqueKeysWithValues: programs.map { ($0.id, $0) })
         self.workoutDaysByID = Dictionary(uniqueKeysWithValues: workoutDays.map { ($0.id, $0) })
         self.dayExercisesByID = Dictionary(uniqueKeysWithValues: dayExercises.map { ($0.id, $0) })
@@ -49,9 +51,30 @@ actor MockDataStore {
 
     func saveUser(_ user: User) {
         usersByID[user.id] = user
+        userRevisionsByID[user.id, default: 0] += 1
         if currentUserID == nil {
             currentUserID = user.id
         }
+    }
+
+    func profileSnapshot(for userID: UUID) -> LocalProfileSnapshot {
+        LocalProfileSnapshot(
+            userID: userID,
+            user: usersByID[userID],
+            revision: userRevisionsByID[userID]
+        )
+    }
+
+    func applyFetchedProfile(_ user: User, ifUnchangedSince snapshot: LocalProfileSnapshot) -> Bool {
+        guard user.id == snapshot.userID,
+              userRevisionsByID[user.id] == snapshot.revision,
+              usersByID[user.id] == snapshot.user,
+              usersByID[user.id] != user else {
+            return false
+        }
+
+        usersByID[user.id] = user
+        return true
     }
 
     /// Updates program selection only if both the user and referenced program exist in the store.
@@ -66,6 +89,7 @@ actor MockDataStore {
 
         let updatedUser = user.selectingProgram(programId)
         usersByID[userId] = updatedUser
+        userRevisionsByID[userId, default: 0] += 1
         return updatedUser
     }
 

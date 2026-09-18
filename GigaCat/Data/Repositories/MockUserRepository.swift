@@ -4,7 +4,7 @@ import Foundation
 struct MockUserRepository: UserRepository {
     private let store: MockDataStore
 
-    init(store: MockDataStore) {
+    nonisolated init(store: MockDataStore) {
         self.store = store
     }
 
@@ -22,5 +22,16 @@ struct MockUserRepository: UserRepository {
 
     func updateSelectedProgram(for userId: UUID, programId: UUID?) async throws -> User {
         try await store.updateSelectedProgram(for: userId, programId: programId)
+    }
+
+    func profileSnapshot(for userID: UUID) async throws -> LocalProfileSnapshot {
+        await store.profileSnapshot(for: userID)
+    }
+
+    func applyFetchedProfile(
+        _ user: User,
+        ifUnchangedSince snapshot: LocalProfileSnapshot
+    ) async throws -> Bool {
+        await store.applyFetchedProfile(user, ifUnchangedSince: snapshot)
     }
 }
