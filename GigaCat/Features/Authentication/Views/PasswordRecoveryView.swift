@@ -208,3 +208,42 @@ struct PasswordRecoveryView: View {
         }
     }
 }
+
+#if DEBUG
+@MainActor
+private struct PasswordRecoveryPreviewHost: View {
+    enum Scenario {
+        case requestLink
+        case newPassword
+    }
+
+    @State private var viewModel = AuthenticationPreviewFactory.makeViewModel(
+        email: "athlete@example.com"
+    )
+    let scenario: Scenario
+
+    var body: some View {
+        PasswordRecoveryView(viewModel: viewModel)
+            .task {
+                await viewModel.restoreSession()
+
+                guard scenario == .newPassword,
+                      let callbackURL = URL(
+                        string: "com.zakmartsin.gigacat://password-recovery?code=preview"
+                      ) else {
+                    return
+                }
+
+                await viewModel.handlePasswordRecoveryCallback(callbackURL)
+            }
+    }
+}
+
+#Preview("Password Recovery") {
+    PasswordRecoveryPreviewHost(scenario: .requestLink)
+}
+
+#Preview("New Password") {
+    PasswordRecoveryPreviewHost(scenario: .newPassword)
+}
+#endif

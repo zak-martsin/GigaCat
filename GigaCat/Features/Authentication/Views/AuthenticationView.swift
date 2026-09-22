@@ -163,3 +163,34 @@ struct AuthenticationView: View {
         viewModel.mode = viewModel.mode == .signIn ? .signUp : .signIn
     }
 }
+
+#if DEBUG
+@MainActor
+private struct AuthenticationPreviewHost: View {
+    @State private var viewModel: AuthenticationViewModel
+
+    init(mode: AuthenticationMode) {
+        _viewModel = State(
+            initialValue: AuthenticationPreviewFactory.makeViewModel(mode: mode)
+        )
+    }
+
+    var body: some View {
+        AuthenticationView(
+            viewModel: viewModel,
+            onForgotPassword: {}
+        )
+        .task {
+            await viewModel.restoreSession()
+        }
+    }
+}
+
+#Preview("Sign In") {
+    AuthenticationPreviewHost(mode: .signIn)
+}
+
+#Preview("Sign Up") {
+    AuthenticationPreviewHost(mode: .signUp)
+}
+#endif
