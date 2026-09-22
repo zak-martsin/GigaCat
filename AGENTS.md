@@ -60,3 +60,20 @@ Current Domain
 * Exercise
 * WorkoutSession
 * ExerciseLog
+
+# Xcode testing rules
+
+When running iOS tests with xcodebuild:
+
+- Never use parallel XCTest execution.
+- Always pass `-parallel-testing-enabled NO`.
+- Reuse the existing iPhone 16 simulator.
+- Do not create new simulators unless explicitly requested.
+- Do not clone simulators manually with `simctl clone`.
+
+Example:
+
+xcodebuild test \
+  -scheme <SCHEME_NAME> \
+  -destination 'platform=iOS Simulator,name=iPhone 16' \
+  -parallel-testing-enabled NO
