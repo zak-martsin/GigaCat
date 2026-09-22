@@ -55,9 +55,7 @@ struct PasswordRecoveryView: View {
                 .onSubmit(requestRecovery)
 
             actionButton(
-                title: viewModel.passwordRecoveryState == .emailSent
-                    ? "Send Again"
-                    : "Send Reset Link",
+                title: recoveryButtonTitle,
                 isDisabled: !viewModel.canRequestPasswordRecovery,
                 action: requestRecovery
             )
@@ -150,6 +148,18 @@ struct PasswordRecoveryView: View {
 
     private var passwordsDoNotMatch: Bool {
         !passwordConfirmation.isEmpty && newPassword != passwordConfirmation
+    }
+
+    private var recoveryButtonTitle: String {
+        let remaining = viewModel.passwordRecoveryCooldownRemaining
+
+        if remaining > 0 {
+            return "Send Again in \(remaining)s"
+        }
+
+        return viewModel.passwordRecoveryState == .emailSent
+            ? "Send Again"
+            : "Send Reset Link"
     }
 
     private var canUpdatePassword: Bool {

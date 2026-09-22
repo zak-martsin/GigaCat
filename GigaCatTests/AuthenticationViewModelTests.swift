@@ -175,6 +175,8 @@ struct AuthenticationViewModelTests {
         #expect(await service.lastRecoveryEmail() == "user@example.com")
         #expect(viewModel.passwordRecoveryState == .emailSent)
         #expect(viewModel.noticeMessage != nil)
+        #expect(viewModel.passwordRecoveryCooldownRemaining == 45)
+        #expect(!viewModel.canRequestPasswordRecovery)
     }
 
     @Test
