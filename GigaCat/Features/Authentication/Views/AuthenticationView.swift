@@ -3,14 +3,21 @@ import SwiftUI
 struct AuthenticationView: View {
     @Bindable var viewModel: AuthenticationViewModel
     let onForgotPassword: () -> Void
+    let onContinueWithApple: () -> Void
 
     var body: some View {
         ScrollView {
             VStack(spacing: AppSpacing.xl) {
-                header
+                AuthenticationBrandHeaderView()
                 credentialsForm
                 feedback
                 submitButton
+                alternativeSignIn
+                authenticationPrompt(
+                    message: modePromptMessage,
+                    actionTitle: modePromptActionTitle,
+                    action: switchMode
+                )
             }
             .frame(maxWidth: 480)
             .padding(.horizontal, AppSpacing.xl)
@@ -21,32 +28,11 @@ struct AuthenticationView: View {
         .background(AppColor.background.ignoresSafeArea())
     }
 
-    private var header: some View {
-        VStack(spacing: AppSpacing.md) {
-            Image(systemName: "figure.strengthtraining.traditional")
-                .font(.system(size: AppIconSize.authenticationLogo, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(
-                    width: AppControlSize.authenticationLogo,
-                    height: AppControlSize.authenticationLogo
-                )
-                .background(AppColor.accent, in: RoundedRectangle(cornerRadius: AppRadius.lg))
-
-            Text("GigaCat")
-                .font(.system(.largeTitle, design: .rounded, weight: .bold))
-                .foregroundStyle(AppColor.textPrimary)
-
-            Text("Your workouts stay ready on every training day.")
-                .font(.body)
-                .foregroundStyle(AppColor.textSecondary)
-                .multilineTextAlignment(.center)
-        }
-    }
-
     private var credentialsForm: some View {
         VStack(spacing: AppSpacing.lg) {
             VStack(spacing: AppSpacing.md) {
                 TextField("Email", text: $viewModel.email)
+
                     .keyboardType(.emailAddress)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
@@ -60,22 +46,15 @@ struct AuthenticationView: View {
             }
 
             if viewModel.mode == .signIn {
-                authenticationPrompt(
-                    message: "Forgot your password?",
-                    actionTitle: "Reset it",
-                    action: onForgotPassword
-                )
+                Button("Forgot your password?", action: onForgotPassword)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppColor.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .center)
             }
 
-            authenticationPrompt(
-                message: modePromptMessage,
-                actionTitle: modePromptActionTitle,
-                action: switchMode
-            )
         }
         .padding(AppSpacing.lg)
         .textFieldStyle(.roundedBorder)
-        .appCardStyle()
     }
 
     private func authenticationPrompt(
@@ -93,6 +72,35 @@ struct AuthenticationView: View {
         }
         .font(.subheadline)
         .frame(maxWidth: .infinity, alignment: .center)
+    }
+
+    private var alternativeSignIn: some View {
+        VStack(spacing: AppSpacing.lg) {
+            HStack(spacing: AppSpacing.md) {
+                Rectangle()
+                    .fill(AppColor.textSecondary.opacity(0.3))
+                    .frame(height: 1)
+
+                Text("OR")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(AppColor.textSecondary)
+
+                Rectangle()
+                    .fill(AppColor.textSecondary.opacity(0.3))
+                    .frame(height: 1)
+            }
+
+            Button(action: onContinueWithApple) {
+                Label("Continue with Apple", systemImage: "apple.logo")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: AppControlSize.buttonHeight)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(AppColor.textPrimary)
+            .background(AppColor.surface, in: Capsule())
+        }
+        .padding(AppSpacing.lg)
     }
 
     @ViewBuilder
@@ -130,9 +138,12 @@ struct AuthenticationView: View {
             .frame(maxWidth: .infinity)
             .frame(height: AppControlSize.buttonHeight)
         }
-        .buttonStyle(.borderedProminent)
-        .tint(AppColor.accent)
+        .buttonStyle(.plain)
+        .foregroundStyle(.white)
+        .background(AppColor.accent, in: Capsule())
+        .opacity(viewModel.canSubmit ? 1 : 0.35)
         .disabled(!viewModel.canSubmit)
+        .padding(AppSpacing.lg)
     }
 
     private func submit() {
@@ -178,7 +189,8 @@ private struct AuthenticationPreviewHost: View {
     var body: some View {
         AuthenticationView(
             viewModel: viewModel,
-            onForgotPassword: {}
+            onForgotPassword: {},
+            onContinueWithApple: {}
         )
         .task {
             await viewModel.restoreSession()

@@ -47,7 +47,8 @@ struct AuthenticationRootView<Factory: RepositoryFactory>: View {
                     onForgotPassword: {
                         viewModel.beginPasswordRecovery()
                         isPasswordRecoveryPresented = true
-                    }
+                    },
+                    onContinueWithApple: {}
                 )
 
             case .authenticated(let account):

@@ -10,7 +10,7 @@ struct PasswordRecoveryView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: AppSpacing.xl) {
-                    header
+                    AuthenticationBrandHeaderView()
 
                     if viewModel.passwordRecoveryState == .readyForNewPassword {
                         newPasswordForm
@@ -44,28 +44,6 @@ struct PasswordRecoveryView: View {
         )
     }
 
-    private var header: some View {
-        VStack(spacing: AppSpacing.md) {
-            Image(systemName: "key.fill")
-                .font(.system(size: AppIconSize.authenticationLogo, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(
-                    width: AppControlSize.authenticationLogo,
-                    height: AppControlSize.authenticationLogo
-                )
-                .background(AppColor.accent, in: RoundedRectangle(cornerRadius: AppRadius.lg))
-
-            Text(headerTitle)
-                .font(.title2.bold())
-                .foregroundStyle(AppColor.textPrimary)
-
-            Text(headerMessage)
-                .font(.body)
-                .foregroundStyle(AppColor.textSecondary)
-                .multilineTextAlignment(.center)
-        }
-    }
-
     private var recoveryEmailForm: some View {
         VStack(spacing: AppSpacing.lg) {
             TextField("Email", text: $viewModel.email)
@@ -86,7 +64,6 @@ struct PasswordRecoveryView: View {
         }
         .padding(AppSpacing.lg)
         .textFieldStyle(.roundedBorder)
-        .appCardStyle()
     }
 
     private var newPasswordForm: some View {
@@ -116,7 +93,6 @@ struct PasswordRecoveryView: View {
         }
         .padding(AppSpacing.lg)
         .textFieldStyle(.roundedBorder)
-        .appCardStyle()
     }
 
     @ViewBuilder
@@ -165,21 +141,11 @@ struct PasswordRecoveryView: View {
             .frame(maxWidth: .infinity)
             .frame(height: AppControlSize.buttonHeight)
         }
-        .buttonStyle(.borderedProminent)
-        .tint(AppColor.accent)
+        .buttonStyle(.plain)
+        .foregroundStyle(.white)
+        .background(AppColor.accent, in: Capsule())
+        .opacity(isDisabled ? 0.35 : 1)
         .disabled(isDisabled)
-    }
-
-    private var headerTitle: String {
-        viewModel.passwordRecoveryState == .readyForNewPassword
-            ? "Create a New Password"
-            : "Reset Your Password"
-    }
-
-    private var headerMessage: String {
-        viewModel.passwordRecoveryState == .readyForNewPassword
-            ? "Enter the new password you want to use for your account."
-            : "Enter your email and we’ll send you a secure recovery link."
     }
 
     private var passwordsDoNotMatch: Bool {
