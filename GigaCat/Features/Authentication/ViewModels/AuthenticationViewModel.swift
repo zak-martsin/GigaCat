@@ -51,13 +51,19 @@ final class AuthenticationViewModel {
     private(set) var errorMessage: String?
     private(set) var noticeMessage: String?
     private(set) var passwordRecoveryState: PasswordRecoveryState = .idle
+    private(set) var passwordRecoveryCooldownRemaining = 0
+
+    @ObservationIgnored
+    private var passwordRecoveryCooldownTask: Task<Void, Never>?
 
     var canSubmit: Bool {
         !normalizedEmail.isEmpty && !password.isEmpty && !isSubmitting
     }
 
     var canRequestPasswordRecovery: Bool {
-        !normalizedEmail.isEmpty && !isSubmitting
+        !normalizedEmail.isEmpty
+            && !isSubmitting
+            && passwordRecoveryCooldownRemaining == 0
     }
 
     // MARK: - Dependencies
@@ -132,6 +138,7 @@ final class AuthenticationViewModel {
             errorMessage = nil
             noticeMessage = nil
             passwordRecoveryState = .idle
+            resetPasswordRecoveryCooldown()
             sessionState = .signedOut
         } catch {
             await syncCoordinator.activate(for: account.id)
@@ -156,8 +163,7 @@ final class AuthenticationViewModel {
     /// Requests a recovery email without revealing whether the account exists.
     func requestPasswordRecovery() async {
         guard case .signedOut = sessionState,
-              !normalizedEmail.isEmpty,
-              !isSubmitting else {
+              canRequestPasswordRecovery else {
             return
         }
 
@@ -172,6 +178,7 @@ final class AuthenticationViewModel {
             )
             passwordRecoveryState = .emailSent
             noticeMessage = "If an account exists for this email, a password reset link has been sent."
+            startPasswordRecoveryCooldown()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -190,6 +197,7 @@ final class AuthenticationViewModel {
         sessionState = .checking
         errorMessage = nil
         noticeMessage = nil
+        resetPasswordRecoveryCooldown()
 
         do {
             try await authenticationService.preparePasswordRecovery(from: url)
@@ -264,6 +272,41 @@ final class AuthenticationViewModel {
 
     private var normalizedEmail: String {
         email.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Prevents repeated recovery requests while keeping the countdown accurate after suspension.
+    private func startPasswordRecoveryCooldown() {
+        passwordRecoveryCooldownTask?.cancel()
+
+        let duration: TimeInterval = 45
+        let deadline = Date().addingTimeInterval(duration)
+        passwordRecoveryCooldownRemaining = Int(duration)
+
+        passwordRecoveryCooldownTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard self != nil else { return }
+
+                let remaining = max(
+                    0,
+                    Int(ceil(deadline.timeIntervalSinceNow))
+                )
+                self?.passwordRecoveryCooldownRemaining = remaining
+
+                guard remaining > 0 else { return }
+
+                do {
+                    try await Task.sleep(for: .seconds(1))
+                } catch {
+                    return
+                }
+            }
+        }
+    }
+
+    private func resetPasswordRecoveryCooldown() {
+        passwordRecoveryCooldownTask?.cancel()
+        passwordRecoveryCooldownTask = nil
+        passwordRecoveryCooldownRemaining = 0
     }
 
     private func handleRegistration(_ result: RegistrationResult) async throws {
