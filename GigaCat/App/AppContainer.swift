@@ -20,6 +20,7 @@ final class AppContainer {
     private let profileBootstrapper: any ProfileBootstrapping
     private let syncCoordinator: any SyncCoordinating
     private let systemCatalogSynchronizer: any SystemCatalogSyncing
+    private let programArtworkService: any ProgramArtworkServicing
     private let selectedProgramReconciler: SelectedProgramReconciliationService
     private var foregroundRefreshTask: Task<ForegroundRefreshResult, Never>?
 
@@ -29,6 +30,7 @@ final class AppContainer {
         repositoryFactory: some RepositoryFactory,
         syncCoordinator: any SyncCoordinating,
         systemCatalogSynchronizer: any SystemCatalogSyncing,
+        programArtworkService: any ProgramArtworkServicing,
         profileBootstrapper: any ProfileBootstrapping
     ) {
         let dataChangeDispatcher = AppDataChangeDispatcher()
@@ -111,6 +113,7 @@ final class AppContainer {
         self.profileBootstrapper = profileBootstrapper
         self.syncCoordinator = syncCoordinator
         self.systemCatalogSynchronizer = systemCatalogSynchronizer
+        self.programArtworkService = programArtworkService
         selectedProgramReconciler = SelectedProgramReconciliationService(
             userRepository: repositoryFactory.userRepository,
             workoutProgramRepository: repositoryFactory.workoutProgramRepository

@@ -23,6 +23,7 @@ struct AppShellView: View {
         userID: UUID,
         syncCoordinator: any SyncCoordinating,
         systemCatalogSynchronizer: any SystemCatalogSyncing,
+        programArtworkService: any ProgramArtworkServicing,
         profileBootstrapper: any ProfileBootstrapping,
         profileSyncRecoveryService: any ProfileSyncRecovering,
         onSignOut: @escaping () -> Void = {}
@@ -31,6 +32,7 @@ struct AppShellView: View {
             repositoryFactory: repositoryFactory,
             syncCoordinator: syncCoordinator,
             systemCatalogSynchronizer: systemCatalogSynchronizer,
+            programArtworkService: programArtworkService,
             profileBootstrapper: profileBootstrapper
         )
 

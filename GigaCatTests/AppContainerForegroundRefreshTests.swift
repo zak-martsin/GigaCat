@@ -16,6 +16,7 @@ struct AppContainerForegroundRefreshTests {
             systemCatalogSynchronizer: ForegroundCatalogSynchronizerSpy(
                 recorder: recorder
             ),
+            programArtworkService: ForegroundProgramArtworkServiceStub(),
             profileBootstrapper: ForegroundProfileBootstrapperSpy(
                 recorder: recorder
             )
@@ -46,6 +47,7 @@ struct AppContainerForegroundRefreshTests {
             repositoryFactory: factory,
             syncCoordinator: ForegroundSyncCoordinatorSpy(),
             systemCatalogSynchronizer: ForegroundCatalogSynchronizerSpy(),
+            programArtworkService: ForegroundProgramArtworkServiceStub(),
             profileBootstrapper: ForegroundProfileBootstrapperSpy()
         )
 
@@ -74,6 +76,7 @@ struct AppContainerForegroundRefreshTests {
             repositoryFactory: factory,
             syncCoordinator: ForegroundSyncCoordinatorSpy(),
             systemCatalogSynchronizer: ForegroundCatalogSynchronizerSpy(),
+            programArtworkService: ForegroundProgramArtworkServiceStub(),
             profileBootstrapper: ForegroundProfileBootstrapperSpy()
         )
 
@@ -105,6 +108,7 @@ struct AppContainerForegroundRefreshTests {
                 recorder: recorder,
                 shouldFail: true
             ),
+            programArtworkService: ForegroundProgramArtworkServiceStub(),
             profileBootstrapper: ForegroundProfileBootstrapperSpy(recorder: recorder)
         )
 
@@ -126,6 +130,7 @@ struct AppContainerForegroundRefreshTests {
             repositoryFactory: factory,
             syncCoordinator: ForegroundSyncCoordinatorSpy(recorder: recorder),
             systemCatalogSynchronizer: catalog,
+            programArtworkService: ForegroundProgramArtworkServiceStub(),
             profileBootstrapper: ForegroundProfileBootstrapperSpy(recorder: recorder)
         )
 
@@ -143,6 +148,19 @@ struct AppContainerForegroundRefreshTests {
         #expect(catalog.refreshCount == 1)
         #expect(recorder.events == ["catalog", "push", "profile"])
     }
+}
+
+private struct ForegroundProgramArtworkServiceStub: ProgramArtworkServicing {
+    func fileURL(
+        programID: UUID,
+        artwork: ProgramArtwork
+    ) async throws -> URL {
+        throw ForegroundProgramArtworkError.unavailable
+    }
+}
+
+private enum ForegroundProgramArtworkError: Error {
+    case unavailable
 }
 
 @MainActor
