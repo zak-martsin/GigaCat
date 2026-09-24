@@ -118,4 +118,18 @@ struct DomainModelTests {
         #expect(authoredProgram.isDefaultCatalogProgram == false)
         #expect(authoredProgram.audience == .men)
     }
+
+    @Test
+    func programArtworkRequiresAPathAndPositiveRevision() throws {
+        let artwork = try ProgramArtwork(path: "program-id/hero.jpg", revision: 1)
+
+        #expect(artwork.path == "program-id/hero.jpg")
+        #expect(artwork.revision == 1)
+        #expect(throws: DomainValidationError.emptyValue(field: "artworkPath")) {
+            try ProgramArtwork(path: "  ", revision: 1)
+        }
+        #expect(throws: DomainValidationError.nonPositiveValue(field: "artworkRevision")) {
+            try ProgramArtwork(path: "program-id/hero.jpg", revision: 0)
+        }
+    }
 }

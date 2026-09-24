@@ -10,6 +10,7 @@ struct WorkoutProgram: Identifiable, Codable, Equatable, Sendable {
     let title: String
     let description: String
     let tags: [WorkoutProgramTag]
+    let artwork: ProgramArtwork?
 
     var isDefaultCatalogProgram: Bool {
         authorId == nil
@@ -22,7 +23,8 @@ struct WorkoutProgram: Identifiable, Codable, Equatable, Sendable {
         isActive: Bool = true,
         title: String,
         description: String,
-        tags: [WorkoutProgramTag] = []
+        tags: [WorkoutProgramTag] = [],
+        artwork: ProgramArtwork? = nil
     ) throws {
         guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw DomainValidationError.emptyValue(field: "title")
@@ -39,5 +41,6 @@ struct WorkoutProgram: Identifiable, Codable, Equatable, Sendable {
         self.title = title
         self.description = description
         self.tags = tags
+        self.artwork = artwork
     }
 }

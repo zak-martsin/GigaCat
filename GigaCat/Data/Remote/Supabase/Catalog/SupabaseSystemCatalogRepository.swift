@@ -65,7 +65,8 @@ private extension SupabaseSystemCatalogRepository {
             isActive: dto.isActive,
             title: dto.title,
             description: dto.description,
-            tags: dto.tags
+            tags: dto.tags,
+            artwork: try makeArtwork(dto)
         )
 
         return ProgramCatalogEntry(program: program)
@@ -78,6 +79,11 @@ private extension SupabaseSystemCatalogRepository {
             title: dto.title,
             orderIndex: dto.orderIndex
         )
+    }
+
+    static func makeArtwork(_ dto: WorkoutProgramCatalogDTO) throws -> ProgramArtwork? {
+        guard let path = dto.artworkPath else { return nil }
+        return try ProgramArtwork(path: path, revision: dto.artworkRevision)
     }
 
     static func makeDayExercise(
@@ -110,6 +116,8 @@ struct WorkoutProgramCatalogDTO: Decodable, Equatable, Sendable {
     let description: String
     let tags: [WorkoutProgramTag]
     let isActive: Bool
+    let artworkPath: String?
+    let artworkRevision: Int
     let workoutDays: [WorkoutDayCatalogDTO]
 
     enum CodingKeys: String, CodingKey {
@@ -120,6 +128,8 @@ struct WorkoutProgramCatalogDTO: Decodable, Equatable, Sendable {
         case description
         case tags
         case isActive = "is_active"
+        case artworkPath = "artwork_path"
+        case artworkRevision = "artwork_revision"
         case workoutDays = "workout_days"
     }
 }
