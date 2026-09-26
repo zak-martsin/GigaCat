@@ -53,6 +53,7 @@ final class AppContainer {
         let programDetailViewModel = ProgramDetailViewModel(
             userRepository: repositoryFactory.userRepository,
             service: programDetailService,
+            programArtworkService: programArtworkService,
             onDataChanged: dataChangeDispatcher.send
         )
         let catalogViewModel = CatalogViewModel(
@@ -60,6 +61,7 @@ final class AppContainer {
             defaultProgramCatalogRepository: repositoryFactory.defaultProgramCatalogRepository,
             workoutProgramRepository: repositoryFactory.workoutProgramRepository,
             workoutRepository: repositoryFactory.workoutRepository,
+            programArtworkService: programArtworkService,
             programDetailService: programDetailService,
             onDataChanged: dataChangeDispatcher.send
         )

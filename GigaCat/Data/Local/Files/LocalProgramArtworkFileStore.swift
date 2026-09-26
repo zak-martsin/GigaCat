@@ -154,10 +154,12 @@ private extension LocalProgramArtworkFileStore {
             return
         }
 
+        let destinationFileName = destinationURL.lastPathComponent
+
         fileURLs
             .filter {
-                $0 != destinationURL
-                && $0.lastPathComponent.hasPrefix("revision-")
+                $0.lastPathComponent.hasPrefix("revision-")
+                && $0.lastPathComponent != destinationFileName
             }
             .forEach { try? fileManager.removeItem(at: $0) }
     }

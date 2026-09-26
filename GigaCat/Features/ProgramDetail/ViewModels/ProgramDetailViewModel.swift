@@ -5,11 +5,13 @@ import Foundation
 @MainActor
 final class ProgramDetailViewModel: ObservableObject {
     @Published var presentedDetail: ProgramDetail?
+    @Published private(set) var artworkFileURL: URL?
     @Published var selectionConflictAlert: ProgramSelectionConflictAlert?
     @Published var errorMessage: String?
 
     private let userRepository: UserRepository
     private let service: ProgramDetailServicing
+    private let programArtworkService: any ProgramArtworkServicing
     private let onDataChanged: AppDataChangeHandler
     private var currentUser: User?
     private var pendingProgramID: UUID?
@@ -17,15 +19,18 @@ final class ProgramDetailViewModel: ObservableObject {
     init(
         userRepository: UserRepository,
         service: ProgramDetailServicing,
+        programArtworkService: any ProgramArtworkServicing,
         onDataChanged: @escaping AppDataChangeHandler = { _ in }
     ) {
         self.userRepository = userRepository
         self.service = service
+        self.programArtworkService = programArtworkService
         self.onDataChanged = onDataChanged
     }
 
     func present(programID: UUID) async {
         errorMessage = nil
+        artworkFileURL = nil
 
         do {
             guard let user = try await userRepository.currentUser() else {
@@ -34,7 +39,9 @@ final class ProgramDetailViewModel: ObservableObject {
             }
 
             currentUser = user
-            presentedDetail = try await service.makeDetail(for: programID, user: user)
+            let detail = try await service.makeDetail(for: programID, user: user)
+            presentedDetail = detail
+            await loadArtwork(for: detail)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -42,6 +49,7 @@ final class ProgramDetailViewModel: ObservableObject {
 
     func dismiss() {
         presentedDetail = nil
+        artworkFileURL = nil
     }
 
     func selectPresentedProgram() async {
@@ -86,6 +94,26 @@ final class ProgramDetailViewModel: ObservableObject {
     func cancelSelectionConflict() {
         pendingProgramID = nil
         selectionConflictAlert = nil
+    }
+
+    /// Resolves optional artwork independently from the program-detail content.
+    private func loadArtwork(for detail: ProgramDetail) async {
+        guard let artwork = detail.artwork else { return }
+
+        do {
+            let fileURL = try await programArtworkService.fileURL(
+                programID: detail.id,
+                artwork: artwork
+            )
+            guard !Task.isCancelled,
+                  presentedDetail?.id == detail.id,
+                  presentedDetail?.artwork == artwork else {
+                return
+            }
+            artworkFileURL = fileURL
+        } catch {
+            // Artwork is optional presentation; the detail keeps its placeholder on failure.
+        }
     }
 
     private func mutatePresentedSession(

@@ -288,6 +288,7 @@ private extension AppShellView {
     private func appProgramDetailSheet(_ detail: ProgramDetail) -> some View {
         ProgramDetailSheet(
             detail: detail,
+            artworkFileURL: programDetailViewModel.artworkFileURL,
             onSelectProgram: {
                 Task {
                     await programDetailViewModel.selectPresentedProgram()

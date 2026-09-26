@@ -57,6 +57,12 @@ The screen may show cached or bundled defaults while offline. The bundled produc
 the same stable identifiers and content as the Supabase seed; it is not sourced from preview mocks.
 A failed refresh does not replace content with an error if valid local content already exists.
 
+Visible program cards ask `CatalogViewModel` to resolve their versioned artwork through the shared
+artwork service. Cached files appear immediately, missing files are downloaded and stored locally,
+and an image failure leaves that card's placeholder visible without failing the catalog screen.
+The same cached artwork view is reused by program details opened from the catalog, workout screen,
+or mini player.
+
 Changing the baseline catalog is an explicit workflow: add a Supabase content migration, update the
 bundled JSON, compare the complete remote and bundled snapshots, then update the test fingerprint.
 

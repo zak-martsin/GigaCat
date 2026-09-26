@@ -73,6 +73,9 @@ struct CatalogView: View {
                                 await viewModel.presentProgramDetail(for: item)
                             }
                         }
+                        .task(id: item.artworkLoadIdentifier) {
+                            await viewModel.loadArtwork(for: item.id)
+                        }
                     }
                 }
             }
@@ -102,6 +105,7 @@ struct CatalogView: View {
     private func programDetailSheet(_ detail: ProgramDetail) -> some View {
         ProgramDetailSheet(
             detail: detail,
+            artworkFileURL: viewModel.artworkFileURL(for: detail.id),
             onSelectProgram: {
                 Task {
                     await viewModel.selectPresentedProgram()

@@ -77,6 +77,7 @@ struct ProgramDetailService: ProgramDetailServicing {
 
         return ProgramDetail(
             id: program.id,
+            artwork: program.artwork,
             title: program.title,
             description: program.description,
             dayCount: days.count,
