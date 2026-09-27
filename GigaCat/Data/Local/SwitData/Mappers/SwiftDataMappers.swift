@@ -84,7 +84,8 @@ enum WorkoutProgramMapper {
                             isActive: entity.isActive,
                             title: entity.title,
                             description: entity.programDescription,
-                            tags: entity.tags)
+                            tags: entity.tags,
+                            artwork: try makeArtwork(from: entity))
     }
 
     static func toEntity(_ domain: WorkoutProgram) -> WorkoutProgramEntity {
@@ -94,7 +95,9 @@ enum WorkoutProgramMapper {
                              isActive: domain.isActive,
                              title: domain.title,
                              description: domain.description,
-                             tags: domain.tags)
+                             tags: domain.tags,
+                             artworkPath: domain.artwork?.path,
+                             artworkRevision: domain.artwork?.revision ?? 0)
     }
 
     static func update(_ entity: WorkoutProgramEntity, from domain: WorkoutProgram) {
@@ -104,6 +107,19 @@ enum WorkoutProgramMapper {
         entity.title = domain.title
         entity.programDescription = domain.description
         entity.tags = domain.tags
+        entity.artworkPath = domain.artwork?.path
+        entity.artworkRevision = domain.artwork?.revision ?? 0
+    }
+
+    private static func makeArtwork(
+        from entity: WorkoutProgramEntity
+    ) throws -> ProgramArtwork? {
+        guard let path = entity.artworkPath else { return nil }
+
+        return try ProgramArtwork(
+            path: path,
+            revision: entity.artworkRevision
+        )
     }
 }
 

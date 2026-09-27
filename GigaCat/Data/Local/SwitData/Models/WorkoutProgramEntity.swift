@@ -17,6 +17,8 @@ final class WorkoutProgramEntity: Identifiable {
     var title: String
     var programDescription: String
     var tags: [WorkoutProgramTag]
+    var artworkPath: String?
+    var artworkRevision: Int = 0
 
     init(
         id: UUID,
@@ -25,7 +27,9 @@ final class WorkoutProgramEntity: Identifiable {
         isActive: Bool = true,
         title: String,
         description: String,
-        tags: [WorkoutProgramTag]
+        tags: [WorkoutProgramTag],
+        artworkPath: String? = nil,
+        artworkRevision: Int = 0
     ) {
         self.id = id
         self.authorId = authorId
@@ -34,5 +38,7 @@ final class WorkoutProgramEntity: Identifiable {
         self.title = title
         self.programDescription = description
         self.tags = tags
+        self.artworkPath = artworkPath
+        self.artworkRevision = artworkRevision
     }
 }

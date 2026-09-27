@@ -87,11 +87,19 @@ The UI always reloads through local repositories; it never renders Supabase DTOs
 leave the last valid local snapshot untouched. A bundled default snapshot supplies first-launch
 offline content. An empty or malformed remote snapshot is not allowed to replace usable local data.
 
+Program artwork follows the same local-first boundary. The catalog stores only versioned artwork
+metadata in SwiftData. `ProgramArtworkService` resolves that metadata through a device-local file
+cache and downloads a missing revision from Supabase Storage. Feature ViewModels receive the local
+file URL; Views never call Supabase and keep the shared placeholder when artwork is unavailable.
+
 The bundled snapshot is production data owned by `Data/Local/SwitData/Bootstrap`; production
 composition must never depend on `PreviewSupport` or `MockSeedData`. Its stable identifiers and
 catalog content mirror the Supabase seed so the first successful refresh updates the same records
 instead of replacing preview-only programs. `MockSeedData` may add users, sessions, and logs for
 previews and tests, but it consumes the production catalog rather than defining another one.
+Bootstrap also backfills missing artwork metadata for those stable bundled programs so development
+installations created before artwork support do not need to erase user-owned local data.
+This targeted repair is not a replacement for versioned migrations of future released schemas.
 
 Fixture construction is deterministic and fail-fast: callers may supply a fixed date, and invalid
 domain values throw instead of being silently removed with `try?`.

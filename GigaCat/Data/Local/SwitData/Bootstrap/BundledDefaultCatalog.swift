@@ -44,6 +44,8 @@ private extension BundledDefaultCatalog {
         let title: String
         let description: String
         let tags: [WorkoutProgramTag]
+        let artworkPath: String?
+        let artworkRevision: Int
 
         func makeDomain() throws -> WorkoutProgram {
             try WorkoutProgram(
@@ -53,8 +55,14 @@ private extension BundledDefaultCatalog {
                 isActive: isActive,
                 title: title,
                 description: description,
-                tags: tags
+                tags: tags,
+                artwork: try makeArtwork()
             )
+        }
+
+        private func makeArtwork() throws -> ProgramArtwork? {
+            guard let artworkPath else { return nil }
+            return try ProgramArtwork(path: artworkPath, revision: artworkRevision)
         }
     }
 

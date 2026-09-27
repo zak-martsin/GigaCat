@@ -13,6 +13,11 @@ struct BundledDefaultCatalogTests {
             MockSeedData.uuid("20000000-0000-0000-0000-000000000002")
         ])
         #expect(catalog.programs.map(\.title) == ["Сплит для мужчин", "Сплит для женщин"])
+        #expect(catalog.programs.map(\.artwork?.revision) == [2, 2])
+        #expect(catalog.programs.map(\.artwork?.path) == [
+            "20000000-0000-0000-0000-000000000001/hero.png",
+            "20000000-0000-0000-0000-000000000002/hero.png"
+        ])
         #expect(catalog.workoutDays.count == 6)
         #expect(catalog.dayExercises.count == 50)
         #expect(catalog.exercises.count == 61)
@@ -37,7 +42,7 @@ struct BundledDefaultCatalogTests {
             .map { String(format: "%02x", $0) }
             .joined()
 
-        #expect(fingerprint == "2c3aad2332c3c69542342d85a277744d9f85f428d3aae2a0664a2b0faedb2e0a")
+        #expect(fingerprint == "c9adcff2341492c4f2100acf3f05de05c6fff608f2516996048320cc9fc2efe7")
     }
 
     @Test

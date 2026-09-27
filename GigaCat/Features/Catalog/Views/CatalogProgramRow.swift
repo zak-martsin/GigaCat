@@ -7,7 +7,11 @@ struct CatalogProgramRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: AppSpacing.md) {
-                ProgramArtworkPlaceholderView(height: 96, width: 96)
+                ProgramArtworkView(
+                    fileURL: item.artworkFileURL,
+                    height: AppControlSize.catalogProgramArtwork,
+                    width: AppControlSize.catalogProgramArtwork
+                )
 
                 VStack(alignment: .leading, spacing: AppSpacing.sm) {
                     HStack(alignment: .firstTextBaseline, spacing: AppSpacing.sm) {

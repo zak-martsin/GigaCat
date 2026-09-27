@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import GigaCat
 
@@ -15,12 +16,14 @@ struct ProgramDetailViewModelTests {
                 defaultProgramCatalogRepository: factory.defaultProgramCatalogRepository,
                 workoutProgramRepository: factory.workoutProgramRepository,
                 workoutRepository: factory.workoutRepository
-            )
+            ),
+            programArtworkService: ProgramDetailArtworkServiceStub()
         )
 
         await viewModel.present(programID: programID)
 
         #expect(viewModel.presentedDetail?.id == programID)
+        #expect(viewModel.artworkFileURL == URL(fileURLWithPath: "/cached/program.jpg"))
         #expect(viewModel.errorMessage == nil)
     }
 
@@ -38,6 +41,7 @@ struct ProgramDetailViewModelTests {
                 workoutProgramRepository: factory.workoutProgramRepository,
                 workoutRepository: factory.workoutRepository
             ),
+            programArtworkService: ProgramDetailArtworkServiceStub(),
             onDataChanged: { changes.append($0) }
         )
 
@@ -46,5 +50,14 @@ struct ProgramDetailViewModelTests {
 
         #expect(changes == [.selectedProgram])
         #expect(viewModel.presentedDetail == nil)
+    }
+}
+
+private struct ProgramDetailArtworkServiceStub: ProgramArtworkServicing {
+    func fileURL(
+        programID: UUID,
+        artwork: ProgramArtwork
+    ) async throws -> URL {
+        URL(fileURLWithPath: "/cached/program.jpg")
     }
 }

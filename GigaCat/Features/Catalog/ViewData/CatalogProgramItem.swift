@@ -9,4 +9,10 @@ struct CatalogProgramItem: Identifiable, Equatable {
     let exerciseCount: Int
     let isSelected: Bool
     let tags: [WorkoutProgramTag]
+    let artwork: ProgramArtwork?
+    var artworkFileURL: URL?
+
+    var artworkLoadIdentifier: String? {
+        artwork.map { "\($0.path)#\($0.revision)" }
+    }
 }

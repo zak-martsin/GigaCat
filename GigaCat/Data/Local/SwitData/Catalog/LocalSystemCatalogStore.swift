@@ -179,6 +179,8 @@ private extension WorkoutProgramEntity {
             && title == program.title
             && programDescription == program.description
             && tags == program.tags
+            && artworkPath == program.artwork?.path
+            && artworkRevision == (program.artwork?.revision ?? 0)
     }
 }
 

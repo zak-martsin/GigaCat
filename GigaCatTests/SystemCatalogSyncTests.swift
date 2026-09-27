@@ -13,6 +13,7 @@ struct SupabaseSystemCatalogRepositoryTests {
             "id": "\(identifiers.programID)", "author_id": null,
             "target_audience": "men", "title": "Split", "description": "Three days",
             "tags": ["gym", "strength"], "is_active": true,
+            "artwork_path": "\(identifiers.programID)/hero.jpg", "artwork_revision": 1,
             "workout_days": [{
               "id": "\(identifiers.dayID)", "program_id": "\(identifiers.programID)",
               "title": "Day 1", "order_index": 0,
@@ -34,6 +35,8 @@ struct SupabaseSystemCatalogRepositoryTests {
         let snapshot = try JSONDecoder().decode(SystemCatalogSnapshotDTO.self, from: Data(json.utf8))
 
         #expect(snapshot.programs.first?.workoutDays.first?.dayExercises.first?.targetSets == 2)
+        #expect(snapshot.programs.first?.artworkPath == "\(identifiers.programID)/hero.jpg")
+        #expect(snapshot.programs.first?.artworkRevision == 1)
         #expect(snapshot.exercises.first?.id == identifiers.exerciseID)
     }
 
@@ -63,6 +66,8 @@ struct SupabaseSystemCatalogRepositoryTests {
 
         #expect(snapshot.entries.count == 1)
         #expect(snapshot.entries.first?.program.audience == .men)
+        #expect(snapshot.entries.first?.program.artwork?.path == "\(identifiers.programID)/hero.jpg")
+        #expect(snapshot.entries.first?.program.artwork?.revision == 1)
         #expect(snapshot.workoutDays.map(\.id) == [identifiers.dayID])
         #expect(snapshot.dayExercises.map(\.id) == [identifiers.dayExerciseID])
         #expect(snapshot.dayExercises.first?.targetSets == 2)
@@ -163,6 +168,11 @@ struct LocalSystemCatalogStoreTests {
             currentUserIDProvider: CurrentUserContext()
         )
         let catalog = try await factory.defaultProgramCatalogRepository.fetchProgramCatalog()
+        let artworkRevisionChanged = try store.apply(
+            identifiers.snapshot(artworkRevision: 2)
+        )
+        let updatedCatalog = try await factory.defaultProgramCatalogRepository
+            .fetchProgramCatalog()
         let days = try await factory.workoutProgramRepository.fetchWorkoutDays(
             programId: identifiers.programID
         )
@@ -171,6 +181,13 @@ struct LocalSystemCatalogStoreTests {
         #expect(catalog.map(\.program.title) == ["Updated title"])
         #expect(firstApplyChangedCatalog)
         #expect(!secondApplyChangedCatalog)
+        #expect(catalog.first?.program.artwork?.revision == 1)
+        #expect(artworkRevisionChanged)
+        #expect(updatedCatalog.first?.program.artwork?.revision == 2)
+        #expect(
+            updatedCatalog.first?.program.artwork?.path
+                == "\(identifiers.programID)/hero.jpg"
+        )
         #expect(!catalog.map(\.id).contains(personalProgram.id))
         #expect(days.map(\.id) == [identifiers.dayID])
         #expect(storedDays.first { $0.id == staleDayID }?.isActive == false)
@@ -224,6 +241,8 @@ private struct CatalogTestIdentifiers {
             description: "Updated description",
             tags: [.gym, .strength],
             isActive: true,
+            artworkPath: "\(programID)/hero.jpg",
+            artworkRevision: 1,
             workoutDays: [
                 WorkoutDayCatalogDTO(
                     id: dayID,
@@ -253,7 +272,7 @@ private struct CatalogTestIdentifiers {
         )
     }
 
-    func snapshot() throws -> SystemCatalogSnapshot {
+    func snapshot(artworkRevision: Int = 1) throws -> SystemCatalogSnapshot {
         SystemCatalogSnapshot(
             entries: [
                 ProgramCatalogEntry(
@@ -262,7 +281,11 @@ private struct CatalogTestIdentifiers {
                         audience: .men,
                         title: "Updated title",
                         description: "Updated description",
-                        tags: [.gym, .strength]
+                        tags: [.gym, .strength],
+                        artwork: try ProgramArtwork(
+                            path: "\(programID)/hero.jpg",
+                            revision: artworkRevision
+                        )
                     )
                 )
             ],

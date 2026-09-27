@@ -15,6 +15,7 @@ final class CatalogViewModel: ObservableObject {
     private let defaultProgramCatalogRepository: DefaultProgramCatalogRepository
     private let presentationService: CatalogPresentationServicing
     private let programDetailService: ProgramDetailServicing
+    private let programArtworkService: any ProgramArtworkServicing
     private let onDataChanged: AppDataChangeHandler
     private var loadTracker = DataLoadTracker()
     private var currentUser: User?
@@ -25,12 +26,14 @@ final class CatalogViewModel: ObservableObject {
         defaultProgramCatalogRepository: DefaultProgramCatalogRepository,
         workoutProgramRepository: WorkoutProgramRepository,
         workoutRepository: WorkoutRepository,
+        programArtworkService: any ProgramArtworkServicing,
         presentationService: CatalogPresentationServicing? = nil,
         programDetailService: ProgramDetailServicing? = nil,
         onDataChanged: @escaping AppDataChangeHandler = { _ in }
     ) {
         self.userRepository = userRepository
         self.defaultProgramCatalogRepository = defaultProgramCatalogRepository
+        self.programArtworkService = programArtworkService
         self.presentationService = presentationService ?? CatalogPresentationService(
             workoutProgramRepository: workoutProgramRepository
         )
@@ -82,10 +85,11 @@ final class CatalogViewModel: ObservableObject {
 
                 currentUser = user
                 let catalog = try await defaultProgramCatalogRepository.fetchProgramCatalog()
-                programs = try await presentationService.makeItems(
+                let loadedPrograms = try await presentationService.makeItems(
                     from: catalog,
                     selectedProgramID: user.selectedProgramId
                 )
+                programs = preservingArtworkFileURLs(in: loadedPrograms)
 
                 if !availableFilters.contains(selectedFilter) {
                     selectedFilter = .all
@@ -102,6 +106,30 @@ final class CatalogViewModel: ObservableObject {
         selectedFilter = filter
     }
 
+    /// Resolves one visible program's artwork without making image failure a catalog failure.
+    func loadArtwork(for programID: UUID) async {
+        guard let item = programs.first(where: { $0.id == programID }),
+              item.artworkFileURL == nil,
+              let artwork = item.artwork else {
+            return
+        }
+
+        do {
+            let fileURL = try await programArtworkService.fileURL(
+                programID: programID,
+                artwork: artwork
+            )
+            guard !Task.isCancelled,
+                  let index = programs.firstIndex(where: { $0.id == programID }),
+                  programs[index].artwork == artwork else {
+                return
+            }
+            programs[index].artworkFileURL = fileURL
+        } catch {
+            // Artwork is optional presentation; the card keeps its placeholder on failure.
+        }
+    }
+
     func presentProgramDetail(for item: CatalogProgramItem) async {
         guard let currentUser else { return }
 
@@ -110,6 +138,7 @@ final class CatalogViewModel: ObservableObject {
                 for: item.id,
                 user: currentUser
             )
+            await loadArtwork(for: item.id)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -117,6 +146,10 @@ final class CatalogViewModel: ObservableObject {
 
     func dismissProgramDetail() {
         presentedProgramDetail = nil
+    }
+
+    func artworkFileURL(for programID: UUID) -> URL? {
+        programs.first(where: { $0.id == programID })?.artworkFileURL
     }
 
     func selectPresentedProgram() async {
@@ -201,6 +234,21 @@ final class CatalogViewModel: ObservableObject {
             await load()
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    private func preservingArtworkFileURLs(
+        in loadedPrograms: [CatalogProgramItem]
+    ) -> [CatalogProgramItem] {
+        loadedPrograms.map { loadedItem in
+            guard let currentItem = programs.first(where: { $0.id == loadedItem.id }),
+                  currentItem.artwork == loadedItem.artwork else {
+                return loadedItem
+            }
+
+            var item = loadedItem
+            item.artworkFileURL = currentItem.artworkFileURL
+            return item
         }
     }
 }

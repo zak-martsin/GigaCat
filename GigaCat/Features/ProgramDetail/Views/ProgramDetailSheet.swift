@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProgramDetailSheet: View {
     let detail: ProgramDetail
+    let artworkFileURL: URL?
     let onSelectProgram: () -> Void
     let onCompleteSession: () -> Void
     let onDeleteSession: () -> Void
@@ -10,7 +11,10 @@ struct ProgramDetailSheet: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppSpacing.lg) {
-                ProgramArtworkPlaceholderView(height: 240)
+                ProgramArtworkView(
+                    fileURL: artworkFileURL,
+                    height: AppControlSize.programDetailArtworkHeight
+                )
 
                 VStack(alignment: .leading, spacing: AppSpacing.sm) {
                     Text(detail.title)

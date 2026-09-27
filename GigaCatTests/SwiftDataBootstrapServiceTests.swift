@@ -33,6 +33,8 @@ struct SwiftDataBootstrapServiceTests {
         let existingProgram = WorkoutProgramMapper.toEntity(try #require(catalog.programs.first))
         let existingExercise = ExerciseMapper.toEntity(try #require(catalog.exercises.first))
         existingProgram.title = "Locally edited title"
+        existingProgram.artworkPath = nil
+        existingProgram.artworkRevision = 0
 
         stack.mainContext.insert(existingProgram)
         stack.mainContext.insert(existingExercise)
@@ -48,7 +50,11 @@ struct SwiftDataBootstrapServiceTests {
         try expectCatalogCounts(in: stack.mainContext, match: catalog)
 
         let programs = try stack.mainContext.fetch(FetchDescriptor<WorkoutProgramEntity>())
-        #expect(programs.first { $0.id == existingProgram.id }?.title == "Locally edited title")
+        let storedProgram = try #require(programs.first { $0.id == existingProgram.id })
+        let bundledArtwork = try #require(catalog.programs.first?.artwork)
+        #expect(storedProgram.title == "Locally edited title")
+        #expect(storedProgram.artworkPath == bundledArtwork.path)
+        #expect(storedProgram.artworkRevision == bundledArtwork.revision)
     }
 }
 

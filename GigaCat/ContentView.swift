@@ -15,6 +15,7 @@ struct ContentView: View {
         userID: UUID,
         syncCoordinator: any SyncCoordinating,
         systemCatalogSynchronizer: any SystemCatalogSyncing,
+        programArtworkService: any ProgramArtworkServicing,
         profileBootstrapper: any ProfileBootstrapping,
         profileSyncRecoveryService: any ProfileSyncRecovering,
         onSignOut: @escaping () -> Void = {}
@@ -24,6 +25,7 @@ struct ContentView: View {
             userID: userID,
             syncCoordinator: syncCoordinator,
             systemCatalogSynchronizer: systemCatalogSynchronizer,
+            programArtworkService: programArtworkService,
             profileBootstrapper: profileBootstrapper,
             profileSyncRecoveryService: profileSyncRecoveryService,
             onSignOut: onSignOut

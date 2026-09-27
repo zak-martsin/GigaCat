@@ -15,6 +15,12 @@ enum AppCompositionRoot {
         let systemCatalogRemoteRepository = SupabaseSystemCatalogRepository(
             client: supabaseStack.client
         )
+        let programArtworkService = ProgramArtworkService(
+            downloader: SupabaseProgramArtworkDownloader(
+                client: supabaseStack.client
+            ),
+            fileStore: try LocalProgramArtworkFileStore()
+        )
         let profileBootstrapService = ProfileBootstrapService(
             remoteRepository: profileRemoteRepository,
             userRepository: repositoryFactory.userRepository,
@@ -47,6 +53,7 @@ enum AppCompositionRoot {
             profileSyncRecoveryService: profileSyncRecoveryService,
             syncCoordinator: syncCoordinator,
             systemCatalogSyncService: systemCatalogSyncService,
+            programArtworkService: programArtworkService,
             currentUserContext: currentUserContext
         )
     }
@@ -76,5 +83,6 @@ struct AppDependencies {
     let profileSyncRecoveryService: ProfileSyncRecoveryService
     let syncCoordinator: SyncCoordinator
     let systemCatalogSyncService: SystemCatalogSyncService
+    let programArtworkService: ProgramArtworkService
     let currentUserContext: CurrentUserContext
 }

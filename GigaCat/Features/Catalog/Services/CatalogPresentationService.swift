@@ -55,7 +55,9 @@ struct CatalogPresentationService: CatalogPresentationServicing {
                     dayCount: days.count,
                     exerciseCount: exerciseCount,
                     isSelected: selectedProgramID == entry.program.id,
-                    tags: entry.program.tags
+                    tags: entry.program.tags,
+                    artwork: entry.program.artwork,
+                    artworkFileURL: nil
                 )
             )
         }
