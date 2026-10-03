@@ -87,18 +87,28 @@ The UI always reloads through local repositories; it never renders Supabase DTOs
 leave the last valid local snapshot untouched. A bundled default snapshot supplies first-launch
 offline content. An empty or malformed remote snapshot is not allowed to replace usable local data.
 
-Program artwork follows the same local-first boundary. The catalog stores only versioned artwork
-metadata in SwiftData. `ProgramArtworkService` resolves that metadata through a device-local file
-cache and downloads a missing revision from Supabase Storage. Feature ViewModels receive the local
-file URL; Views never call Supabase and keep the shared placeholder when artwork is unavailable.
+Catalog artwork follows the same local-first boundary. Program and exercise records store only an
+optional `ArtworkReference` (`path` and positive `revision`) in SwiftData. The shared
+`ArtworkService` resolves that metadata through a device-local file cache and downloads a missing
+revision from the owner-specific Supabase Storage bucket. Program files retain the existing
+`ProgramArtwork` cache root; exercise files use `ExerciseArtwork`. Feature ViewModels receive only
+local file URLs, Views never call Supabase, and a missing or failed image keeps the shared
+placeholder without failing the feature.
+
+Artwork requests are lazy. Catalog cards request program artwork when visible; Workout uses a
+`LazyVStack`, and each visible exercise row starts its own cancellable task. Exercise details request
+only the selected exercise. The actor service coalesces concurrent requests by owner type, owner ID,
+path, and revision, so a list row and details cannot download the same revision twice. `ArtworkView`
+decodes and downsamples the local file through Image I/O outside the main actor. Program artwork is
+cropped with aspect fill, while transparent exercise artwork uses aspect fit.
 
 The bundled snapshot is production data owned by `Data/Local/SwitData/Bootstrap`; production
 composition must never depend on `PreviewSupport` or `MockSeedData`. Its stable identifiers and
 catalog content mirror the Supabase seed so the first successful refresh updates the same records
 instead of replacing preview-only programs. `MockSeedData` may add users, sessions, and logs for
 previews and tests, but it consumes the production catalog rather than defining another one.
-Bootstrap also backfills missing artwork metadata for those stable bundled programs so development
-installations created before artwork support do not need to erase user-owned local data.
+Bootstrap also backfills missing artwork metadata for stable bundled programs and exercises so
+development installations created before artwork support do not need to erase user-owned local data.
 This targeted repair is not a replacement for versioned migrations of future released schemas.
 
 Fixture construction is deterministic and fail-fast: callers may supply a fixed date, and invalid
