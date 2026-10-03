@@ -27,7 +27,9 @@ struct SupabaseSystemCatalogRepositoryTests {
           }],
           "exercises": [{
             "id": "\(identifiers.exerciseID)", "name": "Bench press",
-            "muscle_group": "chest"
+            "muscle_group": "chest",
+            "artwork_path": "\(identifiers.exerciseID)/main.png",
+            "artwork_revision": 1
           }]
         }
         """
@@ -38,6 +40,8 @@ struct SupabaseSystemCatalogRepositoryTests {
         #expect(snapshot.programs.first?.artworkPath == "\(identifiers.programID)/hero.jpg")
         #expect(snapshot.programs.first?.artworkRevision == 1)
         #expect(snapshot.exercises.first?.id == identifiers.exerciseID)
+        #expect(snapshot.exercises.first?.artworkPath == "\(identifiers.exerciseID)/main.png")
+        #expect(snapshot.exercises.first?.artworkRevision == 1)
     }
 
     @Test
@@ -73,6 +77,8 @@ struct SupabaseSystemCatalogRepositoryTests {
         #expect(snapshot.dayExercises.first?.targetSets == 2)
         #expect(snapshot.dayExercises.first?.targetReps == nil)
         #expect(snapshot.exercises.map(\.id) == [identifiers.exerciseID])
+        #expect(snapshot.exercises.first?.artwork?.path == "\(identifiers.exerciseID)/main.png")
+        #expect(snapshot.exercises.first?.artwork?.revision == 1)
     }
 }
 
@@ -198,6 +204,26 @@ struct LocalSystemCatalogStoreTests {
             try stack.mainContext.fetchCount(FetchDescriptor<WorkoutDayExerciseEntity>()) == 1
         )
     }
+
+    @Test
+    func applyingSnapshotPersistsExerciseArtwork() async throws {
+        let stack = try SwiftDataStack(isStoredInMemoryOnly: true)
+        let identifiers = CatalogTestIdentifiers()
+        let store = LocalSystemCatalogStore(context: stack.mainContext)
+
+        _ = try store.apply(identifiers.snapshot())
+
+        let factory = LocalRepositoryFactory(
+            stack: stack,
+            currentUserIDProvider: CurrentUserContext()
+        )
+        let exercise = try await factory.workoutProgramRepository.fetchExercise(
+            id: identifiers.exerciseID
+        )
+
+        #expect(exercise?.artwork?.path == "\(identifiers.exerciseID)/main.png")
+        #expect(exercise?.artwork?.revision == 1)
+    }
 }
 
 private struct SupabaseSystemCatalogClientStub: SupabaseSystemCatalogClient {
@@ -268,7 +294,9 @@ private struct CatalogTestIdentifiers {
         ExerciseCatalogDTO(
             id: exerciseID,
             name: "Bench press",
-            muscleGroup: .chest
+            muscleGroup: .chest,
+            artworkPath: "\(exerciseID)/main.png",
+            artworkRevision: 1
         )
     }
 
@@ -282,7 +310,7 @@ private struct CatalogTestIdentifiers {
                         title: "Updated title",
                         description: "Updated description",
                         tags: [.gym, .strength],
-                        artwork: try ProgramArtwork(
+                        artwork: try ArtworkReference(
                             path: "\(programID)/hero.jpg",
                             revision: artworkRevision
                         )
@@ -309,7 +337,11 @@ private struct CatalogTestIdentifiers {
                 try Exercise(
                     id: exerciseID,
                     name: "Bench press",
-                    muscleGroup: .chest
+                    muscleGroup: .chest,
+                    artwork: try ArtworkReference(
+                        path: "\(exerciseID)/main.png",
+                        revision: 1
+                    )
                 )
             ]
         )

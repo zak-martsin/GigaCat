@@ -5,11 +5,13 @@ struct Exercise: Identifiable, Codable, Equatable, Sendable {
     let id: UUID
     let name: String
     let muscleGroup: ExerciseMuscleGroup
+    let artwork: ArtworkReference?
 
     init(
         id: UUID = UUID(),
         name: String,
-        muscleGroup: ExerciseMuscleGroup
+        muscleGroup: ExerciseMuscleGroup,
+        artwork: ArtworkReference? = nil
     ) throws {
         guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw DomainValidationError.emptyValue(field: "name")
@@ -18,5 +20,6 @@ struct Exercise: Identifiable, Codable, Equatable, Sendable {
         self.id = id
         self.name = name
         self.muscleGroup = muscleGroup
+        self.artwork = artwork
     }
 }

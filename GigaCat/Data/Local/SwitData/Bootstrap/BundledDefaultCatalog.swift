@@ -106,9 +106,24 @@ private extension BundledDefaultCatalog {
         let id: UUID
         let name: String
         let muscleGroup: ExerciseMuscleGroup
+        let artworkPath: String?
+        let artworkRevision: Int?
 
         func makeDomain() throws -> Exercise {
-            try Exercise(id: id, name: name, muscleGroup: muscleGroup)
+            try Exercise(
+                id: id,
+                name: name,
+                muscleGroup: muscleGroup,
+                artwork: try makeArtwork()
+            )
+        }
+
+        private func makeArtwork() throws -> ArtworkReference? {
+            guard let artworkPath else { return nil }
+            return try ArtworkReference(
+                path: artworkPath,
+                revision: artworkRevision ?? 0
+            )
         }
     }
 

@@ -17,6 +17,7 @@ struct SwiftDataBootstrapService {
         var didChange = false
 
         if try insertMissingExercises() { didChange = true }
+        if try backfillMissingExerciseArtwork() { didChange = true }
         if try insertMissingPrograms() { didChange = true }
         if try backfillMissingProgramArtwork() { didChange = true }
         if try insertMissingWorkoutDays() { didChange = true }
@@ -38,6 +39,28 @@ private extension SwiftDataBootstrapService {
         let missing = catalog.exercises.filter { !existingIDs.contains($0.id) }
         missing.forEach { context.insert(ExerciseMapper.toEntity($0)) }
         return !missing.isEmpty
+    }
+
+    /// Repairs artwork metadata added after a bundled exercise was first stored.
+    func backfillMissingExerciseArtwork() throws -> Bool {
+        let bundledExercisesByID = Dictionary(
+            uniqueKeysWithValues: catalog.exercises.map { ($0.id, $0) }
+        )
+        let entities = try context.fetch(FetchDescriptor<ExerciseEntity>())
+        var didChange = false
+
+        for entity in entities {
+            guard entity.artworkPath == nil || entity.artworkRevision <= 0,
+                  let artwork = bundledExercisesByID[entity.id]?.artwork else {
+                continue
+            }
+
+            entity.artworkPath = artwork.path
+            entity.artworkRevision = artwork.revision
+            didChange = true
+        }
+
+        return didChange
     }
 
     func insertMissingPrograms() throws -> Bool {

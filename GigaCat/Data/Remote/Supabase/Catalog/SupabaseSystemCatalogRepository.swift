@@ -103,8 +103,14 @@ private extension SupabaseSystemCatalogRepository {
         try Exercise(
             id: dto.id,
             name: dto.name,
-            muscleGroup: dto.muscleGroup
+            muscleGroup: dto.muscleGroup,
+            artwork: try makeArtwork(dto)
         )
+    }
+
+    static func makeArtwork(_ dto: ExerciseCatalogDTO) throws -> ArtworkReference? {
+        guard let path = dto.artworkPath else { return nil }
+        return try ArtworkReference(path: path, revision: dto.artworkRevision)
     }
 }
 
@@ -172,10 +178,28 @@ struct ExerciseCatalogDTO: Decodable, Equatable, Sendable {
     let id: UUID
     let name: String
     let muscleGroup: ExerciseMuscleGroup
+    let artworkPath: String?
+    let artworkRevision: Int
+
+    init(
+        id: UUID,
+        name: String,
+        muscleGroup: ExerciseMuscleGroup,
+        artworkPath: String? = nil,
+        artworkRevision: Int = 0
+    ) {
+        self.id = id
+        self.name = name
+        self.muscleGroup = muscleGroup
+        self.artworkPath = artworkPath
+        self.artworkRevision = artworkRevision
+    }
 
     enum CodingKeys: String, CodingKey {
         case id
         case name
         case muscleGroup = "muscle_group"
+        case artworkPath = "artwork_path"
+        case artworkRevision = "artwork_revision"
     }
 }

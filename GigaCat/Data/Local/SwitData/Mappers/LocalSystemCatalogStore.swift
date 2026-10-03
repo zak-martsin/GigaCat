@@ -206,6 +206,9 @@ private extension WorkoutDayExerciseEntity {
 
 private extension ExerciseEntity {
     func matches(_ exercise: Exercise) -> Bool {
-        name == exercise.name && muscleGroup == exercise.muscleGroup
+        name == exercise.name
+            && muscleGroup == exercise.muscleGroup
+            && artworkPath == exercise.artwork?.path
+            && artworkRevision == (exercise.artwork?.revision ?? 0)
     }
 }

@@ -56,6 +56,44 @@ struct SwiftDataBootstrapServiceTests {
         #expect(storedProgram.artworkPath == bundledArtwork.path)
         #expect(storedProgram.artworkRevision == bundledArtwork.revision)
     }
+
+    @Test
+    func bootstrapBackfillsMissingExerciseArtwork() throws {
+        let stack = try SwiftDataStack(isStoredInMemoryOnly: true)
+        let bundledCatalog = try BundledDefaultCatalog.load()
+        let exercise = try #require(bundledCatalog.exercises.first)
+        let artwork = try ArtworkReference(
+            path: "\(exercise.id)/main.png",
+            revision: 1
+        )
+        let exerciseWithArtwork = try Exercise(
+            id: exercise.id,
+            name: exercise.name,
+            muscleGroup: exercise.muscleGroup,
+            artwork: artwork
+        )
+        let catalog = WorkoutCatalogSeed(
+            programs: bundledCatalog.programs,
+            workoutDays: bundledCatalog.workoutDays,
+            dayExercises: bundledCatalog.dayExercises,
+            exercises: [exerciseWithArtwork] + Array(bundledCatalog.exercises.dropFirst())
+        )
+        stack.mainContext.insert(ExerciseMapper.toEntity(exercise))
+        try stack.mainContext.save()
+
+        let didChange = try SwiftDataBootstrapService(
+            context: stack.mainContext,
+            catalog: catalog
+        ).bootstrapIfNeeded()
+        let storedExercise = try #require(
+            stack.mainContext.fetch(FetchDescriptor<ExerciseEntity>())
+                .first { $0.id == exercise.id }
+        )
+
+        #expect(didChange)
+        #expect(storedExercise.artworkPath == artwork.path)
+        #expect(storedExercise.artworkRevision == artwork.revision)
+    }
 }
 
 @MainActor
