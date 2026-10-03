@@ -76,9 +76,12 @@ struct WorkoutViewDataMapperTests {
             viewData?.selectedDay.exercises == [
                 WorkoutExerciseViewData(
                     id: fixture.dayExercise.id,
+                    exerciseID: fixture.exercise.id,
                     name: fixture.exercise.name,
                     targetSets: 4,
-                    targetReps: 6
+                    targetReps: 6,
+                    artwork: nil,
+                    artworkFileURL: nil
                 )
             ]
         )
@@ -95,6 +98,23 @@ struct WorkoutViewDataMapperTests {
 
         #expect(viewData == nil)
     }
+
+    @Test
+    func mapsExerciseArtworkMetadataAndResolvedURL() throws {
+        let fixture = try Fixture(hasArtwork: true)
+        let fileURL = URL(filePath: "/tmp/deadlift.png")
+
+        let viewData = WorkoutViewDataMapper().map(
+            context: fixture.context,
+            selectedDayID: fixture.firstDay.id,
+            artworkFileURLs: [fixture.exercise.id: fileURL]
+        )
+        let exercise = try #require(viewData?.selectedDay.exercises.first)
+
+        #expect(exercise.artwork == fixture.exercise.artwork)
+        #expect(exercise.artworkFileURL == fileURL)
+        #expect(exercise.artworkLoadIdentifier?.exerciseID == fixture.exercise.id)
+    }
 }
 
 private extension WorkoutViewDataMapperTests {
@@ -105,7 +125,7 @@ private extension WorkoutViewDataMapperTests {
         let dayExercise: WorkoutDayExercise
         let context: WorkoutContext
 
-        init() throws {
+        init(hasArtwork: Bool = false) throws {
             let program = try WorkoutProgram(
                 title: "Strength Program",
                 description: "A focused strength program."
@@ -122,7 +142,10 @@ private extension WorkoutViewDataMapperTests {
             )
             exercise = try Exercise(
                 name: "Deadlift",
-                muscleGroup: .fullBody
+                muscleGroup: .fullBody,
+                artwork: hasArtwork
+                    ? ArtworkReference(path: "exercise/main.png", revision: 1)
+                    : nil
             )
             dayExercise = try WorkoutDayExercise(
                 workoutDayId: firstDay.id,

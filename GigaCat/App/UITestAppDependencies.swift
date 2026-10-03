@@ -11,7 +11,7 @@ struct UITestAppDependencies {
     let userID: UUID
     let syncCoordinator: UITestSyncCoordinator
     let systemCatalogSynchronizer: UITestSystemCatalogSynchronizer
-    let programArtworkService: UITestProgramArtworkService
+    let artworkService: UITestArtworkService
     let profileBootstrapper: UITestProfileBootstrapper
     let profileSyncRecoveryService: UITestProfileSyncRecoveryService
 
@@ -26,7 +26,7 @@ struct UITestAppDependencies {
             userID: MockSeedData.uuid("11111111-1111-1111-1111-111111111111"),
             syncCoordinator: UITestSyncCoordinator(),
             systemCatalogSynchronizer: UITestSystemCatalogSynchronizer(),
-            programArtworkService: UITestProgramArtworkService(),
+            artworkService: UITestArtworkService(),
             profileBootstrapper: UITestProfileBootstrapper(),
             profileSyncRecoveryService: UITestProfileSyncRecoveryService(
                 status: ProcessInfo.processInfo.arguments.contains(failedSyncLaunchArgument)
@@ -51,16 +51,16 @@ final class UITestSystemCatalogSynchronizer: SystemCatalogSyncing {
     }
 }
 
-struct UITestProgramArtworkService: ProgramArtworkServicing {
+struct UITestArtworkService: ArtworkServicing {
     func fileURL(
-        programID: UUID,
-        artwork: ProgramArtwork
+        for owner: ArtworkOwner,
+        artwork: ArtworkReference
     ) async throws -> URL {
-        throw UITestProgramArtworkError.unavailable
+        throw UITestArtworkError.unavailable
     }
 }
 
-private enum UITestProgramArtworkError: Error {
+private enum UITestArtworkError: Error {
     case unavailable
 }
 

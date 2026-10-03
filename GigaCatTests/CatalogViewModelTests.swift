@@ -48,7 +48,7 @@ struct CatalogViewModelTests {
         let artworkService = CatalogProgramArtworkServiceSpy(fileURL: expectedURL)
         let viewModel = makeViewModel(
             factory: factory,
-            programArtworkService: artworkService
+            artworkService: artworkService
         )
 
         await viewModel.load()
@@ -63,7 +63,7 @@ struct CatalogViewModelTests {
         #expect(
             await artworkService.lastRequest()
                 == CatalogProgramArtworkServiceSpy.Request(
-                    programID: item.id,
+                    owner: .program(item.id),
                     artwork: artwork
                 )
         )
@@ -75,7 +75,7 @@ struct CatalogViewModelTests {
         let expectedURL = URL(fileURLWithPath: "/cached/revision-1.jpg")
         let viewModel = makeViewModel(
             factory: factory,
-            programArtworkService: CatalogProgramArtworkServiceSpy(fileURL: expectedURL)
+            artworkService: CatalogProgramArtworkServiceSpy(fileURL: expectedURL)
         )
 
         await viewModel.load()
@@ -91,7 +91,7 @@ struct CatalogViewModelTests {
 
     private func makeViewModel(
         factory: MockRepositoryFactory,
-        programArtworkService: any ProgramArtworkServicing = CatalogProgramArtworkServiceSpy(),
+        artworkService: any ArtworkServicing = CatalogProgramArtworkServiceSpy(),
         onDataChanged: @escaping AppDataChangeHandler = { _ in }
     ) -> CatalogViewModel {
         CatalogViewModel(
@@ -99,16 +99,16 @@ struct CatalogViewModelTests {
             defaultProgramCatalogRepository: factory.defaultProgramCatalogRepository,
             workoutProgramRepository: factory.workoutProgramRepository,
             workoutRepository: factory.workoutRepository,
-            programArtworkService: programArtworkService,
+            artworkService: artworkService,
             onDataChanged: onDataChanged
         )
     }
 }
 
-private actor CatalogProgramArtworkServiceSpy: ProgramArtworkServicing {
+private actor CatalogProgramArtworkServiceSpy: ArtworkServicing {
     struct Request: Equatable, Sendable {
-        let programID: UUID
-        let artwork: ProgramArtwork
+        let owner: ArtworkOwner
+        let artwork: ArtworkReference
     }
 
     private let resolvedFileURL: URL
@@ -119,10 +119,10 @@ private actor CatalogProgramArtworkServiceSpy: ProgramArtworkServicing {
     }
 
     func fileURL(
-        programID: UUID,
-        artwork: ProgramArtwork
+        for owner: ArtworkOwner,
+        artwork: ArtworkReference
     ) async throws -> URL {
-        requests.append(Request(programID: programID, artwork: artwork))
+        requests.append(Request(owner: owner, artwork: artwork))
         return resolvedFileURL
     }
 

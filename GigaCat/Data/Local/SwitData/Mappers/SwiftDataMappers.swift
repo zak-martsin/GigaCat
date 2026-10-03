@@ -113,10 +113,10 @@ enum WorkoutProgramMapper {
 
     private static func makeArtwork(
         from entity: WorkoutProgramEntity
-    ) throws -> ProgramArtwork? {
+    ) throws -> ArtworkReference? {
         guard let path = entity.artworkPath else { return nil }
 
-        return try ProgramArtwork(
+        return try ArtworkReference(
             path: path,
             revision: entity.artworkRevision
         )
@@ -185,18 +185,34 @@ enum ExerciseMapper {
         try Exercise(
             id: entity.id,
             name: entity.name,
-            muscleGroup: entity.muscleGroup)
+            muscleGroup: entity.muscleGroup,
+            artwork: try makeArtwork(from: entity))
     }
 
     static func toEntity(_ domain: Exercise) -> ExerciseEntity {
         ExerciseEntity(
             id: domain.id,
             name: domain.name,
-            muscleGroup: domain.muscleGroup)
+            muscleGroup: domain.muscleGroup,
+            artworkPath: domain.artwork?.path,
+            artworkRevision: domain.artwork?.revision ?? 0)
     }
 
     static func update(_ entity: ExerciseEntity, from domain: Exercise) {
         entity.name = domain.name
         entity.muscleGroup = domain.muscleGroup
+        entity.artworkPath = domain.artwork?.path
+        entity.artworkRevision = domain.artwork?.revision ?? 0
+    }
+
+    private static func makeArtwork(
+        from entity: ExerciseEntity
+    ) throws -> ArtworkReference? {
+        guard let path = entity.artworkPath else { return nil }
+
+        return try ArtworkReference(
+            path: path,
+            revision: entity.artworkRevision
+        )
     }
 }

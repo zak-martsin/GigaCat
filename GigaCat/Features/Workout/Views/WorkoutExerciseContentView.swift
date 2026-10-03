@@ -41,14 +41,18 @@ struct WorkoutExerciseContentView: View {
                 action: onPreviousExercise
             )
 
-            ProgramArtworkPlaceholderView(
+            ArtworkView(
+                fileURL: viewData.artworkFileURL,
+                contentMode: .fit,
                 cornerRadius: AppRadius.lg,
                 height: AppControlSize.exerciseDetailArtwork,
                 width: AppControlSize.exerciseDetailArtwork
             ) {
-                Image(systemName: "figure.strengthtraining.traditional")
-                    .font(.system(size: AppIconSize.exerciseDetailArtwork, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.92))
+                if viewData.artworkFileURL == nil {
+                    Image(systemName: "figure.strengthtraining.traditional")
+                        .font(.system(size: AppIconSize.exerciseDetailArtwork, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.92))
+                }
             }
 
             navigationButton(

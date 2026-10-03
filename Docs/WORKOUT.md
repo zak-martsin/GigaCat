@@ -31,10 +31,10 @@ The feature lets the user inspect the selected program, navigate its workout day
 WorkoutView / WorkoutExerciseView
     ↓
 WorkoutViewModel / WorkoutExerciseViewModel
+    ├── WorkoutContextService and mappers
+    └── ArtworkService
     ↓
-WorkoutContextService and mappers
-    ↓
-Repository protocols
+Repository protocols and local artwork files
     ↓
 Shared local data source
 ```
@@ -49,7 +49,8 @@ Shared local data source
   Owns the program-level screen state, selected day, session actions, and creation of the exercise ViewModel.
 
 - `WorkoutExerciseViewModel`
-  Owns exercise selection, loaded logs, previous performance, set counts, and set-saving state.
+  Owns exercise selection, its local artwork URL, loaded logs, previous performance, set counts,
+  and set-saving state.
 
 - `WorkoutViewDataMapper`
   Maps program and day content into list-screen view data.
@@ -98,13 +99,20 @@ The detail screen shows:
 
 - the exercise position within the day
 - previous and next exercise navigation
-- exercise artwork placeholder
+- optional exercise artwork, with a placeholder when unavailable
 - exercise name
 - compact weight and repetition inputs for each set
 - a save button for each set
 - an `Add Set` action
 
 Additional sets are local UI state until they are saved. A maximum of 10 sets can be displayed for one exercise.
+
+Exercise artwork is strictly lazy. The workout list uses `LazyVStack`; only an exercise row that
+appears asks `WorkoutViewModel` for its local file. The detail ViewModel requests only the selected
+exercise, never its neighbors. Both requests use the shared artwork actor, so opening details while
+the row is loading reuses the same in-flight task. Download or decode failure is presentation-only
+and leaves the placeholder visible. The same transparent square PNG is displayed with aspect fit at
+the list and detail sizes.
 
 Unsaved weight and repetition drafts survive previous and next exercise navigation. They are keyed by planned exercise and set number, synchronized after a successful save, and discarded when the detail screen closes.
 
@@ -192,6 +200,7 @@ Current-session logs and previous-performance suggestions load independently. If
 - selected workout day
 - context loading state
 - finish and cancel state
+- resolved local artwork URLs keyed by reusable exercise ID
 
 `WorkoutExerciseViewModel` owns:
 
@@ -201,6 +210,7 @@ Current-session logs and previous-performance suggestions load independently. If
 - previous exercise performance
 - displayed set counts
 - log loading and saving state
+- the selected exercise's local artwork URL
 
 View data remains outside the ViewModels. Views map current ViewModel state through feature mappers.
 

@@ -17,7 +17,7 @@ struct ProgramDetailViewModelTests {
                 workoutProgramRepository: factory.workoutProgramRepository,
                 workoutRepository: factory.workoutRepository
             ),
-            programArtworkService: ProgramDetailArtworkServiceStub()
+            artworkService: ProgramDetailArtworkServiceStub()
         )
 
         await viewModel.present(programID: programID)
@@ -41,7 +41,7 @@ struct ProgramDetailViewModelTests {
                 workoutProgramRepository: factory.workoutProgramRepository,
                 workoutRepository: factory.workoutRepository
             ),
-            programArtworkService: ProgramDetailArtworkServiceStub(),
+            artworkService: ProgramDetailArtworkServiceStub(),
             onDataChanged: { changes.append($0) }
         )
 
@@ -53,10 +53,10 @@ struct ProgramDetailViewModelTests {
     }
 }
 
-private struct ProgramDetailArtworkServiceStub: ProgramArtworkServicing {
+private struct ProgramDetailArtworkServiceStub: ArtworkServicing {
     func fileURL(
-        programID: UUID,
-        artwork: ProgramArtwork
+        for owner: ArtworkOwner,
+        artwork: ArtworkReference
     ) async throws -> URL {
         URL(fileURLWithPath: "/cached/program.jpg")
     }

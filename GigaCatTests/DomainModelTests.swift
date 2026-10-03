@@ -120,16 +120,16 @@ struct DomainModelTests {
     }
 
     @Test
-    func programArtworkRequiresAPathAndPositiveRevision() throws {
-        let artwork = try ProgramArtwork(path: "program-id/hero.jpg", revision: 1)
+    func artworkReferenceRequiresAPathAndPositiveRevision() throws {
+        let artwork = try ArtworkReference(path: "catalog-id/main.png", revision: 1)
 
-        #expect(artwork.path == "program-id/hero.jpg")
+        #expect(artwork.path == "catalog-id/main.png")
         #expect(artwork.revision == 1)
         #expect(throws: DomainValidationError.emptyValue(field: "artworkPath")) {
-            try ProgramArtwork(path: "  ", revision: 1)
+            try ArtworkReference(path: "  ", revision: 1)
         }
         #expect(throws: DomainValidationError.nonPositiveValue(field: "artworkRevision")) {
-            try ProgramArtwork(path: "program-id/hero.jpg", revision: 0)
+            try ArtworkReference(path: "catalog-id/main.png", revision: 0)
         }
     }
 }

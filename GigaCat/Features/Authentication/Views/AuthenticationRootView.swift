@@ -7,7 +7,7 @@ struct AuthenticationRootView<Factory: RepositoryFactory>: View {
     private let profileBootstrapper: any ProfileBootstrapping
     private let syncCoordinator: any SyncCoordinating
     private let systemCatalogSynchronizer: any SystemCatalogSyncing
-    private let programArtworkService: any ProgramArtworkServicing
+    private let artworkService: any ArtworkServicing
     private let profileSyncRecoveryService: any ProfileSyncRecovering
 
     init(
@@ -16,7 +16,7 @@ struct AuthenticationRootView<Factory: RepositoryFactory>: View {
         profileBootstrapper: any ProfileBootstrapping,
         syncCoordinator: any SyncCoordinating,
         systemCatalogSynchronizer: any SystemCatalogSyncing,
-        programArtworkService: any ProgramArtworkServicing,
+        artworkService: any ArtworkServicing,
         profileSyncRecoveryService: any ProfileSyncRecovering,
         repositoryFactory: Factory
     ) {
@@ -31,7 +31,7 @@ struct AuthenticationRootView<Factory: RepositoryFactory>: View {
         self.profileBootstrapper = profileBootstrapper
         self.syncCoordinator = syncCoordinator
         self.systemCatalogSynchronizer = systemCatalogSynchronizer
-        self.programArtworkService = programArtworkService
+        self.artworkService = artworkService
         self.profileSyncRecoveryService = profileSyncRecoveryService
         self.repositoryFactory = repositoryFactory
     }
@@ -60,7 +60,7 @@ struct AuthenticationRootView<Factory: RepositoryFactory>: View {
                     userID: account.id,
                     syncCoordinator: syncCoordinator,
                     systemCatalogSynchronizer: systemCatalogSynchronizer,
-                    programArtworkService: programArtworkService,
+                    artworkService: artworkService,
                     profileBootstrapper: profileBootstrapper,
                     profileSyncRecoveryService: profileSyncRecoveryService,
                     onSignOut: signOut

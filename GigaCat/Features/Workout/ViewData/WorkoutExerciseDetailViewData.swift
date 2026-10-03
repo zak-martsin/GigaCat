@@ -6,6 +6,7 @@ struct WorkoutExerciseDetailViewData: Identifiable, Equatable, Sendable {
     let position: Int
     let totalCount: Int
     let targetSummary: String
+    let artworkFileURL: URL?
     let sets: [WorkoutSetRowViewData]
     let canGoBack: Bool
     let canGoForward: Bool

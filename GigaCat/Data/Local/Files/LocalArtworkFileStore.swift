@@ -1,41 +1,43 @@
 import Foundation
 
-/// Stores remotely managed program artwork outside SwiftData for offline access.
-actor LocalProgramArtworkFileStore: ProgramArtworkFileStore {
+/// Stores remotely managed catalog artwork outside SwiftData for offline access.
+actor LocalArtworkFileStore: ArtworkFileStore {
     private let fileManager: FileManager
-    private let rootDirectoryURL: URL
+    private let baseDirectoryURL: URL
 
     init(
         fileManager: FileManager = .default,
-        rootDirectoryURL: URL? = nil
+        baseDirectoryURL: URL? = nil
     ) throws {
         self.fileManager = fileManager
 
-        let resolvedRootDirectoryURL: URL
-        if let rootDirectoryURL {
-            resolvedRootDirectoryURL = rootDirectoryURL
+        if let baseDirectoryURL {
+            self.baseDirectoryURL = baseDirectoryURL
         } else {
-            resolvedRootDirectoryURL = try fileManager.url(
+            self.baseDirectoryURL = try fileManager.url(
                 for: .applicationSupportDirectory,
                 in: .userDomainMask,
                 appropriateFor: nil,
                 create: true
             )
-            .appending(path: "ProgramArtwork", directoryHint: .isDirectory)
         }
 
-        try Self.prepareDirectory(
-            at: resolvedRootDirectoryURL,
-            fileManager: fileManager
-        )
-        self.rootDirectoryURL = resolvedRootDirectoryURL
+        for ownerKind in ArtworkOwnerKind.allCases {
+            try Self.prepareDirectory(
+                at: self.baseDirectoryURL.appending(
+                    path: ownerKind.directoryName,
+                    directoryHint: .isDirectory
+                ),
+                fileManager: fileManager
+            )
+        }
     }
 
     func cachedFileURL(
-        programID: UUID,
-        artwork: ProgramArtwork
+        for owner: ArtworkOwner,
+        artwork: ArtworkReference
     ) -> URL? {
-        let fileURL = fileURL(programID: programID, artwork: artwork)
+        let fileURL = fileURL(for: owner, artwork: artwork)
         var isDirectory: ObjCBool = false
 
         guard fileManager.fileExists(
@@ -53,25 +55,25 @@ actor LocalProgramArtworkFileStore: ProgramArtworkFileStore {
 
     func save(
         _ data: Data,
-        programID: UUID,
-        artwork: ProgramArtwork
+        for owner: ArtworkOwner,
+        artwork: ArtworkReference
     ) throws -> URL {
         guard !data.isEmpty else {
-            throw ProgramArtworkFileStoreError.emptyData
+            throw ArtworkFileStoreError.emptyData
         }
 
-        let programDirectoryURL = programDirectoryURL(for: programID)
+        let ownerDirectoryURL = ownerDirectoryURL(for: owner)
         try fileManager.createDirectory(
-            at: programDirectoryURL,
+            at: ownerDirectoryURL,
             withIntermediateDirectories: true
         )
 
-        let destinationURL = fileURL(programID: programID, artwork: artwork)
+        let destinationURL = fileURL(for: owner, artwork: artwork)
         if cachedFileExists(at: destinationURL) {
             return destinationURL
         }
 
-        let temporaryURL = programDirectoryURL
+        let temporaryURL = ownerDirectoryURL
             .appending(path: ".pending-\(UUID().uuidString)")
         defer { try? fileManager.removeItem(at: temporaryURL) }
 
@@ -81,7 +83,7 @@ actor LocalProgramArtworkFileStore: ProgramArtworkFileStore {
         }
         try fileManager.moveItem(at: temporaryURL, to: destinationURL)
         removeObsoleteRevisions(
-            from: programDirectoryURL,
+            from: ownerDirectoryURL,
             keeping: destinationURL
         )
 
@@ -89,7 +91,21 @@ actor LocalProgramArtworkFileStore: ProgramArtworkFileStore {
     }
 }
 
-private extension LocalProgramArtworkFileStore {
+private extension LocalArtworkFileStore {
+    enum ArtworkOwnerKind: CaseIterable {
+        case program
+        case exercise
+
+        var directoryName: String {
+            switch self {
+            case .program:
+                "ProgramArtwork"
+            case .exercise:
+                "ExerciseArtwork"
+            }
+        }
+    }
+
     static func prepareDirectory(
         at directoryURL: URL,
         fileManager: FileManager
@@ -105,23 +121,38 @@ private extension LocalProgramArtworkFileStore {
         try mutableDirectoryURL.setResourceValues(resourceValues)
     }
 
-    func programDirectoryURL(for programID: UUID) -> URL {
-        rootDirectoryURL.appending(
-            path: programID.uuidString.lowercased(),
+    func rootDirectoryURL(for owner: ArtworkOwner) -> URL {
+        let kind: ArtworkOwnerKind
+        switch owner {
+        case .program:
+            kind = .program
+        case .exercise:
+            kind = .exercise
+        }
+
+        return baseDirectoryURL.appending(
+            path: kind.directoryName,
+            directoryHint: .isDirectory
+        )
+    }
+
+    func ownerDirectoryURL(for owner: ArtworkOwner) -> URL {
+        rootDirectoryURL(for: owner).appending(
+            path: owner.id.uuidString.lowercased(),
             directoryHint: .isDirectory
         )
     }
 
     func fileURL(
-        programID: UUID,
-        artwork: ProgramArtwork
+        for owner: ArtworkOwner,
+        artwork: ArtworkReference
     ) -> URL {
-        programDirectoryURL(for: programID)
+        ownerDirectoryURL(for: owner)
             .appending(path: "revision-\(artwork.revision)")
             .appendingPathExtension(fileExtension(for: artwork))
     }
 
-    func fileExtension(for artwork: ProgramArtwork) -> String {
+    func fileExtension(for artwork: ArtworkReference) -> String {
         let pathExtension = URL(fileURLWithPath: artwork.path)
             .pathExtension
             .lowercased()
@@ -159,7 +190,7 @@ private extension LocalProgramArtworkFileStore {
         fileURLs
             .filter {
                 $0.lastPathComponent.hasPrefix("revision-")
-                && $0.lastPathComponent != destinationFileName
+                    && $0.lastPathComponent != destinationFileName
             }
             .forEach { try? fileManager.removeItem(at: $0) }
     }

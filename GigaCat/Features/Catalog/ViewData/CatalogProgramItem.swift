@@ -9,7 +9,7 @@ struct CatalogProgramItem: Identifiable, Equatable {
     let exerciseCount: Int
     let isSelected: Bool
     let tags: [WorkoutProgramTag]
-    let artwork: ProgramArtwork?
+    let artwork: ArtworkReference?
     var artworkFileURL: URL?
 
     var artworkLoadIdentifier: String? {

@@ -173,10 +173,62 @@ struct WorkoutViewModelTests {
         #expect(viewModel.sessionActionState == .idle)
         #expect(invalidationCount == 1)
     }
+
+    @Test
+    func artworkLoadsOnlyAfterVisibleRowRequestsIt() async throws {
+        let artwork = try ArtworkReference(path: "exercise/main.png", revision: 1)
+        let context = try makeContext(artwork: artwork)
+        let service = ArtworkServiceTestDouble(
+            fileURL: URL(filePath: "/tmp/bench-press.png")
+        )
+        let viewModel = WorkoutViewModel(
+            contextService: WorkoutContextServiceStub(results: [.success(context)]),
+            workoutRepository: makeWorkoutRepository(),
+            artworkService: service
+        )
+        let exerciseID = try #require(
+            context.dayContents.first?.exercises.first?.exercise.id
+        )
+
+        await viewModel.load()
+        #expect(await service.requests.isEmpty)
+
+        await viewModel.loadArtwork(for: exerciseID)
+
+        #expect(viewModel.exerciseArtworkFileURLs[exerciseID]?.lastPathComponent == "bench-press.png")
+        #expect(
+            await service.requests == [
+                .init(owner: .exercise(exerciseID), artwork: artwork)
+            ]
+        )
+    }
+
+    @Test
+    func artworkFailureKeepsPlaceholderState() async throws {
+        let artwork = try ArtworkReference(path: "exercise/main.png", revision: 1)
+        let context = try makeContext(artwork: artwork)
+        let service = ArtworkServiceTestDouble(error: .unavailable)
+        let viewModel = WorkoutViewModel(
+            contextService: WorkoutContextServiceStub(results: [.success(context)]),
+            workoutRepository: makeWorkoutRepository(),
+            artworkService: service
+        )
+        let exerciseID = try #require(
+            context.dayContents.first?.exercises.first?.exercise.id
+        )
+
+        await viewModel.load()
+        await viewModel.loadArtwork(for: exerciseID)
+
+        #expect(viewModel.exerciseArtworkFileURLs[exerciseID] == nil)
+    }
 }
 
 private extension WorkoutViewModelTests {
-    func makeContext(hasActiveSession: Bool = false) throws -> WorkoutContext {
+    func makeContext(
+        hasActiveSession: Bool = false,
+        artwork: ArtworkReference? = nil
+    ) throws -> WorkoutContext {
         let programID = UUID()
         let firstDayID = UUID()
         let userID = UUID()
@@ -200,7 +252,8 @@ private extension WorkoutViewModelTests {
         ]
         let exercise = try Exercise(
             name: "Bench Press",
-            muscleGroup: .chest
+            muscleGroup: .chest,
+            artwork: artwork
         )
         let dayExercise = try WorkoutDayExercise(
             workoutDayId: firstDayID,

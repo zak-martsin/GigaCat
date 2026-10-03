@@ -1,40 +1,42 @@
 import Foundation
 
-protocol ProgramArtworkServicing: Sendable {
+protocol ArtworkServicing: Sendable {
     /// Returns the cached file or downloads and stores the requested revision first.
     func fileURL(
-        programID: UUID,
-        artwork: ProgramArtwork
+        for owner: ArtworkOwner,
+        artwork: ArtworkReference
     ) async throws -> URL
 }
 
 /// Coordinates remote artwork downloads with the device-local file cache.
-actor ProgramArtworkService: ProgramArtworkServicing {
-    private let downloader: any ProgramArtworkDownloading
-    private let fileStore: any ProgramArtworkFileStore
+actor ArtworkService: ArtworkServicing {
+    private let downloader: any ArtworkDownloading
+    private let fileStore: any ArtworkFileStore
     private var inFlightTasks: [ArtworkRequestKey: Task<URL, Error>] = [:]
 
     init(
-        downloader: any ProgramArtworkDownloading,
-        fileStore: any ProgramArtworkFileStore
+        downloader: any ArtworkDownloading,
+        fileStore: any ArtworkFileStore
     ) {
         self.downloader = downloader
         self.fileStore = fileStore
     }
 
     func fileURL(
-        programID: UUID,
-        artwork: ProgramArtwork
+        for owner: ArtworkOwner,
+        artwork: ArtworkReference
     ) async throws -> URL {
+        try Task.checkCancellation()
+
         if let cachedURL = await fileStore.cachedFileURL(
-            programID: programID,
+            for: owner,
             artwork: artwork
         ) {
             return cachedURL
         }
 
         let key = ArtworkRequestKey(
-            programID: programID,
+            owner: owner,
             path: artwork.path,
             revision: artwork.revision
         )
@@ -44,10 +46,11 @@ actor ProgramArtworkService: ProgramArtworkServicing {
         }
 
         let task = Task { [downloader, fileStore] in
-            let data = try await downloader.download(artwork)
+            let data = try await downloader.download(artwork, for: owner)
+            try Task.checkCancellation()
             return try await fileStore.save(
                 data,
-                programID: programID,
+                for: owner,
                 artwork: artwork
             )
         }
@@ -59,7 +62,7 @@ actor ProgramArtworkService: ProgramArtworkServicing {
 }
 
 private struct ArtworkRequestKey: Hashable, Sendable {
-    let programID: UUID
+    let owner: ArtworkOwner
     let path: String
     let revision: Int
 }

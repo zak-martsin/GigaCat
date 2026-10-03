@@ -1,7 +1,7 @@
 import Foundation
 
-/// Versioned reference to artwork supplied with a workout program catalog entry.
-struct ProgramArtwork: Codable, Equatable, Sendable {
+/// Versioned reference to remotely managed catalog artwork.
+struct ArtworkReference: Codable, Equatable, Hashable, Sendable {
     let path: String
     let revision: Int
 

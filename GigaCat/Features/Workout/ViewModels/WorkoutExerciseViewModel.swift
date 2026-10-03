@@ -30,9 +30,13 @@ final class WorkoutExerciseViewModel {
     private(set) var setCountByDayExerciseID: [UUID: Int]
     private(set) var logsLoadState: WorkoutExerciseLogsLoadState = .loading
     private(set) var setSaveState: WorkoutSetSaveState = .ready
+    private(set) var artworkFileURL: URL?
 
     @ObservationIgnored
     private let workoutRepository: WorkoutRepository
+
+    @ObservationIgnored
+    private let artworkService: any ArtworkServicing
 
     @ObservationIgnored
     private let onSessionChanged: (WorkoutSession) -> Void
@@ -40,12 +44,16 @@ final class WorkoutExerciseViewModel {
     @ObservationIgnored
     private let onDataChanged: AppDataChangeHandler
 
+    @ObservationIgnored
+    private var loadedArtworkReference: ArtworkReference?
+
     init(
         userID: UUID,
         activeSession: WorkoutSession?,
         dayContent: WorkoutDayContent,
         initialDayExerciseID: UUID,
         workoutRepository: WorkoutRepository,
+        artworkService: any ArtworkServicing,
         onSessionChanged: @escaping (WorkoutSession) -> Void = { _ in },
         onDataChanged: @escaping AppDataChangeHandler = { _ in }
     ) {
@@ -58,6 +66,7 @@ final class WorkoutExerciseViewModel {
         exercises = orderedExercises
         self.activeSession = activeSession
         self.workoutRepository = workoutRepository
+        self.artworkService = artworkService
         self.onSessionChanged = onSessionChanged
         self.onDataChanged = onDataChanged
         setCountByDayExerciseID = Dictionary(
@@ -92,14 +101,54 @@ final class WorkoutExerciseViewModel {
         return selectedExerciseIndex < exercises.index(before: exercises.endIndex)
     }
 
+    var selectedArtworkLoadIdentifier: ExerciseArtworkLoadIdentifier? {
+        guard let selectedExercise,
+              let artwork = selectedExercise.exercise.artwork else {
+            return nil
+        }
+
+        return ExerciseArtworkLoadIdentifier(
+            exerciseID: selectedExercise.exercise.id,
+            artwork: artwork
+        )
+    }
+
     func selectPreviousExercise() {
         guard let selectedExerciseIndex, canSelectPreviousExercise else { return }
         selectedDayExerciseID = exercises[selectedExerciseIndex - 1].dayExercise.id
+        resetArtwork()
     }
 
     func selectNextExercise() {
         guard let selectedExerciseIndex, canSelectNextExercise else { return }
         selectedDayExerciseID = exercises[selectedExerciseIndex + 1].dayExercise.id
+        resetArtwork()
+    }
+
+    // MARK: - Artwork Loading
+
+    /// Resolves only the currently selected exercise artwork.
+    func loadSelectedArtwork() async {
+        guard let request = selectedArtworkLoadIdentifier,
+              loadedArtworkReference != request.artwork || artworkFileURL == nil else {
+            return
+        }
+
+        do {
+            let fileURL = try await artworkService.fileURL(
+                for: .exercise(request.exerciseID),
+                artwork: request.artwork
+            )
+            guard !Task.isCancelled,
+                  selectedArtworkLoadIdentifier == request else {
+                return
+            }
+
+            loadedArtworkReference = request.artwork
+            artworkFileURL = fileURL
+        } catch {
+            // Artwork failure does not affect workout logging.
+        }
     }
 
     // MARK: - Log Loading
@@ -298,5 +347,10 @@ final class WorkoutExerciseViewModel {
         }
 
         return false
+    }
+
+    private func resetArtwork() {
+        artworkFileURL = nil
+        loadedArtworkReference = nil
     }
 }

@@ -13,7 +13,8 @@ struct WorkoutExerciseDetailViewDataMapper {
         selectedExercise: WorkoutExerciseContent,
         selectedExerciseIndex: Int,
         totalCount: Int,
-        logContext: WorkoutExerciseLogContext
+        logContext: WorkoutExerciseLogContext,
+        artworkFileURL: URL? = nil
     ) -> WorkoutExerciseDetailViewData {
         WorkoutExerciseDetailViewData(
             id: selectedExercise.dayExercise.id,
@@ -21,6 +22,7 @@ struct WorkoutExerciseDetailViewDataMapper {
             position: selectedExerciseIndex + 1,
             totalCount: totalCount,
             targetSummary: makeTargetSummary(from: selectedExercise.dayExercise),
+            artworkFileURL: artworkFileURL,
             sets: makeSetRows(
                 from: selectedExercise.dayExercise,
                 logContext: logContext

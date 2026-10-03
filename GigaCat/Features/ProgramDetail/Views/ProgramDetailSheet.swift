@@ -11,8 +11,9 @@ struct ProgramDetailSheet: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppSpacing.lg) {
-                ProgramArtworkView(
+                ArtworkView(
                     fileURL: artworkFileURL,
+                    contentMode: .fill,
                     height: AppControlSize.programDetailArtworkHeight
                 )
 
