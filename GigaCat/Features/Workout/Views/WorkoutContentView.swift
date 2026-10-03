@@ -4,6 +4,7 @@ struct WorkoutContentView: View {
     let viewData: WorkoutViewData
     let onSelectDay: (UUID) -> Void
     let onSelectExercise: (UUID) -> Void
+    let onLoadExerciseArtwork: (UUID) async -> Void
     let onProgramInfo: () -> Void
 
     var body: some View {
@@ -95,9 +96,14 @@ struct WorkoutContentView: View {
                     message: "This workout day does not contain any exercises yet."
                 )
             } else {
-                ForEach(viewData.selectedDay.exercises) { exercise in
-                    WorkoutExerciseRow(exercise: exercise) {
-                        onSelectExercise(exercise.id)
+                LazyVStack(spacing: AppSpacing.md) {
+                    ForEach(viewData.selectedDay.exercises) { exercise in
+                        WorkoutExerciseRow(
+                            exercise: exercise,
+                            onLoadArtwork: onLoadExerciseArtwork
+                        ) {
+                            onSelectExercise(exercise.id)
+                        }
                     }
                 }
             }
@@ -152,22 +158,25 @@ private struct WorkoutDayChip: View {
 
 private struct WorkoutExerciseRow: View {
     let exercise: WorkoutExerciseViewData
+    let onLoadArtwork: (UUID) async -> Void
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: AppSpacing.md) {
-                RoundedRectangle(cornerRadius: AppRadius.md)
-                    .fill(AppColor.background)
-                    .frame(
-                        width: AppControlSize.exerciseArtwork,
-                        height: AppControlSize.exerciseArtwork
-                    )
-                    .overlay {
+                ArtworkView(
+                    fileURL: exercise.artworkFileURL,
+                    contentMode: .fit,
+                    cornerRadius: AppRadius.md,
+                    height: AppControlSize.exerciseArtwork,
+                    width: AppControlSize.exerciseArtwork
+                ) {
+                    if exercise.artworkFileURL == nil {
                         Image(systemName: "figure.strengthtraining.traditional")
                             .font(.system(size: AppIconSize.exerciseArtwork, weight: .semibold))
                             .foregroundStyle(AppColor.textPrimary)
                     }
+                }
 
                 VStack(alignment: .leading, spacing: AppSpacing.xs) {
                     Text(exercise.name)
@@ -185,6 +194,10 @@ private struct WorkoutExerciseRow: View {
             .appCardStyle()
         }
         .buttonStyle(.plain)
+        .task(id: exercise.artworkLoadIdentifier) {
+            guard exercise.artworkLoadIdentifier != nil else { return }
+            await onLoadArtwork(exercise.exerciseID)
+        }
         .accessibilityHint("Opens exercise details")
         .accessibilityIdentifier("workout.exercise.\(exercise.id)")
     }

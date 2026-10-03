@@ -93,11 +93,16 @@ struct WorkoutView: View {
     private var loadedState: some View {
         if let context = viewModel.context,
            let selectedDayID = viewModel.selectedDayID,
-           let viewData = mapper.map(context: context, selectedDayID: selectedDayID) {
+           let viewData = mapper.map(
+               context: context,
+               selectedDayID: selectedDayID,
+               artworkFileURLs: viewModel.exerciseArtworkFileURLs
+           ) {
             WorkoutContentView(
                 viewData: viewData,
                 onSelectDay: viewModel.selectDay,
                 onSelectExercise: { selectedDayExerciseID = $0 },
+                onLoadExerciseArtwork: viewModel.loadArtwork,
                 onProgramInfo: { onProgramInfo(context.program.id) }
             )
             .safeAreaInset(edge: .bottom) {

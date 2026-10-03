@@ -4,7 +4,8 @@ import Foundation
 struct WorkoutViewDataMapper {
     func map(
         context: WorkoutContext,
-        selectedDayID: UUID
+        selectedDayID: UUID,
+        artworkFileURLs: [UUID: URL] = [:]
     ) -> WorkoutViewData? {
         guard let selectedDayContent = context.dayContents.first(
             where: { $0.day.id == selectedDayID }
@@ -25,7 +26,9 @@ struct WorkoutViewDataMapper {
             },
             selectedDay: SelectedWorkoutDayViewData(
                 id: selectedDayContent.day.id,
-                exercises: selectedDayContent.exercises.map(mapExercise)
+                exercises: selectedDayContent.exercises.map {
+                    mapExercise($0, artworkFileURLs: artworkFileURLs)
+                }
             )
         )
     }
@@ -46,12 +49,18 @@ struct WorkoutViewDataMapper {
         )
     }
 
-    private func mapExercise(_ content: WorkoutExerciseContent) -> WorkoutExerciseViewData {
+    private func mapExercise(
+        _ content: WorkoutExerciseContent,
+        artworkFileURLs: [UUID: URL]
+    ) -> WorkoutExerciseViewData {
         WorkoutExerciseViewData(
             id: content.dayExercise.id,
+            exerciseID: content.exercise.id,
             name: content.exercise.name,
             targetSets: content.dayExercise.targetSets,
-            targetReps: content.dayExercise.targetReps
+            targetReps: content.dayExercise.targetReps,
+            artwork: content.exercise.artwork,
+            artworkFileURL: artworkFileURLs[content.exercise.id]
         )
     }
 }

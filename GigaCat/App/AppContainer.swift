@@ -81,6 +81,7 @@ final class AppContainer {
         let workoutViewModel = WorkoutViewModel(
             contextService: workoutContextService,
             workoutRepository: repositoryFactory.workoutRepository,
+            artworkService: artworkService,
             onDataChanged: dataChangeDispatcher.send
         )
         let dataChangeCoordinator = AppDataChangeCoordinator(

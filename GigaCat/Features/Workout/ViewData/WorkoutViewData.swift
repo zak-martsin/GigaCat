@@ -26,7 +26,25 @@ struct SelectedWorkoutDayViewData: Identifiable, Equatable, Sendable {
 
 struct WorkoutExerciseViewData: Identifiable, Equatable, Sendable {
     let id: UUID
+    let exerciseID: UUID
     let name: String
     let targetSets: Int?
     let targetReps: Int?
+    let artwork: ArtworkReference?
+    let artworkFileURL: URL?
+
+    var artworkLoadIdentifier: ExerciseArtworkLoadIdentifier? {
+        artwork.map {
+            ExerciseArtworkLoadIdentifier(
+                exerciseID: exerciseID,
+                artwork: $0
+            )
+        }
+    }
+}
+
+/// Identifies one lazy exercise-artwork request across view reuse and revision changes.
+struct ExerciseArtworkLoadIdentifier: Hashable, Sendable {
+    let exerciseID: UUID
+    let artwork: ArtworkReference
 }

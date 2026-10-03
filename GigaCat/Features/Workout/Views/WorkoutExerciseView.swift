@@ -55,6 +55,9 @@ struct WorkoutExerciseView: View {
         .task {
             await viewModel.loadLogs()
         }
+        .task(id: viewModel.selectedArtworkLoadIdentifier) {
+            await viewModel.loadSelectedArtwork()
+        }
     }
 
     // MARK: - View Data
@@ -80,7 +83,8 @@ struct WorkoutExerciseView: View {
                     dayExerciseID: selectedExercise.dayExercise.id
                 ),
                 setSaveState: viewModel.setSaveState
-            )
+            ),
+            artworkFileURL: viewModel.artworkFileURL
         )
     }
 

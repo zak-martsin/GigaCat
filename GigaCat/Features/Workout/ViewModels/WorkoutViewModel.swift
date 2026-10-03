@@ -21,12 +21,16 @@ final class WorkoutViewModel {
     private(set) var loadState: WorkoutLoadState = .loading
     private(set) var selectedDayID: UUID?
     private(set) var sessionActionState: WorkoutSessionActionState = .idle
+    private(set) var exerciseArtworkFileURLs: [UUID: URL] = [:]
 
     @ObservationIgnored
     private let contextService: WorkoutContextServicing
 
     @ObservationIgnored
     private let workoutRepository: WorkoutRepository
+
+    @ObservationIgnored
+    private let artworkService: any ArtworkServicing
 
     @ObservationIgnored
     private let onDataChanged: AppDataChangeHandler
@@ -37,13 +41,18 @@ final class WorkoutViewModel {
     @ObservationIgnored
     private var isLoading = false
 
+    @ObservationIgnored
+    private var loadedArtworkReferences: [UUID: ArtworkReference] = [:]
+
     init(
         contextService: WorkoutContextServicing,
         workoutRepository: WorkoutRepository,
+        artworkService: any ArtworkServicing,
         onDataChanged: @escaping AppDataChangeHandler = { _ in }
     ) {
         self.contextService = contextService
         self.workoutRepository = workoutRepository
+        self.artworkService = artworkService
         self.onDataChanged = onDataChanged
     }
 
@@ -105,18 +114,23 @@ final class WorkoutViewModel {
                 guard let context = try await contextService.loadContext() else {
                     self.context = nil
                     selectedDayID = nil
+                    exerciseArtworkFileURLs = [:]
+                    loadedArtworkReferences = [:]
                     loadTracker.markLoaded(revision: loadingRevision)
                     loadState = .empty
                     continue
                 }
 
                 self.context = context
+                preserveCurrentArtworkURLs(in: context)
                 selectedDayID = context.initialDayID
                 loadTracker.markLoaded(revision: loadingRevision)
                 loadState = .loaded
             } catch {
                 context = nil
                 selectedDayID = nil
+                exerciseArtworkFileURLs = [:]
+                loadedArtworkReferences = [:]
                 loadState = .failed
                 return
             }
@@ -127,6 +141,33 @@ final class WorkoutViewModel {
     func selectDay(id: UUID) {
         guard days.contains(where: { $0.id == id }) else { return }
         selectedDayID = id
+    }
+
+    // MARK: - Exercise Artwork
+
+    /// Resolves artwork only when a visible exercise row asks for it.
+    func loadArtwork(for exerciseID: UUID) async {
+        guard let artwork = exercise(withID: exerciseID)?.artwork,
+              loadedArtworkReferences[exerciseID] != artwork
+                || exerciseArtworkFileURLs[exerciseID] == nil else {
+            return
+        }
+
+        do {
+            let fileURL = try await artworkService.fileURL(
+                for: .exercise(exerciseID),
+                artwork: artwork
+            )
+            guard !Task.isCancelled,
+                  exercise(withID: exerciseID)?.artwork == artwork else {
+                return
+            }
+
+            loadedArtworkReferences[exerciseID] = artwork
+            exerciseArtworkFileURLs[exerciseID] = fileURL
+        } catch {
+            // Artwork is optional presentation; the row keeps its placeholder on failure.
+        }
     }
 
     // MARK: - Session Actions
@@ -193,6 +234,7 @@ final class WorkoutViewModel {
             dayContent: dayContent,
             initialDayExerciseID: initialDayExerciseID,
             workoutRepository: workoutRepository,
+            artworkService: artworkService,
             onSessionChanged: updateActiveSession,
             onDataChanged: onDataChanged
         )
@@ -208,5 +250,31 @@ final class WorkoutViewModel {
             initialDayID: context.initialDayID,
             activeSession: session
         )
+    }
+
+    private func exercise(withID exerciseID: UUID) -> Exercise? {
+        context?.dayContents
+            .lazy
+            .flatMap(\.exercises)
+            .first { $0.exercise.id == exerciseID }?
+            .exercise
+    }
+
+    private func preserveCurrentArtworkURLs(in context: WorkoutContext) {
+        let currentReferences = Dictionary(
+            context.dayContents
+                .flatMap(\.exercises)
+                .compactMap { content in
+                    content.exercise.artwork.map { (content.exercise.id, $0) }
+                },
+            uniquingKeysWith: { current, _ in current }
+        )
+
+        exerciseArtworkFileURLs = exerciseArtworkFileURLs.filter {
+            loadedArtworkReferences[$0.key] == currentReferences[$0.key]
+        }
+        loadedArtworkReferences = loadedArtworkReferences.filter {
+            currentReferences[$0.key] == $0.value
+        }
     }
 }
