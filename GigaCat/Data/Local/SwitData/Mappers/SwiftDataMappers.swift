@@ -113,10 +113,10 @@ enum WorkoutProgramMapper {
 
     private static func makeArtwork(
         from entity: WorkoutProgramEntity
-    ) throws -> ProgramArtwork? {
+    ) throws -> ArtworkReference? {
         guard let path = entity.artworkPath else { return nil }
 
-        return try ProgramArtwork(
+        return try ArtworkReference(
             path: path,
             revision: entity.artworkRevision
         )

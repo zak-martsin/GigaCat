@@ -43,7 +43,7 @@ struct GigaCatApp: App {
                     profileBootstrapper: dependencies.profileBootstrapService,
                     syncCoordinator: dependencies.syncCoordinator,
                     systemCatalogSynchronizer: dependencies.systemCatalogSyncService,
-                    programArtworkService: dependencies.programArtworkService,
+                    artworkService: dependencies.artworkService,
                     profileSyncRecoveryService: dependencies.profileSyncRecoveryService,
                     repositoryFactory: dependencies.repositoryFactory
                 )
@@ -54,7 +54,7 @@ struct GigaCatApp: App {
                     userID: dependencies.userID,
                     syncCoordinator: dependencies.syncCoordinator,
                     systemCatalogSynchronizer: dependencies.systemCatalogSynchronizer,
-                    programArtworkService: dependencies.programArtworkService,
+                    artworkService: dependencies.artworkService,
                     profileBootstrapper: dependencies.profileBootstrapper,
                     profileSyncRecoveryService: dependencies.profileSyncRecoveryService
                 )

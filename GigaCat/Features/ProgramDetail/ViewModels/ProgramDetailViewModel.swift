@@ -11,7 +11,7 @@ final class ProgramDetailViewModel: ObservableObject {
 
     private let userRepository: UserRepository
     private let service: ProgramDetailServicing
-    private let programArtworkService: any ProgramArtworkServicing
+    private let artworkService: any ArtworkServicing
     private let onDataChanged: AppDataChangeHandler
     private var currentUser: User?
     private var pendingProgramID: UUID?
@@ -19,12 +19,12 @@ final class ProgramDetailViewModel: ObservableObject {
     init(
         userRepository: UserRepository,
         service: ProgramDetailServicing,
-        programArtworkService: any ProgramArtworkServicing,
+        artworkService: any ArtworkServicing,
         onDataChanged: @escaping AppDataChangeHandler = { _ in }
     ) {
         self.userRepository = userRepository
         self.service = service
-        self.programArtworkService = programArtworkService
+        self.artworkService = artworkService
         self.onDataChanged = onDataChanged
     }
 
@@ -101,8 +101,8 @@ final class ProgramDetailViewModel: ObservableObject {
         guard let artwork = detail.artwork else { return }
 
         do {
-            let fileURL = try await programArtworkService.fileURL(
-                programID: detail.id,
+            let fileURL = try await artworkService.fileURL(
+                for: .program(detail.id),
                 artwork: artwork
             )
             guard !Task.isCancelled,

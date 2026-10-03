@@ -21,7 +21,7 @@ struct ProgramDetail: Identifiable, Equatable {
     }
 
     let id: UUID
-    let artwork: ProgramArtwork?
+    let artwork: ArtworkReference?
     let title: String
     let description: String
     let dayCount: Int

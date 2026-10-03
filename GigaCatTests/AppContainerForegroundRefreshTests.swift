@@ -16,7 +16,7 @@ struct AppContainerForegroundRefreshTests {
             systemCatalogSynchronizer: ForegroundCatalogSynchronizerSpy(
                 recorder: recorder
             ),
-            programArtworkService: ForegroundProgramArtworkServiceStub(),
+            artworkService: ForegroundArtworkServiceStub(),
             profileBootstrapper: ForegroundProfileBootstrapperSpy(
                 recorder: recorder
             )
@@ -47,7 +47,7 @@ struct AppContainerForegroundRefreshTests {
             repositoryFactory: factory,
             syncCoordinator: ForegroundSyncCoordinatorSpy(),
             systemCatalogSynchronizer: ForegroundCatalogSynchronizerSpy(),
-            programArtworkService: ForegroundProgramArtworkServiceStub(),
+            artworkService: ForegroundArtworkServiceStub(),
             profileBootstrapper: ForegroundProfileBootstrapperSpy()
         )
 
@@ -76,7 +76,7 @@ struct AppContainerForegroundRefreshTests {
             repositoryFactory: factory,
             syncCoordinator: ForegroundSyncCoordinatorSpy(),
             systemCatalogSynchronizer: ForegroundCatalogSynchronizerSpy(),
-            programArtworkService: ForegroundProgramArtworkServiceStub(),
+            artworkService: ForegroundArtworkServiceStub(),
             profileBootstrapper: ForegroundProfileBootstrapperSpy()
         )
 
@@ -108,7 +108,7 @@ struct AppContainerForegroundRefreshTests {
                 recorder: recorder,
                 shouldFail: true
             ),
-            programArtworkService: ForegroundProgramArtworkServiceStub(),
+            artworkService: ForegroundArtworkServiceStub(),
             profileBootstrapper: ForegroundProfileBootstrapperSpy(recorder: recorder)
         )
 
@@ -130,7 +130,7 @@ struct AppContainerForegroundRefreshTests {
             repositoryFactory: factory,
             syncCoordinator: ForegroundSyncCoordinatorSpy(recorder: recorder),
             systemCatalogSynchronizer: catalog,
-            programArtworkService: ForegroundProgramArtworkServiceStub(),
+            artworkService: ForegroundArtworkServiceStub(),
             profileBootstrapper: ForegroundProfileBootstrapperSpy(recorder: recorder)
         )
 
@@ -150,16 +150,16 @@ struct AppContainerForegroundRefreshTests {
     }
 }
 
-private struct ForegroundProgramArtworkServiceStub: ProgramArtworkServicing {
+private struct ForegroundArtworkServiceStub: ArtworkServicing {
     func fileURL(
-        programID: UUID,
-        artwork: ProgramArtwork
+        for owner: ArtworkOwner,
+        artwork: ArtworkReference
     ) async throws -> URL {
-        throw ForegroundProgramArtworkError.unavailable
+        throw ForegroundArtworkError.unavailable
     }
 }
 
-private enum ForegroundProgramArtworkError: Error {
+private enum ForegroundArtworkError: Error {
     case unavailable
 }
 

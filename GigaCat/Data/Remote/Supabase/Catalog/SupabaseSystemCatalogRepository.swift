@@ -81,9 +81,9 @@ private extension SupabaseSystemCatalogRepository {
         )
     }
 
-    static func makeArtwork(_ dto: WorkoutProgramCatalogDTO) throws -> ProgramArtwork? {
+    static func makeArtwork(_ dto: WorkoutProgramCatalogDTO) throws -> ArtworkReference? {
         guard let path = dto.artworkPath else { return nil }
-        return try ProgramArtwork(path: path, revision: dto.artworkRevision)
+        return try ArtworkReference(path: path, revision: dto.artworkRevision)
     }
 
     static func makeDayExercise(

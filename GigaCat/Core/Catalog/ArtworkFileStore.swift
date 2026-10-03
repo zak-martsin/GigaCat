@@ -1,22 +1,22 @@
 import Foundation
 
-/// Provides device-local access to versioned workout program artwork files.
-protocol ProgramArtworkFileStore: Sendable {
+/// Provides device-local access to versioned catalog artwork files.
+protocol ArtworkFileStore: Sendable {
     /// Returns the file only when the requested revision is already stored locally.
     func cachedFileURL(
-        programID: UUID,
-        artwork: ProgramArtwork
+        for owner: ArtworkOwner,
+        artwork: ArtworkReference
     ) async -> URL?
 
     /// Persists one revision and returns its deterministic local URL.
     @discardableResult
     func save(
         _ data: Data,
-        programID: UUID,
-        artwork: ProgramArtwork
+        for owner: ArtworkOwner,
+        artwork: ArtworkReference
     ) async throws -> URL
 }
 
-enum ProgramArtworkFileStoreError: Error, Equatable {
+enum ArtworkFileStoreError: Error, Equatable {
     case emptyData
 }

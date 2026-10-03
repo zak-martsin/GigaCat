@@ -7,8 +7,9 @@ struct CatalogProgramRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: AppSpacing.md) {
-                ProgramArtworkView(
+                ArtworkView(
                     fileURL: item.artworkFileURL,
+                    contentMode: .fill,
                     height: AppControlSize.catalogProgramArtwork,
                     width: AppControlSize.catalogProgramArtwork
                 )

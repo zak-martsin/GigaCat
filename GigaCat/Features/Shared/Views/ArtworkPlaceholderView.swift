@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct ProgramArtworkPlaceholderView<Overlay: View>: View {
+struct ArtworkPlaceholderView<Overlay: View>: View {
     let cornerRadius: CGFloat
     let height: CGFloat?
     let width: CGFloat?

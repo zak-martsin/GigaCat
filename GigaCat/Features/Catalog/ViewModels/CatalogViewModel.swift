@@ -15,7 +15,7 @@ final class CatalogViewModel: ObservableObject {
     private let defaultProgramCatalogRepository: DefaultProgramCatalogRepository
     private let presentationService: CatalogPresentationServicing
     private let programDetailService: ProgramDetailServicing
-    private let programArtworkService: any ProgramArtworkServicing
+    private let artworkService: any ArtworkServicing
     private let onDataChanged: AppDataChangeHandler
     private var loadTracker = DataLoadTracker()
     private var currentUser: User?
@@ -26,14 +26,14 @@ final class CatalogViewModel: ObservableObject {
         defaultProgramCatalogRepository: DefaultProgramCatalogRepository,
         workoutProgramRepository: WorkoutProgramRepository,
         workoutRepository: WorkoutRepository,
-        programArtworkService: any ProgramArtworkServicing,
+        artworkService: any ArtworkServicing,
         presentationService: CatalogPresentationServicing? = nil,
         programDetailService: ProgramDetailServicing? = nil,
         onDataChanged: @escaping AppDataChangeHandler = { _ in }
     ) {
         self.userRepository = userRepository
         self.defaultProgramCatalogRepository = defaultProgramCatalogRepository
-        self.programArtworkService = programArtworkService
+        self.artworkService = artworkService
         self.presentationService = presentationService ?? CatalogPresentationService(
             workoutProgramRepository: workoutProgramRepository
         )
@@ -115,8 +115,8 @@ final class CatalogViewModel: ObservableObject {
         }
 
         do {
-            let fileURL = try await programArtworkService.fileURL(
-                programID: programID,
+            let fileURL = try await artworkService.fileURL(
+                for: .program(programID),
                 artwork: artwork
             )
             guard !Task.isCancelled,
