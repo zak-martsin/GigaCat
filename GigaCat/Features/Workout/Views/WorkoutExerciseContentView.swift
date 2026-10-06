@@ -14,6 +14,13 @@ struct WorkoutExerciseContentView: View {
                 positionLabel
                 artworkNavigation
                 exerciseTitle
+                if let previousResult = viewData.previousResult,
+                   let bestResult = viewData.bestResult {
+                    WorkoutExerciseHistoryCard(
+                        previousResult: previousResult,
+                        bestResult: bestResult
+                    )
+                }
                 targetSetList
             }
             .padding(.horizontal, AppSpacing.lg)

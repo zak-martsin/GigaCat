@@ -4,6 +4,7 @@ enum AppCardStyle {
     case standard
     case selected
     case tinted
+    case subtle
     case elevated
 }
 
@@ -54,6 +55,8 @@ struct AppCardModifier: ViewModifier {
                     endPoint: .bottomTrailing
                 )
             )
+        case .subtle:
+            AnyShapeStyle(AppColor.surfaceSecondary)
         }
     }
 
@@ -63,6 +66,8 @@ struct AppCardModifier: ViewModifier {
             AppShadow.cardColor
         case .selected:
             AppShadow.selectedColor
+        case .subtle:
+            .clear
         case .elevated:
             AppShadow.elevatedColor
         }
@@ -74,6 +79,8 @@ struct AppCardModifier: ViewModifier {
             AppShadow.cardRadius
         case .selected:
             AppShadow.selectedRadius
+        case .subtle:
+            0
         case .elevated:
             AppShadow.elevatedRadius
         }
@@ -85,6 +92,8 @@ struct AppCardModifier: ViewModifier {
             AppShadow.cardOffsetY
         case .selected:
             AppShadow.selectedOffsetY
+        case .subtle:
+            0
         case .elevated:
             AppShadow.elevatedOffsetY
         }
