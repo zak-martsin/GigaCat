@@ -12,7 +12,6 @@ final class AppContainer {
     let catalogViewModel: CatalogViewModel
     let progressViewModel: ProgressViewModel
     let workoutViewModel: WorkoutViewModel
-    let miniPlayerViewModel: MiniPlayerViewModel
     let programDetailViewModel: ProgramDetailViewModel
     private let dataChangeCoordinator: AppDataChangeCoordinator
     private let dataChangeDispatcher: AppDataChangeDispatcher
@@ -39,16 +38,6 @@ final class AppContainer {
             defaultProgramCatalogRepository: repositoryFactory.defaultProgramCatalogRepository,
             workoutProgramRepository: repositoryFactory.workoutProgramRepository,
             workoutRepository: repositoryFactory.workoutRepository
-        )
-        let miniPlayerService = MiniPlayerService(
-            userRepository: repositoryFactory.userRepository,
-            workoutProgramRepository: repositoryFactory.workoutProgramRepository,
-            workoutRepository: repositoryFactory.workoutRepository
-        )
-        let miniPlayerViewModel = MiniPlayerViewModel(
-            service: miniPlayerService,
-            workoutRepository: repositoryFactory.workoutRepository,
-            onDataChanged: dataChangeDispatcher.send
         )
         let programDetailViewModel = ProgramDetailViewModel(
             userRepository: repositoryFactory.userRepository,
@@ -94,9 +83,6 @@ final class AppContainer {
             invalidateWorkout: { [weak workoutViewModel] in
                 workoutViewModel?.invalidate()
             },
-            reloadMiniPlayer: { [weak miniPlayerViewModel] in
-                await miniPlayerViewModel?.reload()
-            },
             requestProfileSync: {
                 // Local mutations update the UI immediately; their cloud push remains best-effort.
                 Task(priority: .utility) {
@@ -108,7 +94,6 @@ final class AppContainer {
         self.catalogViewModel = catalogViewModel
         self.progressViewModel = progressViewModel
         self.workoutViewModel = workoutViewModel
-        self.miniPlayerViewModel = miniPlayerViewModel
         self.programDetailViewModel = programDetailViewModel
         self.dataChangeCoordinator = dataChangeCoordinator
         self.dataChangeDispatcher = dataChangeDispatcher

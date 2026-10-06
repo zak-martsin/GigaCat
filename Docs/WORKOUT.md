@@ -228,8 +228,7 @@ AppDataChange.workoutSession
 AppDataChangeCoordinator
     ├── invalidates Catalog
     ├── invalidates Workout
-    ├── invalidates Progress
-    └── reloads the mini player
+    └── invalidates Progress
 ```
 
 The change is emitted after:

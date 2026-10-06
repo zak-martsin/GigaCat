@@ -96,7 +96,7 @@ placeholder tabs, repositories, or actions for them.
 
 - The authenticated shell exposes only Catalog, Workout, and Progress.
 - A first launch can show default programs without requiring a successful live catalog request.
-- Selecting a program updates Catalog, Workout, and the mini player consistently.
+- Selecting a program updates Catalog, Workout, and Progress consistently.
 - Logging, finishing, and cancelling a workout correctly refresh Workout and Progress.
 - Catalog refresh uses one application-level invalidation path.
 - Removed product areas are absent from the active dependency graph and UI.

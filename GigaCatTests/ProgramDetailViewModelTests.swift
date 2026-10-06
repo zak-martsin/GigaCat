@@ -5,7 +5,7 @@ import Testing
 @MainActor
 struct ProgramDetailViewModelTests {
     @Test
-    func presentsRepositoryBackedDetailForGlobalMiniPlayer() async throws {
+    func presentsRepositoryBackedDetail() async throws {
         let factory = try MockRepositoryFactory()
         let user = try #require(try await factory.userRepository.currentUser())
         let programID = try #require(user.selectedProgramId)
