@@ -68,7 +68,8 @@ struct WorkoutContextService: WorkoutContextServicing {
             program: program,
             dayContents: dayContents,
             initialDayID: initialDay.id,
-            activeSession: nil
+            activeSession: nil,
+            activeSessionLogs: []
         )
     }
 
@@ -93,13 +94,17 @@ struct WorkoutContextService: WorkoutContextServicing {
             throw WorkoutContextError.workoutDayNotFound
         }
         let dayContents = try await makeDayContents(from: days, includeInactive: true)
+        let activeSessionLogs = try await workoutRepository.fetchExerciseLogs(
+            sessionId: activeSession.id
+        )
 
         return WorkoutContext(
             userID: userID,
             program: program,
             dayContents: dayContents,
             initialDayID: activeWorkoutDay.id,
-            activeSession: activeSession
+            activeSession: activeSession,
+            activeSessionLogs: activeSessionLogs
         )
     }
 

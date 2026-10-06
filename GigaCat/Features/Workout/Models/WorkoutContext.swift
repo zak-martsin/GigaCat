@@ -7,6 +7,7 @@ struct WorkoutContext: Equatable, Sendable {
     let dayContents: [WorkoutDayContent]
     let initialDayID: UUID
     let activeSession: WorkoutSession?
+    let activeSessionLogs: [ExerciseLog]
 }
 
 /// A workout day paired with the exercise definitions and targets needed to present it.

@@ -16,6 +16,7 @@ struct WorkoutContextServiceTests {
         #expect(context.program.id == fixture.firstProgram.id)
         #expect(context.initialDayID == fixture.firstProgramDays[1].id)
         #expect(context.activeSession?.workoutDayId == fixture.firstProgramDays[1].id)
+        #expect(context.activeSessionLogs == fixture.sessionLogs)
     }
 
     @Test
@@ -30,6 +31,7 @@ struct WorkoutContextServiceTests {
         #expect(context.program.id == fixture.firstProgram.id)
         #expect(context.initialDayID == fixture.firstProgramDays[1].id)
         #expect(context.activeSession == nil)
+        #expect(context.activeSessionLogs.isEmpty)
     }
 
     @Test
@@ -115,6 +117,7 @@ private extension WorkoutContextServiceTests {
         let secondProgramDays: [WorkoutDay]
         let firstDayExercise: WorkoutDayExercise
         let firstExercise: Exercise
+        let sessionLogs: [ExerciseLog]
         let service: WorkoutContextService
 
         init(selection: Selection, sessionState: SessionState) throws {
@@ -129,6 +132,16 @@ private extension WorkoutContextServiceTests {
                 identifiers: identifiers,
                 now: now
             )
+            sessionLogs = try sessions.map { session in
+                try ExerciseLog(
+                    sessionId: session.id,
+                    workoutDayExerciseId: identifiers.firstDayExerciseID,
+                    weight: 60,
+                    reps: 8,
+                    setNumber: 1,
+                    performedAt: now
+                )
+            }
 
             firstProgram = programs.first
             secondProgram = programs.second
@@ -144,6 +157,7 @@ private extension WorkoutContextServiceTests {
                 dayExercises: [firstDayExercise],
                 exercises: [firstExercise],
                 sessions: sessions,
+                exerciseLogs: sessionLogs,
                 currentUserID: identifiers.userID
             )
             let factory = MockRepositoryFactory(store: store)

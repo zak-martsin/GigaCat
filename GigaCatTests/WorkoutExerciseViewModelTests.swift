@@ -4,7 +4,6 @@ import Testing
 
 @MainActor
 struct WorkoutExerciseViewModelTests {
-
     @Test
     func selectsRequestedExerciseAfterOrderingDayContent() throws {
         let fixture = try Fixture()
@@ -178,11 +177,11 @@ struct WorkoutExerciseViewModelTests {
     @Test
     func firstSavedSetStartsSessionAndNotifiesParent() async throws {
         let fixture = try Fixture()
-        var changedSession: WorkoutSession?
+        var receivedEvent: WorkoutExerciseEvent?
         var workoutDataChangeCount = 0
         let viewModel = fixture.makeViewModel(
             initialDayExerciseID: fixture.first.dayExercise.id,
-            onSessionChanged: { changedSession = $0 },
+            onEvent: { receivedEvent = $0 },
             onDataChanged: { change in
                 #expect(change == .workoutSession)
                 workoutDataChangeCount += 1
@@ -200,11 +199,21 @@ struct WorkoutExerciseViewModelTests {
         let savedLog = viewModel.savedLogs(
             dayExerciseID: fixture.first.dayExercise.id
         )[1]
+        let activeSession = try #require(viewModel.activeSession)
+        let persistedLog = try #require(savedLog)
         #expect(viewModel.activeSession?.startedAt == performedAt)
         #expect(savedLog?.weight == 62.5)
         #expect(savedLog?.reps == 8)
         #expect(viewModel.setSaveState == .saved(setNumber: 1, didStartSession: true))
-        #expect(changedSession == viewModel.activeSession)
+        #expect(
+            receivedEvent == .setSaved(
+                WorkoutSetSaveResult(
+                    session: activeSession,
+                    log: persistedLog,
+                    didStartSession: true
+                )
+            )
+        )
         #expect(workoutDataChangeCount == 1)
         #expect(viewModel.latestLog(exerciseID: fixture.first.exercise.id) == savedLog)
     }
@@ -316,7 +325,7 @@ struct WorkoutExerciseViewModelTests {
     }
 }
 
-private extension WorkoutExerciseViewModelTests {
+extension WorkoutExerciseViewModelTests {
     struct SessionHistory {
         let activeSession: WorkoutSession?
         let savedLog: ExerciseLog?
@@ -397,7 +406,7 @@ private extension WorkoutExerciseViewModelTests {
         func makeViewModel(
             initialDayExerciseID: UUID,
             workoutRepository: WorkoutRepository? = nil,
-            onSessionChanged: @escaping (WorkoutSession) -> Void = { _ in },
+            onEvent: @escaping (WorkoutExerciseEvent) -> Void = { _ in },
             onDataChanged: @escaping AppDataChangeHandler = { _ in }
         ) -> WorkoutExerciseViewModel {
             WorkoutExerciseViewModel(
@@ -406,7 +415,7 @@ private extension WorkoutExerciseViewModelTests {
                 dayContent: dayContent,
                 initialDayExerciseID: initialDayExerciseID,
                 workoutRepository: workoutRepository ?? repository,
-                onSessionChanged: onSessionChanged,
+                onEvent: onEvent,
                 onDataChanged: onDataChanged
             )
         }
@@ -488,5 +497,4 @@ private extension WorkoutExerciseViewModelTests {
             )
         }
     }
-
 }

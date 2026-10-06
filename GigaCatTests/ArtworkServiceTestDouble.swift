@@ -54,8 +54,9 @@ extension WorkoutExerciseViewModel {
         activeSession: WorkoutSession?,
         dayContent: WorkoutDayContent,
         initialDayExerciseID: UUID,
+        initialSetCounts: [UUID: Int] = [:],
         workoutRepository: WorkoutRepository,
-        onSessionChanged: @escaping (WorkoutSession) -> Void = { _ in },
+        onEvent: @escaping (WorkoutExerciseEvent) -> Void = { _ in },
         onDataChanged: @escaping AppDataChangeHandler = { _ in }
     ) {
         self.init(
@@ -63,9 +64,10 @@ extension WorkoutExerciseViewModel {
             activeSession: activeSession,
             dayContent: dayContent,
             initialDayExerciseID: initialDayExerciseID,
+            initialSetCounts: initialSetCounts,
             workoutRepository: workoutRepository,
             artworkService: ArtworkServiceTestDouble(),
-            onSessionChanged: onSessionChanged,
+            onEvent: onEvent,
             onDataChanged: onDataChanged
         )
     }

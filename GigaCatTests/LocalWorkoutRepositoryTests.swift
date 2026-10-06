@@ -255,6 +255,71 @@ struct LocalWorkoutRepositoryTests {
 
         #expect(latest == expected)
     }
+
+    @Test
+    func historySummaryUsesOnlyCompletedSessionsForRequestedUser() async throws {
+        let fixture = try Fixture()
+        let olderBest = try await fixture.repository.saveSet(
+            fixture.input(
+                weight: 100,
+                reps: 3,
+                performedAt: Date(timeIntervalSince1970: 900)
+            )
+        )
+        _ = try await fixture.repository.completeSession(
+            sessionId: olderBest.session.id,
+            userId: fixture.user.id,
+            completedAt: Date(timeIntervalSince1970: 1_000)
+        )
+        let latestFirst = try await fixture.repository.saveSet(
+            fixture.otherDayInput(
+                weight: 70,
+                reps: 10,
+                setNumber: 1,
+                performedAt: Date(timeIntervalSince1970: 1_800)
+            )
+        )
+        let expectedPrevious = try await fixture.repository.saveSet(
+            fixture.otherDayInput(
+                weight: 75,
+                reps: 8,
+                setNumber: 2,
+                performedAt: Date(timeIntervalSince1970: 1_900)
+            )
+        ).log
+        _ = try await fixture.repository.completeSession(
+            sessionId: latestFirst.session.id,
+            userId: fixture.user.id,
+            completedAt: Date(timeIntervalSince1970: 2_000)
+        )
+        _ = try await fixture.repository.saveSet(
+            fixture.input(
+                weight: 150,
+                reps: 1,
+                performedAt: Date(timeIntervalSince1970: 3_000)
+            )
+        )
+        let foreignUser = try fixture.insertForeignUser()
+        let foreignResult = try await fixture.repository.saveSet(fixture.input(
+                userId: foreignUser.id,
+                weight: 200,
+                reps: 1,
+                performedAt: Date(timeIntervalSince1970: 4_000)
+            ))
+        _ = try await fixture.repository.completeSession(
+            sessionId: foreignResult.session.id,
+            userId: foreignUser.id,
+            completedAt: Date(timeIntervalSince1970: 4_100)
+        )
+
+        let summary = try await fixture.repository.fetchExerciseHistorySummary(
+            userId: fixture.user.id,
+            exerciseId: fixture.exercise.id
+        )
+
+        #expect(summary.previousLog == expectedPrevious)
+        #expect(summary.bestLog == olderBest.log)
+    }
 }
 
 private extension LocalWorkoutRepositoryTests {
@@ -335,15 +400,20 @@ private extension LocalWorkoutRepositoryTests {
             )
         }
 
-        func otherDayInput() -> WorkoutSetInput {
+        func otherDayInput(
+            weight: Double = 80,
+            reps: Int = 5,
+            setNumber: Int = 1,
+            performedAt: Date = Date(timeIntervalSince1970: 2_000)
+        ) -> WorkoutSetInput {
             WorkoutSetInput(
                 userId: user.id,
                 workoutDayId: otherDay.id,
                 workoutDayExerciseId: otherDayExercise.id,
-                weight: 80,
-                reps: 5,
-                setNumber: 1,
-                performedAt: Date(timeIntervalSince1970: 2_000)
+                weight: weight,
+                reps: reps,
+                setNumber: setNumber,
+                performedAt: performedAt
             )
         }
 

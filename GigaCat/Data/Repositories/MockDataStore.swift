@@ -339,6 +339,33 @@ actor MockDataStore {
             .first
     }
 
+}
+
+extension MockDataStore {
+    func exerciseHistorySummary(
+        userId: UUID,
+        exerciseId: UUID
+    ) -> ExerciseHistorySummary {
+        let completedSessions = sessionsByID.values.filter {
+            $0.userId == userId && $0.status == .completed
+        }
+        let sessionIDs = Set(completedSessions.map(\.id))
+        let dayExerciseIDs = Set(
+            dayExercisesByID.values
+                .filter { $0.exerciseId == exerciseId }
+                .map(\.id)
+        )
+        let logs = exerciseLogsByID.values.filter {
+            sessionIDs.contains($0.sessionId) &&
+                dayExerciseIDs.contains($0.workoutDayExerciseId)
+        }
+
+        return ExerciseHistorySummary(
+            completedSessions: completedSessions,
+            logs: logs
+        )
+    }
+
     // MARK: - Private Helpers
 
     private func validateOwnership(of session: WorkoutSession, userId: UUID) throws {

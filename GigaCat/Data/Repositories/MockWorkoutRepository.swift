@@ -76,4 +76,11 @@ struct MockWorkoutRepository: WorkoutRepository {
     ) async throws -> ExerciseLog? {
         await store.latestExerciseLog(userId: userId, exerciseId: exerciseId)
     }
+
+    func fetchExerciseHistorySummary(
+        userId: UUID,
+        exerciseId: UUID
+    ) async throws -> ExerciseHistorySummary {
+        await store.exerciseHistorySummary(userId: userId, exerciseId: exerciseId)
+    }
 }

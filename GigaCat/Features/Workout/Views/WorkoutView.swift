@@ -96,6 +96,7 @@ struct WorkoutView: View {
            let viewData = mapper.map(
                context: context,
                selectedDayID: selectedDayID,
+               exerciseSetCounts: viewModel.exerciseSetCounts,
                artworkFileURLs: viewModel.exerciseArtworkFileURLs
            ) {
             WorkoutContentView(

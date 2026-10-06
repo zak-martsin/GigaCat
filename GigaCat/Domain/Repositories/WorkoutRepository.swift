@@ -28,4 +28,8 @@ protocol WorkoutRepository {
         userId: UUID,
         exerciseId: UUID
     ) async throws -> ExerciseLog?
+    func fetchExerciseHistorySummary(
+        userId: UUID,
+        exerciseId: UUID
+    ) async throws -> ExerciseHistorySummary
 }

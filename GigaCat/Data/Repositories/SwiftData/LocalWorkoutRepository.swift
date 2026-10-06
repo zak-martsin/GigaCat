@@ -249,6 +249,34 @@ struct LocalWorkoutRepository: WorkoutRepository {
         }
         return try ExerciseLogMapper.toDomain(entity)
     }
+
+    func fetchExerciseHistorySummary(
+        userId: UUID,
+        exerciseId: UUID
+    ) async throws -> ExerciseHistorySummary {
+        let completedSessions = try fetchCompletedSessions(for: userId)
+        let sessionIds = completedSessions.map(\.id)
+        let dayExerciseIds = try fetchWorkoutDayExerciseIds(for: exerciseId)
+
+        guard !sessionIds.isEmpty, !dayExerciseIds.isEmpty else {
+            return ExerciseHistorySummary(completedSessions: [], logs: [])
+        }
+
+        let descriptor = FetchDescriptor<ExerciseLogEntity>(
+            predicate: #Predicate {
+                sessionIds.contains($0.sessionId) &&
+                    dayExerciseIds.contains($0.workoutDayExerciseId)
+            }
+        )
+        let logs = try context.fetch(descriptor).map {
+            try ExerciseLogMapper.toDomain($0)
+        }
+
+        return ExerciseHistorySummary(
+            completedSessions: completedSessions,
+            logs: logs
+        )
+    }
 }
 
 // MARK: - Fetch Helpers
@@ -347,6 +375,19 @@ private extension LocalWorkoutRepository {
         )
 
         return try context.fetch(descriptor).map(\.id)
+    }
+
+    private func fetchCompletedSessions(for userId: UUID) throws -> [WorkoutSession] {
+        let completed = WorkoutSessionStatus.completed.rawValue
+        let descriptor = FetchDescriptor<WorkoutSessionEntity>(
+            predicate: #Predicate {
+                $0.userId == userId && $0.statusRawValue == completed
+            }
+        )
+
+        return try context.fetch(descriptor).map {
+            try WorkoutSessionMapper.toDomain($0)
+        }
     }
 
     private func fetchWorkoutDayExerciseIds(for exerciseId: UUID) throws -> [UUID] {

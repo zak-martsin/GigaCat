@@ -28,7 +28,8 @@ struct WorkoutExerciseViewData: Identifiable, Equatable, Sendable {
     let id: UUID
     let exerciseID: UUID
     let name: String
-    let targetSets: Int?
+    let completedSets: Int?
+    let setCount: Int?
     let targetReps: Int?
     let artwork: ArtworkReference?
     let artworkFileURL: URL?

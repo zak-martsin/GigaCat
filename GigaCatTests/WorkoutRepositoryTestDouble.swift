@@ -5,6 +5,7 @@ actor WorkoutRepositoryTestDouble: WorkoutRepository {
     enum Failure: Equatable, Sendable {
         case currentSessionLogs
         case latestExerciseLog
+        case exerciseHistorySummary
     }
 
     let base: WorkoutRepository
@@ -143,6 +144,20 @@ actor WorkoutRepositoryTestDouble: WorkoutRepository {
         }
 
         return try await base.fetchLatestExerciseLog(
+            userId: userId,
+            exerciseId: exerciseId
+        )
+    }
+
+    func fetchExerciseHistorySummary(
+        userId: UUID,
+        exerciseId: UUID
+    ) async throws -> ExerciseHistorySummary {
+        guard failure != .exerciseHistorySummary else {
+            throw RepositoryError.exerciseNotFound
+        }
+
+        return try await base.fetchExerciseHistorySummary(
             userId: userId,
             exerciseId: exerciseId
         )

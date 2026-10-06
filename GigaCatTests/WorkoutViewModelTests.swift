@@ -131,6 +131,17 @@ struct WorkoutViewModelTests {
         await viewModel.load()
         #expect(viewModel.hasActiveSessionForSelectedDay)
 
+        let dayContent = try #require(viewModel.selectedDayContent)
+        let dayExerciseID = try #require(dayContent.exercises.first?.dayExercise.id)
+        let exerciseViewModel = try #require(
+            viewModel.makeExerciseViewModel(
+                dayContent: dayContent,
+                initialDayExerciseID: dayExerciseID
+            )
+        )
+        exerciseViewModel.addSet()
+        #expect(viewModel.exerciseSetCounts[dayExerciseID] == 4)
+
         await viewModel.finishActiveSession(completedAt: completedAt)
 
         let sessions = try await repository.fetchSessions(for: activeContext.userID)
@@ -139,6 +150,7 @@ struct WorkoutViewModelTests {
         #expect(viewModel.context == nextContext)
         #expect(viewModel.selectedDayID == nextDayID)
         #expect(viewModel.sessionActionState == .idle)
+        #expect(viewModel.exerciseSetCounts.isEmpty)
         #expect(invalidationCount == 1)
     }
 
@@ -172,6 +184,68 @@ struct WorkoutViewModelTests {
         #expect(viewModel.activeSession == nil)
         #expect(viewModel.sessionActionState == .idle)
         #expect(invalidationCount == 1)
+    }
+
+    @Test
+    func savedSetUpdatesSessionAndUpsertsLogInContext() async throws {
+        let context = try makeContext()
+        let repository = makeWorkoutRepository(for: context)
+        let viewModel = WorkoutViewModel(
+            contextService: WorkoutContextServiceStub(results: [.success(context)]),
+            workoutRepository: repository
+        )
+        await viewModel.load()
+
+        let dayContent = try #require(viewModel.selectedDayContent)
+        let dayExerciseID = try #require(dayContent.exercises.first?.dayExercise.id)
+        let exerciseViewModel = try #require(
+            viewModel.makeExerciseViewModel(
+                dayContent: dayContent,
+                initialDayExerciseID: dayExerciseID
+            )
+        )
+
+        await exerciseViewModel.saveSet(weight: 60, reps: 8, setNumber: 1)
+        let firstLog = try #require(viewModel.context?.activeSessionLogs.first)
+
+        await exerciseViewModel.saveSet(weight: 65, reps: 6, setNumber: 1)
+
+        #expect(viewModel.activeSession == exerciseViewModel.activeSession)
+        #expect(viewModel.context?.activeSessionLogs.count == 1)
+        #expect(viewModel.context?.activeSessionLogs.first?.id == firstLog.id)
+        #expect(viewModel.context?.activeSessionLogs.first?.weight == 65)
+        #expect(viewModel.context?.activeSessionLogs.first?.reps == 6)
+    }
+
+    @Test
+    func addedSetUpdatesParentCountAndReopenedExercise() async throws {
+        let context = try makeContext(hasActiveSession: true)
+        let viewModel = WorkoutViewModel(
+            contextService: WorkoutContextServiceStub(results: [.success(context)]),
+            workoutRepository: makeWorkoutRepository()
+        )
+        await viewModel.load()
+
+        let dayContent = try #require(viewModel.selectedDayContent)
+        let dayExerciseID = try #require(dayContent.exercises.first?.dayExercise.id)
+        let exerciseViewModel = try #require(
+            viewModel.makeExerciseViewModel(
+                dayContent: dayContent,
+                initialDayExerciseID: dayExerciseID
+            )
+        )
+
+        exerciseViewModel.addSet()
+
+        #expect(viewModel.exerciseSetCounts[dayExerciseID] == 4)
+
+        let reopenedViewModel = try #require(
+            viewModel.makeExerciseViewModel(
+                dayContent: dayContent,
+                initialDayExerciseID: dayExerciseID
+            )
+        )
+        #expect(reopenedViewModel.setCount(dayExerciseID: dayExerciseID) == 4)
     }
 
     @Test
@@ -274,22 +348,29 @@ private extension WorkoutViewModelTests {
             ),
             WorkoutDayContent(day: days[1], exercises: [])
         ]
-        let activeSession: WorkoutSession? = if hasActiveSession {
-            try WorkoutSession(
-                userId: userID,
-                workoutDayId: firstDayID
-            )
-        } else {
-            nil
-        }
+        let activeSession = try makeActiveSession(
+            userID: userID,
+            dayID: firstDayID,
+            isActive: hasActiveSession
+        )
 
         return WorkoutContext(
             userID: userID,
             program: program,
             dayContents: dayContents,
             initialDayID: firstDayID,
-            activeSession: activeSession
+            activeSession: activeSession,
+            activeSessionLogs: []
         )
+    }
+
+    func makeActiveSession(
+        userID: UUID,
+        dayID: UUID,
+        isActive: Bool
+    ) throws -> WorkoutSession? {
+        guard isActive else { return nil }
+        return try WorkoutSession(userId: userID, workoutDayId: dayID)
     }
 
     func context(
@@ -301,7 +382,8 @@ private extension WorkoutViewModelTests {
             program: context.program,
             dayContents: context.dayContents,
             initialDayID: initialDayID,
-            activeSession: nil
+            activeSession: nil,
+            activeSessionLogs: []
         )
     }
 
@@ -311,6 +393,21 @@ private extension WorkoutViewModelTests {
         MockWorkoutRepository(
             store: MockDataStore(sessions: sessions)
         )
+    }
+
+    func makeWorkoutRepository(for context: WorkoutContext) -> MockWorkoutRepository {
+        let exercises = context.dayContents.flatMap(\.exercises)
+        let store = MockDataStore(
+            users: [User(id: context.userID, selectedProgramId: context.program.id)],
+            programs: [context.program],
+            workoutDays: context.dayContents.map(\.day),
+            dayExercises: exercises.map(\.dayExercise),
+            exercises: exercises.map(\.exercise),
+            sessions: [context.activeSession].compactMap { $0 },
+            exerciseLogs: context.activeSessionLogs,
+            currentUserID: context.userID
+        )
+        return MockWorkoutRepository(store: store)
     }
 }
 
