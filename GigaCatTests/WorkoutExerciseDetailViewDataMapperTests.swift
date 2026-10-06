@@ -18,6 +18,7 @@ struct WorkoutExerciseDetailViewDataMapperTests {
             logContext: WorkoutExerciseLogContext(
                 savedLogsBySetNumber: [:],
                 latestExerciseLog: nil,
+                historySummary: nil,
                 displayedSetCount: 3,
                 setSaveState: .ready
             )
@@ -28,12 +29,14 @@ struct WorkoutExerciseDetailViewDataMapperTests {
         #expect(viewData.position == 2)
         #expect(viewData.totalCount == 4)
         #expect(viewData.targetSummary == "3 sets · 8 reps")
+        #expect(viewData.previousResult == nil)
+        #expect(viewData.bestResult == nil)
         #expect(viewData.canGoBack)
         #expect(viewData.canGoForward)
     }
 
     @Test
-    func latestExerciseLogSuggestsWeightWhileProgramSuggestsReps() throws {
+    func latestExerciseLogSuggestsPreviousWeightAndReps() throws {
         let content = try makeExerciseContent(
             targetSets: 3,
             targetReps: 8
@@ -53,6 +56,7 @@ struct WorkoutExerciseDetailViewDataMapperTests {
             logContext: WorkoutExerciseLogContext(
                 savedLogsBySetNumber: [:],
                 latestExerciseLog: previousLog,
+                historySummary: nil,
                 displayedSetCount: 3,
                 setSaveState: .ready
             )
@@ -64,7 +68,7 @@ struct WorkoutExerciseDetailViewDataMapperTests {
                     setNumber: 1,
                     savedRepsText: nil,
                     savedWeightText: nil,
-                    suggestedRepsPlaceholder: "8",
+                    suggestedRepsPlaceholder: "5",
                     suggestedWeightPlaceholder: "60",
                     isSaved: false,
                     isSaving: false,
@@ -74,7 +78,7 @@ struct WorkoutExerciseDetailViewDataMapperTests {
                     setNumber: 2,
                     savedRepsText: nil,
                     savedWeightText: nil,
-                    suggestedRepsPlaceholder: "8",
+                    suggestedRepsPlaceholder: "5",
                     suggestedWeightPlaceholder: "60",
                     isSaved: false,
                     isSaving: false,
@@ -84,7 +88,7 @@ struct WorkoutExerciseDetailViewDataMapperTests {
                     setNumber: 3,
                     savedRepsText: nil,
                     savedWeightText: nil,
-                    suggestedRepsPlaceholder: "8",
+                    suggestedRepsPlaceholder: "5",
                     suggestedWeightPlaceholder: "60",
                     isSaved: false,
                     isSaving: false,
@@ -115,6 +119,7 @@ struct WorkoutExerciseDetailViewDataMapperTests {
             logContext: WorkoutExerciseLogContext(
                 savedLogsBySetNumber: [1: savedLog],
                 latestExerciseLog: nil,
+                historySummary: nil,
                 displayedSetCount: 2,
                 setSaveState: .saving(setNumber: 2)
             )
@@ -160,6 +165,7 @@ struct WorkoutExerciseDetailViewDataMapperTests {
             logContext: WorkoutExerciseLogContext(
                 savedLogsBySetNumber: [:],
                 latestExerciseLog: nil,
+                historySummary: nil,
                 displayedSetCount: 1,
                 setSaveState: .ready
             )
@@ -191,6 +197,7 @@ struct WorkoutExerciseDetailViewDataMapperTests {
             logContext: WorkoutExerciseLogContext(
                 savedLogsBySetNumber: [:],
                 latestExerciseLog: nil,
+                historySummary: nil,
                 displayedSetCount: 1,
                 setSaveState: .ready
             )
@@ -211,6 +218,7 @@ struct WorkoutExerciseDetailViewDataMapperTests {
             logContext: WorkoutExerciseLogContext(
                 savedLogsBySetNumber: [:],
                 latestExerciseLog: nil,
+                historySummary: nil,
                 displayedSetCount: 2,
                 setSaveState: .ready
             )
@@ -220,11 +228,75 @@ struct WorkoutExerciseDetailViewDataMapperTests {
         #expect(viewData.sets.count == 2)
         #expect(viewData.sets.first?.suggestedRepsPlaceholder == "")
     }
+
+    @Test
+    func mapsPreviousAndBestCompletedResults() throws {
+        let content = try makeExerciseContent(targetSets: 2, targetReps: 8)
+        let olderSession = try makeCompletedSession(completedAt: 1_000)
+        let previousSession = try makeCompletedSession(completedAt: 2_000)
+        let bestLog = try ExerciseLog(
+            sessionId: olderSession.id,
+            workoutDayExerciseId: content.dayExercise.id,
+            weight: 82.5,
+            reps: 5,
+            setNumber: 1
+        )
+        let previousLog = try ExerciseLog(
+            sessionId: previousSession.id,
+            workoutDayExerciseId: content.dayExercise.id,
+            weight: 70,
+            reps: 8,
+            setNumber: 2
+        )
+        let history = ExerciseHistorySummary(
+            completedSessions: [olderSession, previousSession],
+            logs: [bestLog, previousLog]
+        )
+
+        let viewData = WorkoutExerciseDetailViewDataMapper().map(
+            selectedExercise: content,
+            selectedExerciseIndex: 0,
+            totalCount: 1,
+            logContext: WorkoutExerciseLogContext(
+                savedLogsBySetNumber: [:],
+                latestExerciseLog: nil,
+                historySummary: history,
+                displayedSetCount: 2,
+                setSaveState: .ready
+            )
+        )
+
+        #expect(
+            viewData.previousResult == WorkoutExerciseResultViewData(
+                weightText: "70",
+                repsText: "8"
+            )
+        )
+        #expect(
+            viewData.bestResult == WorkoutExerciseResultViewData(
+                weightText: 82.5.formatted(
+                    .number.precision(.fractionLength(0...2))
+                ),
+                repsText: "5"
+            )
+        )
+    }
 }
 
 private extension WorkoutExerciseDetailViewDataMapperTests {
     func formattedWeight(_ weight: Double) -> String {
         weight.formatted(.number.precision(.fractionLength(0...2)))
+    }
+
+    func makeCompletedSession(completedAt: TimeInterval) throws -> WorkoutSession {
+        let completedAt = Date(timeIntervalSince1970: completedAt)
+        return try WorkoutSession(
+            userId: UUID(),
+            workoutDayId: UUID(),
+            status: .completed,
+            startedAt: completedAt.addingTimeInterval(-600),
+            completedAt: completedAt
+        )
     }
 
     func makeExerciseContent(

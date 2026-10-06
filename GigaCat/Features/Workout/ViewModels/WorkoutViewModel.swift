@@ -22,6 +22,7 @@ final class WorkoutViewModel {
     private(set) var selectedDayID: UUID?
     private(set) var sessionActionState: WorkoutSessionActionState = .idle
     private(set) var exerciseArtworkFileURLs: [UUID: URL] = [:]
+    private(set) var exerciseSetCounts: [UUID: Int] = [:]
 
     @ObservationIgnored
     private let contextService: WorkoutContextServicing
@@ -115,12 +116,14 @@ final class WorkoutViewModel {
                     self.context = nil
                     selectedDayID = nil
                     exerciseArtworkFileURLs = [:]
+                    exerciseSetCounts = [:]
                     loadedArtworkReferences = [:]
                     loadTracker.markLoaded(revision: loadingRevision)
                     loadState = .empty
                     continue
                 }
 
+                resetExerciseSetCountsIfSessionChanged(to: context)
                 self.context = context
                 preserveCurrentArtworkURLs(in: context)
                 selectedDayID = context.initialDayID
@@ -130,6 +133,7 @@ final class WorkoutViewModel {
                 context = nil
                 selectedDayID = nil
                 exerciseArtworkFileURLs = [:]
+                exerciseSetCounts = [:]
                 loadedArtworkReferences = [:]
                 loadState = .failed
                 return
@@ -233,22 +237,46 @@ final class WorkoutViewModel {
             activeSession: context.activeSession,
             dayContent: dayContent,
             initialDayExerciseID: initialDayExerciseID,
+            initialSetCounts: exerciseSetCounts,
             workoutRepository: workoutRepository,
             artworkService: artworkService,
-            onSessionChanged: updateActiveSession,
+            onEvent: handleExerciseEvent,
             onDataChanged: onDataChanged
         )
     }
 
-    private func updateActiveSession(_ session: WorkoutSession) {
+    private func handleExerciseEvent(_ event: WorkoutExerciseEvent) {
+        switch event {
+        case let .setCountChanged(dayExerciseID, count):
+            exerciseSetCounts[dayExerciseID] = count
+        case let .setSaved(result):
+            updateAfterSetSaved(result)
+        }
+    }
+
+    private func updateAfterSetSaved(_ result: WorkoutSetSaveResult) {
         guard let context else { return }
+
+        var activeSessionLogs = context.activeSessionLogs
+        let matchingLogIndex = activeSessionLogs.firstIndex {
+            $0.sessionId == result.log.sessionId &&
+                $0.workoutDayExerciseId == result.log.workoutDayExerciseId &&
+                $0.setNumber == result.log.setNumber
+        }
+
+        if let matchingLogIndex {
+            activeSessionLogs[matchingLogIndex] = result.log
+        } else {
+            activeSessionLogs.append(result.log)
+        }
 
         self.context = WorkoutContext(
             userID: context.userID,
             program: context.program,
             dayContents: context.dayContents,
             initialDayID: context.initialDayID,
-            activeSession: session
+            activeSession: result.session,
+            activeSessionLogs: activeSessionLogs
         )
     }
 
@@ -276,5 +304,10 @@ final class WorkoutViewModel {
         loadedArtworkReferences = loadedArtworkReferences.filter {
             currentReferences[$0.key] == $0.value
         }
+    }
+
+    private func resetExerciseSetCountsIfSessionChanged(to newContext: WorkoutContext) {
+        guard context?.activeSession?.id != newContext.activeSession?.id else { return }
+        exerciseSetCounts = [:]
     }
 }

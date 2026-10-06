@@ -79,6 +79,9 @@ struct WorkoutExerciseView: View {
                 latestExerciseLog: viewModel.latestLog(
                     exerciseID: selectedExercise.exercise.id
                 ),
+                historySummary: viewModel.historySummary(
+                    exerciseID: selectedExercise.exercise.id
+                ),
                 displayedSetCount: viewModel.setCount(
                     dayExerciseID: selectedExercise.dayExercise.id
                 ),

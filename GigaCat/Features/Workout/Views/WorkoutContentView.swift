@@ -184,13 +184,16 @@ private struct WorkoutExerciseRow: View {
                         .foregroundStyle(AppColor.textPrimary)
                         .lineLimit(2)
 
-                    Text(targetSummary)
+                    Text(exerciseSummary)
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(AppColor.textSecondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(AppSpacing.md)
+            .background {
+                exerciseProgress
+            }
             .appCardStyle()
         }
         .buttonStyle(.plain)
@@ -199,15 +202,46 @@ private struct WorkoutExerciseRow: View {
             await onLoadArtwork(exercise.exerciseID)
         }
         .accessibilityHint("Opens exercise details")
+        .accessibilityValue(progressAccessibilityValue)
         .accessibilityIdentifier("workout.exercise.\(exercise.id)")
     }
 
-    private var targetSummary: String {
-        switch (exercise.targetSets, exercise.targetReps) {
-        case let (targetSets?, targetReps?):
-            return "\(targetSets) x \(targetReps) reps"
-        case let (targetSets?, nil):
-            return "\(targetSets) \(targetSets == 1 ? "set" : "sets")"
+    @ViewBuilder
+    private var exerciseProgress: some View {
+        if let completedSets = exercise.completedSets,
+           let setCount = exercise.setCount,
+           setCount > 0 {
+            SwiftUI.ProgressView(
+                value: Double(completedSets),
+                total: Double(setCount)
+            )
+            .progressViewStyle(WorkoutExerciseCardProgressStyle())
+            .clipShape(
+                RoundedRectangle(
+                    cornerRadius: AppRadius.lg,
+                    style: .continuous
+                )
+            )
+            .accessibilityHidden(true)
+        }
+    }
+
+    private var progressAccessibilityValue: String {
+        guard let completedSets = exercise.completedSets,
+              let setCount = exercise.setCount,
+              setCount > 0 else {
+            return ""
+        }
+
+        return "\(completedSets) of \(setCount) sets completed"
+    }
+
+    private var exerciseSummary: String {
+        switch (exercise.setCount, exercise.targetReps) {
+        case let (setCount?, targetReps?):
+            return "\(setCount) x \(targetReps) reps"
+        case let (setCount?, nil):
+            return "\(setCount) \(setCount == 1 ? "set" : "sets")"
         case let (nil, targetReps?):
             return "\(targetReps) \(targetReps == 1 ? "rep" : "reps")"
         case (nil, nil):

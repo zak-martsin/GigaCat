@@ -15,6 +15,11 @@ enum WorkoutSetSaveState: Equatable {
     case failed(setNumber: Int)
 }
 
+enum WorkoutExerciseEvent: Equatable {
+    case setCountChanged(dayExerciseID: UUID, count: Int)
+    case setSaved(WorkoutSetSaveResult)
+}
+
 @MainActor
 @Observable
 final class WorkoutExerciseViewModel {
@@ -27,6 +32,7 @@ final class WorkoutExerciseViewModel {
     private(set) var activeSession: WorkoutSession?
     private(set) var logsByDayExerciseID: [UUID: [Int: ExerciseLog]] = [:]
     private(set) var latestLogByExerciseID: [UUID: ExerciseLog] = [:]
+    private(set) var historyByExerciseID: [UUID: ExerciseHistorySummary] = [:]
     private(set) var setCountByDayExerciseID: [UUID: Int]
     private(set) var logsLoadState: WorkoutExerciseLogsLoadState = .loading
     private(set) var setSaveState: WorkoutSetSaveState = .ready
@@ -39,7 +45,7 @@ final class WorkoutExerciseViewModel {
     private let artworkService: any ArtworkServicing
 
     @ObservationIgnored
-    private let onSessionChanged: (WorkoutSession) -> Void
+    private let onEvent: (WorkoutExerciseEvent) -> Void
 
     @ObservationIgnored
     private let onDataChanged: AppDataChangeHandler
@@ -52,9 +58,10 @@ final class WorkoutExerciseViewModel {
         activeSession: WorkoutSession?,
         dayContent: WorkoutDayContent,
         initialDayExerciseID: UUID,
+        initialSetCounts: [UUID: Int] = [:],
         workoutRepository: WorkoutRepository,
         artworkService: any ArtworkServicing,
-        onSessionChanged: @escaping (WorkoutSession) -> Void = { _ in },
+        onEvent: @escaping (WorkoutExerciseEvent) -> Void = { _ in },
         onDataChanged: @escaping AppDataChangeHandler = { _ in }
     ) {
         let orderedExercises = dayContent.exercises.sorted {
@@ -67,11 +74,13 @@ final class WorkoutExerciseViewModel {
         self.activeSession = activeSession
         self.workoutRepository = workoutRepository
         self.artworkService = artworkService
-        self.onSessionChanged = onSessionChanged
+        self.onEvent = onEvent
         self.onDataChanged = onDataChanged
         setCountByDayExerciseID = Dictionary(
             uniqueKeysWithValues: orderedExercises.map {
-                ($0.dayExercise.id, $0.dayExercise.targetSets ?? 1)
+                let plannedCount = $0.dayExercise.targetSets ?? 1
+                let initialCount = initialSetCounts[$0.dayExercise.id] ?? plannedCount
+                return ($0.dayExercise.id, max(plannedCount, initialCount))
             }
         )
         selectedDayExerciseID = orderedExercises.contains {
@@ -161,17 +170,28 @@ final class WorkoutExerciseViewModel {
         } catch {
             logsByDayExerciseID = [:]
             latestLogByExerciseID = [:]
+            historyByExerciseID = [:]
             logsLoadState = .failed
             return
         }
 
+        var didPartiallyFail = false
+
         do {
             latestLogByExerciseID = try await loadLatestExerciseLogs()
-            logsLoadState = .loaded
         } catch {
             latestLogByExerciseID = [:]
-            logsLoadState = .partiallyLoaded
+            didPartiallyFail = true
         }
+
+        do {
+            historyByExerciseID = try await loadExerciseHistory()
+        } catch {
+            historyByExerciseID = [:]
+            didPartiallyFail = true
+        }
+
+        logsLoadState = didPartiallyFail ? .partiallyLoaded : .loaded
     }
 
     // MARK: - Set State
@@ -182,6 +202,10 @@ final class WorkoutExerciseViewModel {
 
     func latestLog(exerciseID: UUID) -> ExerciseLog? {
         latestLogByExerciseID[exerciseID]
+    }
+
+    func historySummary(exerciseID: UUID) -> ExerciseHistorySummary? {
+        historyByExerciseID[exerciseID]
     }
 
     func setCount(dayExerciseID: UUID) -> Int {
@@ -197,7 +221,14 @@ final class WorkoutExerciseViewModel {
             ?? 1
         guard currentCount < Self.maximumSetCount else { return }
 
-        setCountByDayExerciseID[dayExercise.id] = currentCount + 1
+        let newCount = currentCount + 1
+        setCountByDayExerciseID[dayExercise.id] = newCount
+        onEvent(
+            .setCountChanged(
+                dayExerciseID: dayExercise.id,
+                count: newCount
+            )
+        )
     }
 
     // MARK: - Set Saving
@@ -266,13 +297,16 @@ final class WorkoutExerciseViewModel {
                 setNumber: result.log.setNumber,
                 didStartSession: result.didStartSession
             )
-            onSessionChanged(result.session)
+            onEvent(.setSaved(result))
             await onDataChanged(.workoutSession)
         } catch {
             setSaveState = .failed(setNumber: setNumber)
         }
     }
 
+}
+
+private extension WorkoutExerciseViewModel {
     // MARK: - Log and Save Helpers
 
     private func makeLogsByDayExerciseID(
@@ -320,6 +354,20 @@ final class WorkoutExerciseViewModel {
             if let latestLog {
                 result[content.exercise.id] = latestLog
             }
+        }
+
+        return result
+    }
+
+    private func loadExerciseHistory() async throws -> [UUID: ExerciseHistorySummary] {
+        var result: [UUID: ExerciseHistorySummary] = [:]
+
+        for content in exercises {
+            result[content.exercise.id] = try await workoutRepository
+                .fetchExerciseHistorySummary(
+                    userId: userID,
+                    exerciseId: content.exercise.id
+                )
         }
 
         return result

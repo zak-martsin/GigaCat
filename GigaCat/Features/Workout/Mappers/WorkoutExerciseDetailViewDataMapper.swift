@@ -3,6 +3,7 @@ import Foundation
 struct WorkoutExerciseLogContext {
     let savedLogsBySetNumber: [Int: ExerciseLog]
     let latestExerciseLog: ExerciseLog?
+    let historySummary: ExerciseHistorySummary?
     let displayedSetCount: Int
     let setSaveState: WorkoutSetSaveState
 }
@@ -23,6 +24,8 @@ struct WorkoutExerciseDetailViewDataMapper {
             totalCount: totalCount,
             targetSummary: makeTargetSummary(from: selectedExercise.dayExercise),
             artworkFileURL: artworkFileURL,
+            previousResult: mapResult(logContext.historySummary?.previousLog),
+            bestResult: mapResult(logContext.historySummary?.bestLog),
             sets: makeSetRows(
                 from: selectedExercise.dayExercise,
                 logContext: logContext
@@ -50,6 +53,7 @@ struct WorkoutExerciseDetailViewDataMapper {
             let suggestedWeight = latestPriorLog?.weight
                 ?? logContext.latestExerciseLog?.weight
             let suggestedReps = latestPriorLog?.reps
+                ?? logContext.latestExerciseLog?.reps
                 ?? dayExercise.targetReps
 
             return WorkoutSetRowViewData(
@@ -84,6 +88,15 @@ struct WorkoutExerciseDetailViewDataMapper {
 
     private func formattedWeight(_ weight: Double) -> String {
         weight.formatted(.number.precision(.fractionLength(0...2)))
+    }
+
+    private func mapResult(_ log: ExerciseLog?) -> WorkoutExerciseResultViewData? {
+        log.map {
+            WorkoutExerciseResultViewData(
+                weightText: formattedWeight($0.weight),
+                repsText: String($0.reps)
+            )
+        }
     }
 
     private static func isOlder(_ lhs: ExerciseLog, _ rhs: ExerciseLog) -> Bool {
