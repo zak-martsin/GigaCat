@@ -35,8 +35,8 @@ switching safe in the shared SwiftData store without turning the default catalog
 data. Production and mock implementations both return only active programs whose `authorId` is
 `nil`.
 
-Program details remain a shared supporting feature because the mini player can also open them. Its
-v1 actions are select, start, and continue; there is no save-to-Library action.
+Program details remain a shared supporting feature because Catalog and Workout can both open them.
+Its v1 actions are select, start, and continue; there is no save-to-Library action.
 
 ## Filtering
 
@@ -60,8 +60,7 @@ A failed refresh does not replace content with an error if valid local content a
 Visible program cards ask `CatalogViewModel` to resolve their versioned artwork through the shared
 artwork service. Cached files appear immediately, missing files are downloaded and stored locally,
 and an image failure leaves that card's placeholder visible without failing the catalog screen.
-The same cached artwork view is reused by program details opened from the catalog, workout screen,
-or mini player.
+The same cached artwork view is reused by program details opened from the catalog or workout screen.
 
 Changing the baseline catalog is an explicit workflow: add a Supabase content migration, update the
 bundled JSON, compare the complete remote and bundled snapshots, then update the test fingerprint.
@@ -73,8 +72,8 @@ bundled JSON, compare the complete remote and bundled snapshots, then update the
 - If an active session belongs to the same program, the primary action continues it.
 - If an active session belongs to another program, Catalog asks for confirmation before cancelling
   that session and switching programs.
-- Selection invalidates all three feature caches and reloads the app-level mini player. Progress is
-  included because resolving a selection conflict may also finish an active session.
+- Selection invalidates all three feature caches. Progress is included because resolving a
+  selection conflict may also finish an active session.
 
 ## UI States
 

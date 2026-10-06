@@ -39,7 +39,6 @@ AppShell
     │   └── Exercise logger
     ├── Progress
     │   └── Full calendar
-    └── App-level mini player
 ```
 
 Library, Nutrition, custom program creation, catalog search, and marketplace ranking do not belong
@@ -80,7 +79,7 @@ LocalSystemCatalogStore applies it transactionally to SwiftData
     ↓
 AppDataChange.programCatalog is emitted only when local values changed
     ↓
-affected ViewModels and the mini player are invalidated; the visible tab reloads
+affected ViewModels are invalidated; the visible tab reloads
 ```
 
 The UI always reloads through local repositories; it never renders Supabase DTOs. Failed downloads
@@ -215,11 +214,11 @@ Reapplying an identical server snapshot is a no-op and must not disturb an activ
 
 Expected v1 invalidation:
 
-| Change | Catalog | Workout | Progress | Mini player |
-| --- | --- | --- | --- | --- |
-| selected program | yes | yes | yes | immediate reload |
-| workout session/log | yes | yes | yes | immediate reload |
-| system catalog | yes | yes | yes | immediate reload |
+| Change | Catalog | Workout | Progress |
+| --- | --- | --- | --- |
+| selected program | yes | yes | yes |
+| workout session/log | yes | yes | yes |
+| system catalog | yes | yes | yes |
 
 Account changes are lifecycle boundaries, not data invalidations: Authentication recreates the app
 shell for the newly resolved `CurrentUserContext`, so `AppDataChange` has no unused current-user case.

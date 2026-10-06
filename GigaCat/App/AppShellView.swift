@@ -12,7 +12,6 @@ struct AppShellView: View {
     @State private var workoutViewModel: WorkoutViewModel
     @State private var progressViewModel: ProgressViewModel
     @StateObject private var catalogViewModel: CatalogViewModel
-    @StateObject private var miniPlayerViewModel: MiniPlayerViewModel
     @StateObject private var programDetailViewModel: ProgramDetailViewModel
     @StateObject private var profileSheetViewModel: ProfileSheetViewModel
 
@@ -42,7 +41,6 @@ struct AppShellView: View {
         _workoutViewModel = State(initialValue: container.workoutViewModel)
         _progressViewModel = State(initialValue: container.progressViewModel)
         _catalogViewModel = StateObject(wrappedValue: container.catalogViewModel)
-        _miniPlayerViewModel = StateObject(wrappedValue: container.miniPlayerViewModel)
         _programDetailViewModel = StateObject(wrappedValue: container.programDetailViewModel)
         _profileSheetViewModel = StateObject(
             wrappedValue: ProfileSheetViewModel(
@@ -88,48 +86,8 @@ struct AppShellView: View {
                 Label(AppTab.progress.title, systemImage: AppTab.progress.systemImage)
             }
         }
-        .tabViewBottomAccessory(isEnabled: selectedTab != .workout) {
-            ProgramMiniPlayerView(
-                state: miniPlayerViewModel.state,
-                onTap: openMiniPlayerProgramDetail,
-                onPrimaryAction: handleMiniPlayerAction
-            )
-            .padding(.horizontal, AppSpacing.lg)
-            .padding(.bottom, AppSpacing.sm)
-        }
         .toolbar(.hidden, for: .navigationBar)
         .background(AppColor.background.ignoresSafeArea())
-
-        .alert(
-            miniPlayerViewModel.expiredSessionAlert?.title ?? "",
-            isPresented: expiredSessionAlertIsPresented,
-            presenting: miniPlayerViewModel.expiredSessionAlert
-        ) { _ in
-            Button("Continue") {
-                Task {
-                    let route = miniPlayerViewModel.continueExpiredSession()
-                    if route == .openWorkout {
-                        openWorkoutTab()
-                    }
-                }
-            }
-
-            Button("Finish") {
-                Task {
-                    await miniPlayerViewModel.completeExpiredSession()
-                    await loadSelectedTabIfNeeded()
-                }
-            }
-
-            Button("Discard", role: .destructive) {
-                Task {
-                    await miniPlayerViewModel.deleteExpiredSession()
-                    await loadSelectedTabIfNeeded()
-                }
-            }
-        } message: { alert in
-            Text(alert.message)
-        }
         .sheet(item: $programDetailViewModel.presentedDetail) { detail in
             appProgramDetailSheet(detail)
         }
@@ -181,9 +139,6 @@ struct AppShellView: View {
             case .progress:
                 await progressViewModel.loadIfNeeded()
             }
-        }
-        .task {
-            await miniPlayerViewModel.reload()
         }
         .task {
             await refreshAfterBecomingActive()
@@ -254,13 +209,6 @@ private extension AppShellView {
         }
     }
 
-    private func handleMiniPlayerAction() {
-        let route = miniPlayerViewModel.handlePrimaryAction()
-        if route == .openWorkout {
-            openWorkoutTab()
-        }
-    }
-
     private func handleHeaderAction(_ action: HeaderAction) {
         switch action {
         case .profile:
@@ -271,12 +219,6 @@ private extension AppShellView {
     private func signOut() {
         isProfilePresented = false
         onSignOut()
-    }
-
-    private func openMiniPlayerProgramDetail() {
-        guard let programID = miniPlayerViewModel.programID else { return }
-
-        openProgramDetail(programID)
     }
 
     private func openProgramDetail(_ programID: UUID) {
@@ -340,17 +282,6 @@ private extension AppShellView {
 
     // MARK: - Bindings
 
-    private var expiredSessionAlertIsPresented: Binding<Bool> {
-        Binding(
-            get: { miniPlayerViewModel.expiredSessionAlert != nil },
-            set: { isPresented in
-                if !isPresented {
-                    miniPlayerViewModel.expiredSessionAlert = nil
-                }
-            }
-        )
-    }
-
     private var programDetailErrorIsPresented: Binding<Bool> {
         Binding(
             get: { programDetailViewModel.errorMessage != nil },
@@ -360,85 +291,5 @@ private extension AppShellView {
                 }
             }
         )
-    }
-}
-
-// MARK: - Supporting Views
-
-private struct ProgramMiniPlayerView: View {
-    let state: MiniPlayerState
-    let onTap: () -> Void
-    let onPrimaryAction: () -> Void
-
-    // MARK: - Layout
-
-    var body: some View {
-        GlassEffectContainer(spacing: AppSpacing.md) {
-            HStack(alignment: .center, spacing: AppSpacing.md) {
-                RoundedRectangle(cornerRadius: AppRadius.md)
-                    .fill(
-                        LinearGradient(
-                            colors: [AppColor.accent.opacity(0.95), AppColor.textSecondary.opacity(0.45)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(
-                        width: AppControlSize.miniPlayerArtwork,
-                        height: AppControlSize.miniPlayerArtwork
-                    )
-                    .overlay {
-                        ZStack {
-                            Image(systemName: "figure.strengthtraining.traditional")
-                                .font(.system(size: AppIconSize.miniPlayerArtwork, weight: .medium))
-                                .foregroundStyle(.white.opacity(0.9))
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
-                    .offset(y: 4)
-
-                VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                    Text(state.title)
-                        .font(.headline)
-                        .foregroundStyle(AppColor.textPrimary)
-                        .lineLimit(1)
-
-                    Text(state.subtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(AppColor.textSecondary)
-                        .lineLimit(2)
-                }
-
-                Spacer(minLength: AppSpacing.md)
-
-                if state.action != .none {
-                    actionButton
-                        .offset(y: 4)
-                }
-            }
-            .padding(.horizontal, AppSpacing.md)
-            .padding(.vertical, AppSpacing.sm)
-        }
-        .contentShape(Rectangle())
-        .onTapGesture(perform: onTap)
-    }
-
-    // MARK: - Helpers
-
-    @ViewBuilder
-    private var actionButton: some View {
-        let button = Button(action: onPrimaryAction) {
-            Text(state.action == .continueWorkout ? "Continue" : "Start")
-                .font(.subheadline.weight(.semibold))
-                .padding(.horizontal, AppSpacing.lg)
-        }
-            .frame(height: AppControlSize.fieldHeight)
-            .buttonStyle(.glassProminent)
-
-        if state.action == .start {
-            button.tint(.green)
-        } else {
-            button
-        }
     }
 }
