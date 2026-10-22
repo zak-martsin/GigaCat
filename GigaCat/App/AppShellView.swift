@@ -144,9 +144,12 @@ struct AppShellView: View {
             await refreshAfterBecomingActive()
         }
         .onChange(of: scenePhase) { _, newPhase in
-            guard newPhase == .active else { return }
-            Task {
-                await refreshAfterBecomingActive()
+            if newPhase == .active {
+                Task {
+                    await refreshAfterBecomingActive()
+                }
+            } else {
+                container.pauseSessionExpirationMonitoring()
             }
         }
         .task(id: isUnavailableNoticeVisible) {

@@ -21,6 +21,7 @@ final class AppContainer {
     private let systemCatalogSynchronizer: any SystemCatalogSyncing
     private let artworkService: any ArtworkServicing
     private let selectedProgramReconciler: SelectedProgramReconciliationService
+    private let workoutSessionExpirationMonitor: WorkoutSessionExpirationMonitor
     private var foregroundRefreshTask: Task<ForegroundRefreshResult, Never>?
 
     // The composition root keeps the complete dependency graph visible in one place.
@@ -33,6 +34,15 @@ final class AppContainer {
         profileBootstrapper: any ProfileBootstrapping
     ) {
         let dataChangeDispatcher = AppDataChangeDispatcher()
+        let workoutSessionExpirationService = WorkoutSessionExpirationService(
+            workoutRepository: repositoryFactory.workoutRepository
+        )
+        let workoutSessionExpirationMonitor = WorkoutSessionExpirationMonitor(
+            service: workoutSessionExpirationService,
+            onSessionExpired: {
+                await dataChangeDispatcher.send(.workoutSession)
+            }
+        )
         let programDetailService = ProgramDetailService(
             userRepository: repositoryFactory.userRepository,
             defaultProgramCatalogRepository: repositoryFactory.defaultProgramCatalogRepository,
@@ -88,6 +98,9 @@ final class AppContainer {
                 Task(priority: .utility) {
                     await syncCoordinator.requestSync()
                 }
+            },
+            refreshWorkoutSessionExpiration: { [weak workoutSessionExpirationMonitor] in
+                await workoutSessionExpirationMonitor?.refresh()
             }
         )
 
@@ -102,6 +115,7 @@ final class AppContainer {
         self.syncCoordinator = syncCoordinator
         self.systemCatalogSynchronizer = systemCatalogSynchronizer
         self.artworkService = artworkService
+        self.workoutSessionExpirationMonitor = workoutSessionExpirationMonitor
         selectedProgramReconciler = SelectedProgramReconciliationService(
             userRepository: repositoryFactory.userRepository,
             workoutProgramRepository: repositoryFactory.workoutProgramRepository
@@ -123,7 +137,12 @@ final class AppContainer {
         return result
     }
 
+    func pauseSessionExpirationMonitoring() {
+        workoutSessionExpirationMonitor.stop()
+    }
+
     private func performForegroundRefresh(for userID: UUID) async -> ForegroundRefreshResult {
+        let sessionDidExpire = await workoutSessionExpirationMonitor.refresh(for: userID)
         let selectedProgramBefore = try? await userRepository
             .user(id: userID)?.selectedProgramId
         let catalogDidChange: Bool
@@ -157,7 +176,10 @@ final class AppContainer {
         }
 
         return ForegroundRefreshResult(
-            didChange: catalogDidChange || selectionWasReconciled || profileDidChange,
+            didChange: sessionDidExpire
+                || catalogDidChange
+                || selectionWasReconciled
+                || profileDidChange,
             selectedProgramBecameUnavailable: selectionWasReconciled
         )
     }
