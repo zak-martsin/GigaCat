@@ -50,6 +50,7 @@ recommendation sections, or user-generated programs.
 - Save and update weight and repetitions locally.
 - Show previous exercise performance.
 - Finish or cancel the active session.
+- Automatically finish an active session after two hours without saved activity or five hours from its start, whichever occurs first.
 - Remain usable without a network connection.
 
 ### Progress

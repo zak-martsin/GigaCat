@@ -6,6 +6,43 @@ import Testing
 struct AppContainerForegroundRefreshTests {
 
     @Test
+    func foregroundRefreshCompletesAnExpiredWorkoutSession() async throws {
+        let userID = UUID()
+        let startedAt = Date().addingTimeInterval(-3 * 60 * 60)
+        let session = try WorkoutSession(
+            userId: userID,
+            workoutDayId: UUID(),
+            startedAt: startedAt
+        )
+        let factory = MockRepositoryFactory(
+            store: MockDataStore(
+                users: [User(id: userID)],
+                sessions: [session],
+                currentUserID: userID
+            )
+        )
+        let container = AppContainer(
+            repositoryFactory: factory,
+            syncCoordinator: ForegroundSyncCoordinatorSpy(),
+            systemCatalogSynchronizer: ForegroundCatalogSynchronizerSpy(),
+            artworkService: ForegroundArtworkServiceStub(),
+            profileBootstrapper: ForegroundProfileBootstrapperSpy()
+        )
+
+        let result = await container.refreshAfterBecomingActive(for: userID)
+
+        let persistedSession = try #require(
+            try await factory.workoutRepository.fetchSessions(for: userID).first
+        )
+        #expect(result.didChange)
+        #expect(persistedSession.status == .completed)
+        #expect(
+            persistedSession.completedAt
+                == startedAt.addingTimeInterval(2 * 60 * 60)
+        )
+    }
+
+    @Test
     func foregroundRefreshRunsCatalogPushAndProfilePullInOrder() async throws {
         let recorder = ForegroundRefreshRecorder()
         let factory = try MockRepositoryFactory()

@@ -156,6 +156,12 @@ successful catalog refresh, await the outbox push, then pull the profile when th
 Only completed local changes are routed through `AppDataChangeDispatcher`; Views do not coordinate
 these storage operations.
 
+Active workout expiration follows the same application boundary. A pure domain policy calculates
+the earlier of the inactivity and absolute deadlines, a focused service reconciles that policy with
+the local `WorkoutRepository`, and an app-scoped monitor schedules best-effort checks while the app
+is active. Foreground reconciliation provides correctness after suspension or termination; no
+background execution guarantee is required.
+
 Account transitions are serialized at the authentication boundary. Signing out first awaits sync
 deactivation before removing the Supabase session and current local user ID. Authenticating an
 account first stops any previous worker, installs the new current user ID, bootstraps that profile,

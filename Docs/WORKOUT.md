@@ -15,6 +15,7 @@ The feature lets the user inspect the selected program, navigate its workout day
 - creating a session when the first set is saved
 - saving and updating exercise logs
 - completing or cancelling an active session
+- automatically completing an abandoned active session
 - notifying other screens when workout data becomes stale
 
 `Workout` is not responsible for:
@@ -133,6 +134,20 @@ Session status is inProgress
 ```
 
 Only one session can be active. Saving a set for a different inspected day is blocked while another day's session is active.
+
+### Automatic completion
+
+An active session is completed at the earlier of these deadlines:
+
+- two hours after its latest saved exercise log, or two hours after session start when it has no logs
+- five hours after session start
+
+`WorkoutSessionExpirationPolicy` owns this calculation. `WorkoutSessionExpirationService` reloads
+the active session and its logs from `WorkoutRepository` before applying the policy and persists an
+expired session with the calculated deadline as `completedAt`. `WorkoutSessionExpirationMonitor`
+keeps a best-effort timer while the app is active and reschedules it after workout data changes.
+Because iOS can suspend timers, every foreground refresh also runs the service and remains the
+authoritative recovery path.
 
 ### Finish
 
