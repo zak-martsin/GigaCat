@@ -114,7 +114,7 @@ struct WorkoutViewModelTests {
             initialDayID: nextDayID
         )
         let activeSession = try #require(activeContext.activeSession)
-        let repository = makeWorkoutRepository(sessions: [activeSession])
+        let repository = makeWorkoutRepository(for: activeContext)
         var invalidationCount = 0
         let viewModel = WorkoutViewModel(
             contextService: WorkoutContextServiceStub(
@@ -342,7 +342,8 @@ private extension WorkoutViewModelTests {
                 exercises: [
                     WorkoutExerciseContent(
                         dayExercise: dayExercise,
-                        exercise: exercise
+                        exercise: exercise,
+                        recommendedSets: dayExercise.targetSets
                     )
                 ]
             ),

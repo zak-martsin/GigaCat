@@ -315,7 +315,8 @@ private extension WorkoutExerciseDetailViewDataMapperTests {
 
         return WorkoutExerciseContent(
             dayExercise: dayExercise,
-            exercise: exercise
+            exercise: exercise,
+            recommendedSets: dayExercise.targetSets
         )
     }
 }

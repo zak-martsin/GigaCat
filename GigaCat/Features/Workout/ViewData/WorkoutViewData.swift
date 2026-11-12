@@ -33,6 +33,7 @@ struct WorkoutExerciseViewData: Identifiable, Equatable, Sendable {
     let targetReps: Int?
     let artwork: ArtworkReference?
     let artworkFileURL: URL?
+    var recommendedSets: Int?
 
     var artworkLoadIdentifier: ExerciseArtworkLoadIdentifier? {
         artwork.map {

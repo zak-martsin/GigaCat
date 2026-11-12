@@ -20,4 +20,6 @@ struct WorkoutDayContent: Equatable, Sendable {
 struct WorkoutExerciseContent: Equatable, Sendable {
     let dayExercise: WorkoutDayExercise
     let exercise: Exercise
+    /// Resolved by the context service; a catalog override is never interpreted by the UI.
+    var recommendedSets: Int?
 }

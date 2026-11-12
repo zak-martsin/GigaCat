@@ -38,7 +38,7 @@ struct WorkoutContextService: WorkoutContextServicing {
         if let activeSession = try await workoutRepository.activeSession(for: user.id) {
             return try await makeActiveSessionContext(
                 for: activeSession,
-                userID: user.id
+                user: user
             )
         }
 
@@ -61,7 +61,7 @@ struct WorkoutContextService: WorkoutContextServicing {
             in: days,
             latestWorkoutDay: latestWorkoutDay
         )
-        let dayContents = try await makeDayContents(from: days)
+        let dayContents = try await makeDayContents(from: days, user: user)
 
         return WorkoutContext(
             userID: user.id,
@@ -77,7 +77,7 @@ struct WorkoutContextService: WorkoutContextServicing {
 
     private func makeActiveSessionContext(
         for activeSession: WorkoutSession,
-        userID: UUID
+        user: User
     ) async throws -> WorkoutContext {
         guard let activeWorkoutDay = try await workoutProgramRepository.fetchWorkoutDay(
             id: activeSession.workoutDayId
@@ -93,13 +93,13 @@ struct WorkoutContextService: WorkoutContextServicing {
         guard days.contains(where: { $0.id == activeWorkoutDay.id }) else {
             throw WorkoutContextError.workoutDayNotFound
         }
-        let dayContents = try await makeDayContents(from: days, includeInactive: true)
+        let dayContents = try await makeDayContents(from: days, user: user, activeSession: activeSession, includeInactive: true)
         let activeSessionLogs = try await workoutRepository.fetchExerciseLogs(
             sessionId: activeSession.id
         )
 
         return WorkoutContext(
-            userID: userID,
+            userID: user.id,
             program: program,
             dayContents: dayContents,
             initialDayID: activeWorkoutDay.id,
@@ -142,6 +142,8 @@ struct WorkoutContextService: WorkoutContextServicing {
 
     private func makeDayContents(
         from days: [WorkoutDay],
+        user: User,
+        activeSession: WorkoutSession? = nil,
         includeInactive: Bool = false
     ) async throws -> [WorkoutDayContent] {
         var dayContents: [WorkoutDayContent] = []
@@ -155,6 +157,15 @@ struct WorkoutContextService: WorkoutContextServicing {
                 dayExercises = try await workoutProgramRepository
                     .fetchWorkoutDayExercises(workoutDayId: day.id)
             }
+            let targets: [WorkoutExerciseTarget]
+            if let activeSession, activeSession.workoutDayId == day.id {
+                targets = activeSession.exerciseTargets ?? []
+            } else {
+                targets = WorkoutRecommendationService(
+                    userRepository: userRepository, programRepository: workoutProgramRepository
+                ).recommendations(exercises: dayExercises, user: user)
+            }
+            let targetSets = Dictionary(uniqueKeysWithValues: targets.map { ($0.workoutDayExerciseID, $0.targetSets) })
             var exerciseContents: [WorkoutExerciseContent] = []
 
             for dayExercise in dayExercises.sorted(by: { $0.orderIndex < $1.orderIndex }) {
@@ -167,7 +178,8 @@ struct WorkoutContextService: WorkoutContextServicing {
                 exerciseContents.append(
                     WorkoutExerciseContent(
                         dayExercise: dayExercise,
-                        exercise: exercise
+                        exercise: exercise,
+                        recommendedSets: targetSets[dayExercise.id]
                     )
                 )
             }

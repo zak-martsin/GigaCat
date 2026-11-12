@@ -3,7 +3,6 @@ import SwiftUI
 struct WorkoutExerciseView: View {
     @State private var viewModel: WorkoutExerciseViewModel
     @State private var transitionDirection: ExerciseTransitionDirection = .forward
-    @State private var drafts = WorkoutSetDraftCollection()
 
     private let mapper = WorkoutExerciseDetailViewDataMapper()
     private let onExerciseInfo: () -> Void
@@ -21,7 +20,7 @@ struct WorkoutExerciseView: View {
             if let viewData {
                 WorkoutExerciseContentView(
                     viewData: viewData,
-                    drafts: $drafts,
+                    drafts: Binding(get: { viewModel.drafts }, set: { viewModel.drafts = $0 }),
                     onPreviousExercise: selectPreviousExercise,
                     onNextExercise: selectNextExercise,
                     onAddSet: addSet,

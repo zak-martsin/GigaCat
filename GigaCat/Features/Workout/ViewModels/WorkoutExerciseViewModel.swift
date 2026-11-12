@@ -27,7 +27,9 @@ final class WorkoutExerciseViewModel {
 
     let userID: UUID
     let day: WorkoutDay
-    let exercises: [WorkoutExerciseContent]
+    private(set) var exercises: [WorkoutExerciseContent]
+    var drafts = WorkoutSetDraftCollection()
+    private var manuallyAddedCounts: [UUID: Int]
     private(set) var selectedDayExerciseID: UUID?
     private(set) var activeSession: WorkoutSession?
     private(set) var logsByDayExerciseID: [UUID: [Int: ExerciseLog]] = [:]
@@ -68,6 +70,7 @@ final class WorkoutExerciseViewModel {
             $0.dayExercise.orderIndex < $1.dayExercise.orderIndex
         }
 
+        manuallyAddedCounts = initialSetCounts
         self.userID = userID
         day = dayContent.day
         exercises = orderedExercises
@@ -78,7 +81,7 @@ final class WorkoutExerciseViewModel {
         self.onDataChanged = onDataChanged
         setCountByDayExerciseID = Dictionary(
             uniqueKeysWithValues: orderedExercises.map {
-                let plannedCount = $0.dayExercise.targetSets ?? 1
+                let plannedCount = $0.recommendedSets ?? 0
                 let initialCount = initialSetCounts[$0.dayExercise.id] ?? plannedCount
                 return ($0.dayExercise.id, max(plannedCount, initialCount))
             }
@@ -86,6 +89,21 @@ final class WorkoutExerciseViewModel {
         selectedDayExerciseID = orderedExercises.contains {
             $0.dayExercise.id == initialDayExerciseID
         } ? initialDayExerciseID : orderedExercises.first?.dayExercise.id
+    }
+
+    /// Refreshes resolved recommendations without replacing this model or its unsaved inputs.
+    func refresh(dayContent: WorkoutDayContent, session: WorkoutSession?, logs: [ExerciseLog]) {
+        guard dayContent.day.id == day.id else { return }
+        exercises = dayContent.exercises.sorted { $0.dayExercise.orderIndex < $1.dayExercise.orderIndex }
+        activeSession = session
+        if !isSavingSet { logsByDayExerciseID = makeLogsByDayExerciseID(from: logs) }
+        for content in exercises {
+            let id = content.dayExercise.id
+            setCountByDayExerciseID[id] = [
+                content.recommendedSets ?? 0, manuallyAddedCounts[id] ?? 0,
+                logsByDayExerciseID[id]?.keys.max() ?? 0, drafts.highestEnteredSetNumber(for: id)
+            ].max() ?? 0
+        }
     }
 
     // MARK: - Exercise Selection
@@ -217,12 +235,13 @@ final class WorkoutExerciseViewModel {
 
         let dayExercise = selectedExercise.dayExercise
         let currentCount = setCountByDayExerciseID[dayExercise.id]
-            ?? dayExercise.targetSets
-            ?? 1
+            ?? selectedExercise.recommendedSets
+            ?? 0
         guard currentCount < Self.maximumSetCount else { return }
 
         let newCount = currentCount + 1
         setCountByDayExerciseID[dayExercise.id] = newCount
+        manuallyAddedCounts[dayExercise.id] = newCount
         onEvent(
             .setCountChanged(
                 dayExerciseID: dayExercise.id,
@@ -288,6 +307,16 @@ final class WorkoutExerciseViewModel {
             )
 
             activeSession = result.session
+            let targets = Dictionary(uniqueKeysWithValues: (result.session.exerciseTargets ?? []).map {
+                ($0.workoutDayExerciseID, $0.targetSets)
+            })
+            if result.session.workoutDayId == day.id {
+                exercises = exercises.map { content in
+                    var updated = content
+                    updated.recommendedSets = targets[content.dayExercise.id]
+                    return updated
+                }
+            }
             var exerciseLogs = logsByDayExerciseID[result.log.workoutDayExerciseId] ?? [:]
             exerciseLogs[result.log.setNumber] = result.log
             logsByDayExerciseID[result.log.workoutDayExerciseId] = exerciseLogs

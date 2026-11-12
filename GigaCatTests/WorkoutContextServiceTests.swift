@@ -79,7 +79,8 @@ struct WorkoutContextServiceTests {
             context.dayContents[0].exercises == [
                 WorkoutExerciseContent(
                     dayExercise: fixture.firstDayExercise,
-                    exercise: fixture.firstExercise
+                    exercise: fixture.firstExercise,
+                    recommendedSets: fixture.firstDayExercise.targetSets
                 )
             ]
         )
