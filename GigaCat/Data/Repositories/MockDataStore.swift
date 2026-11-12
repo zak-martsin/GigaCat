@@ -57,24 +57,29 @@ actor MockDataStore {
         }
     }
 
+    func updateTrainingPreferences(for userID: UUID, goal: TrainingGoal?, level: TrainingLevel?) throws -> User {
+        guard let user = usersByID[userID] else { throw RepositoryError.userNotFound }
+        guard user.goal != goal || user.level != level else { return user }
+        let updated = user.updatingTraining(goal: goal, level: level)
+        let active = sessionsByID.values.filter { $0.userId == userID && $0.isActive }
+        let updatedSessions = try active.map { session in
+            let resolved = try resolvedSession(session)
+            return try resolved.replacingTargets(WorkoutTargetResolver().recalculated(
+                resolved.exerciseTargets ?? [], user: updated
+            ))
+        }
+        usersByID[userID] = updated
+        userRevisionsByID[userID, default: 0] += 1
+        for session in updatedSessions { sessionsByID[session.id] = session }
+        return updated
+    }
+
     func profileSnapshot(for userID: UUID) -> LocalProfileSnapshot {
         LocalProfileSnapshot(
             userID: userID,
             user: usersByID[userID],
             revision: userRevisionsByID[userID]
         )
-    }
-
-    func applyFetchedProfile(_ user: User, ifUnchangedSince snapshot: LocalProfileSnapshot) -> Bool {
-        guard user.id == snapshot.userID,
-              userRevisionsByID[user.id] == snapshot.revision,
-              usersByID[user.id] == snapshot.user,
-              usersByID[user.id] != user else {
-            return false
-        }
-
-        usersByID[user.id] = user
-        return true
     }
 
     /// Updates program selection only if both the user and referenced program exist in the store.
@@ -130,9 +135,28 @@ actor MockDataStore {
         sessionsByID.values.first { $0.userId == userId && $0.status == .inProgress }
     }
 
+    func reconcileActiveSession(for userID: UUID) throws -> WorkoutSession? {
+        guard let session = activeSession(for: userID) else { return nil }
+        let resolved = try resolvedSession(session)
+        sessionsByID[session.id] = resolved
+        return resolved
+    }
+
+    private func resolvedSession(_ session: WorkoutSession) throws -> WorkoutSession {
+        guard session.isActive, session.exerciseTargets == nil else { return session }
+        guard let user = usersByID[session.userId] else { throw RepositoryError.userNotFound }
+        return try session.replacingTargets(initialTargets(workoutDayID: session.workoutDayId, user: user))
+    }
+
+    private func initialTargets(workoutDayID: UUID, user: User) -> [WorkoutExerciseTarget] {
+        WorkoutTargetResolver().targets(
+            exercises: dayExercisesByID.values.filter { $0.workoutDayId == workoutDayID }, user: user
+        )
+    }
+
     /// Starts a session only when the user exists, the workout day exists, and there is no active session yet.
     func startSession(userId: UUID, workoutDayId: UUID, startedAt: Date) throws -> WorkoutSession {
-        guard usersByID[userId] != nil else {
+        guard let user = usersByID[userId] else {
             throw RepositoryError.userNotFound
         }
 
@@ -147,7 +171,8 @@ actor MockDataStore {
         let session = try WorkoutSession(
             userId: userId,
             workoutDayId: workoutDayId,
-            startedAt: startedAt
+            startedAt: startedAt,
+            exerciseTargets: initialTargets(workoutDayID: workoutDayId, user: user)
         )
         sessionsByID[session.id] = session
         return session
@@ -163,7 +188,7 @@ actor MockDataStore {
         }
         try validateOwnership(of: session, userId: userId)
 
-        let completedSession = try session.markCompleted(at: completedAt)
+        let completedSession = try resolvedSession(session).markCompleted(at: completedAt)
         sessionsByID[sessionId] = completedSession
         return completedSession
     }
@@ -179,7 +204,7 @@ actor MockDataStore {
         }
         try validateOwnership(of: session, userId: userId)
 
-        let completedSession = try session.markCompleted(at: completedAt)
+        let completedSession = try resolvedSession(session).markCompleted(at: completedAt)
         let updatedUser = try updatedUserSelectingProgram(for: userId, programId: programId)
 
         sessionsByID[sessionId] = completedSession
@@ -217,7 +242,7 @@ actor MockDataStore {
 
     /// Creates the first session and saves its first set as one actor-isolated mutation.
     func saveSet(_ input: WorkoutSetInput) throws -> WorkoutSetSaveResult {
-        guard usersByID[input.userId] != nil else {
+        guard let user = usersByID[input.userId] else {
             throw RepositoryError.userNotFound
         }
 
@@ -236,10 +261,11 @@ actor MockDataStore {
             throw RepositoryError.activeSessionWorkoutDayConflict
         }
 
-        let session = try existingSession ?? WorkoutSession(
+        let session = try existingSession.map(resolvedSession) ?? WorkoutSession(
             userId: input.userId,
             workoutDayId: input.workoutDayId,
-            startedAt: input.performedAt
+            startedAt: input.performedAt,
+            exerciseTargets: initialTargets(workoutDayID: input.workoutDayId, user: user)
         )
         let existingLog = matchingExerciseLog(
             sessionId: session.id,
@@ -256,9 +282,7 @@ actor MockDataStore {
             performedAt: input.performedAt
         )
 
-        if existingSession == nil {
-            sessionsByID[session.id] = session
-        }
+        sessionsByID[session.id] = session
         exerciseLogsByID[log.id] = log
 
         return WorkoutSetSaveResult(
@@ -385,4 +409,29 @@ extension MockDataStore {
 
         return user.selectingProgram(programId)
     }
+}
+
+extension MockDataStore {
+    func applyFetchedProfile(_ user: User, ifUnchangedSince snapshot: LocalProfileSnapshot) throws -> Bool {
+        guard user.id == snapshot.userID,
+              userRevisionsByID[user.id] == snapshot.revision,
+              usersByID[user.id] == snapshot.user,
+              usersByID[user.id] != user else {
+            return false
+        }
+
+        let previous = usersByID[user.id]
+        let trainingChanged = previous?.goal != user.goal || previous?.level != user.level
+        let sessions = trainingChanged ? sessionsByID.values.filter { $0.userId == user.id && $0.isActive } : []
+        let updatedSessions = try sessions.map { session in
+            let resolved = try resolvedSession(session)
+            return try resolved.replacingTargets(WorkoutTargetResolver().recalculated(
+                resolved.exerciseTargets ?? [], user: user
+            ))
+        }
+        usersByID[user.id] = user
+        for session in updatedSessions { sessionsByID[session.id] = session }
+        return true
+    }
+
 }

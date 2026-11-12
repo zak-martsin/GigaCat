@@ -24,7 +24,8 @@ struct SupabaseSyncExecutor: RemoteSyncExecuting {
         do {
             let profile = try await profileRepository.updateProfile(
                 for: operation.aggregateID,
-                selectedProgramID: payload.selectedProgramID
+                selectedProgramID: payload.selectedProgramID,
+                personalization: payload.personalization
             )
             return .userProfile(profile)
         } catch {

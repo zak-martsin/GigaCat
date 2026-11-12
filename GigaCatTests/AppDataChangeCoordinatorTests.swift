@@ -30,3 +30,20 @@ struct AppDataChangeCoordinatorTests {
 
     }
 }
+
+extension AppDataChangeCoordinatorTests {
+    @Test
+    func remoteProfileInvalidatesCachesWithoutPushingItBackToServer() async {
+        var invalidated: Set<String> = []
+        var syncRequests = 0
+        let coordinator = AppDataChangeCoordinator(
+            invalidateCatalog: { invalidated.insert("catalog") },
+            invalidateProgress: { invalidated.insert("progress") },
+            invalidateWorkout: { invalidated.insert("workout") },
+            requestProfileSync: { syncRequests += 1 }
+        )
+        await coordinator.handle(.remoteProfile)
+        #expect(invalidated == ["catalog", "progress", "workout"])
+        #expect(syncRequests == 0)
+    }
+}

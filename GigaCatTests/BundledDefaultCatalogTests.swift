@@ -21,12 +21,12 @@ struct BundledDefaultCatalogTests {
         #expect(catalog.workoutDays.count == 6)
         #expect(catalog.dayExercises.count == 50)
         #expect(catalog.exercises.count == 61)
-        #expect(catalog.dayExercises.allSatisfy { $0.targetSets == 2 })
+        #expect(catalog.dayExercises.allSatisfy { $0.targetSets == nil })
         #expect(catalog.dayExercises.allSatisfy { $0.targetReps == nil })
     }
 
     @Test
-    func bundledCatalogSnapshotMatchesReviewedRemoteBaseline() throws {
+    func bundledCatalogSnapshotMatchesPlannedOverrideMigration() throws {
         let resourceURL = try #require(
             Bundle.main.url(forResource: "DefaultCatalog", withExtension: "json")
         )
@@ -42,7 +42,7 @@ struct BundledDefaultCatalogTests {
             .map { String(format: "%02x", $0) }
             .joined()
 
-        #expect(fingerprint == "c9adcff2341492c4f2100acf3f05de05c6fff608f2516996048320cc9fc2efe7")
+        #expect(fingerprint == "2abea3994e770d4c6b66472da6e9094cdd79cbaead1f1a0e5dbf787e2144f66e")
     }
 
     @Test

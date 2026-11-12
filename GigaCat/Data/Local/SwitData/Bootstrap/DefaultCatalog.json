@@ -74,7 +74,7 @@
       "id": "40000000-0000-0000-0000-000000000001",
       "workoutDayId": "30000000-0000-0000-0000-000000000001",
       "exerciseId": "10000000-0000-0000-0000-000000000003",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 0
     },
@@ -82,7 +82,7 @@
       "id": "40000000-0000-0000-0000-000000000002",
       "workoutDayId": "30000000-0000-0000-0000-000000000001",
       "exerciseId": "10000000-0000-0000-0000-000000000005",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 1
     },
@@ -90,7 +90,7 @@
       "id": "40000000-0000-0000-0000-000000000003",
       "workoutDayId": "30000000-0000-0000-0000-000000000001",
       "exerciseId": "10000000-0000-0000-0000-000000000007",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 2
     },
@@ -98,7 +98,7 @@
       "id": "40000000-0000-0000-0000-000000000004",
       "workoutDayId": "30000000-0000-0000-0000-000000000001",
       "exerciseId": "10000000-0000-0000-0000-000000000011",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 3
     },
@@ -106,7 +106,7 @@
       "id": "40000000-0000-0000-0000-000000000005",
       "workoutDayId": "30000000-0000-0000-0000-000000000001",
       "exerciseId": "10000000-0000-0000-0000-000000000013",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 4
     },
@@ -114,7 +114,7 @@
       "id": "40000000-0000-0000-0000-000000000006",
       "workoutDayId": "30000000-0000-0000-0000-000000000001",
       "exerciseId": "10000000-0000-0000-0000-000000000016",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 5
     },
@@ -122,7 +122,7 @@
       "id": "40000000-0000-0000-0000-000000000007",
       "workoutDayId": "30000000-0000-0000-0000-000000000001",
       "exerciseId": "10000000-0000-0000-0000-000000000059",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 6
     },
@@ -130,7 +130,7 @@
       "id": "40000000-0000-0000-0000-000000000008",
       "workoutDayId": "30000000-0000-0000-0000-000000000001",
       "exerciseId": "10000000-0000-0000-0000-000000000019",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 7
     },
@@ -138,7 +138,7 @@
       "id": "40000000-0000-0000-0000-000000000009",
       "workoutDayId": "30000000-0000-0000-0000-000000000001",
       "exerciseId": "10000000-0000-0000-0000-000000000021",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 8
     },
@@ -146,7 +146,7 @@
       "id": "40000000-0000-0000-0000-000000000010",
       "workoutDayId": "30000000-0000-0000-0000-000000000002",
       "exerciseId": "10000000-0000-0000-0000-000000000028",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 0
     },
@@ -154,7 +154,7 @@
       "id": "40000000-0000-0000-0000-000000000011",
       "workoutDayId": "30000000-0000-0000-0000-000000000002",
       "exerciseId": "10000000-0000-0000-0000-000000000030",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 1
     },
@@ -162,7 +162,7 @@
       "id": "40000000-0000-0000-0000-000000000012",
       "workoutDayId": "30000000-0000-0000-0000-000000000002",
       "exerciseId": "10000000-0000-0000-0000-000000000034",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 2
     },
@@ -170,7 +170,7 @@
       "id": "40000000-0000-0000-0000-000000000013",
       "workoutDayId": "30000000-0000-0000-0000-000000000002",
       "exerciseId": "10000000-0000-0000-0000-000000000011",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 3
     },
@@ -178,7 +178,7 @@
       "id": "40000000-0000-0000-0000-000000000014",
       "workoutDayId": "30000000-0000-0000-0000-000000000002",
       "exerciseId": "10000000-0000-0000-0000-000000000036",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 4
     },
@@ -186,7 +186,7 @@
       "id": "40000000-0000-0000-0000-000000000015",
       "workoutDayId": "30000000-0000-0000-0000-000000000002",
       "exerciseId": "10000000-0000-0000-0000-000000000038",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 5
     },
@@ -194,7 +194,7 @@
       "id": "40000000-0000-0000-0000-000000000016",
       "workoutDayId": "30000000-0000-0000-0000-000000000002",
       "exerciseId": "10000000-0000-0000-0000-000000000040",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 6
     },
@@ -202,7 +202,7 @@
       "id": "40000000-0000-0000-0000-000000000017",
       "workoutDayId": "30000000-0000-0000-0000-000000000002",
       "exerciseId": "10000000-0000-0000-0000-000000000042",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 7
     },
@@ -210,7 +210,7 @@
       "id": "40000000-0000-0000-0000-000000000018",
       "workoutDayId": "30000000-0000-0000-0000-000000000002",
       "exerciseId": "10000000-0000-0000-0000-000000000019",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 8
     },
@@ -218,7 +218,7 @@
       "id": "40000000-0000-0000-0000-000000000019",
       "workoutDayId": "30000000-0000-0000-0000-000000000002",
       "exerciseId": "10000000-0000-0000-0000-000000000021",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 9
     },
@@ -226,7 +226,7 @@
       "id": "40000000-0000-0000-0000-000000000020",
       "workoutDayId": "30000000-0000-0000-0000-000000000003",
       "exerciseId": "10000000-0000-0000-0000-000000000045",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 0
     },
@@ -234,7 +234,7 @@
       "id": "40000000-0000-0000-0000-000000000021",
       "workoutDayId": "30000000-0000-0000-0000-000000000003",
       "exerciseId": "10000000-0000-0000-0000-000000000049",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 1
     },
@@ -242,7 +242,7 @@
       "id": "40000000-0000-0000-0000-000000000022",
       "workoutDayId": "30000000-0000-0000-0000-000000000003",
       "exerciseId": "10000000-0000-0000-0000-000000000046",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 2
     },
@@ -250,7 +250,7 @@
       "id": "40000000-0000-0000-0000-000000000023",
       "workoutDayId": "30000000-0000-0000-0000-000000000003",
       "exerciseId": "10000000-0000-0000-0000-000000000050",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 3
     },
@@ -258,7 +258,7 @@
       "id": "40000000-0000-0000-0000-000000000024",
       "workoutDayId": "30000000-0000-0000-0000-000000000003",
       "exerciseId": "10000000-0000-0000-0000-000000000011",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 4
     },
@@ -266,7 +266,7 @@
       "id": "40000000-0000-0000-0000-000000000025",
       "workoutDayId": "30000000-0000-0000-0000-000000000003",
       "exerciseId": "10000000-0000-0000-0000-000000000053",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 5
     },
@@ -274,7 +274,7 @@
       "id": "40000000-0000-0000-0000-000000000026",
       "workoutDayId": "30000000-0000-0000-0000-000000000003",
       "exerciseId": "10000000-0000-0000-0000-000000000057",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 6
     },
@@ -282,7 +282,7 @@
       "id": "40000000-0000-0000-0000-000000000027",
       "workoutDayId": "30000000-0000-0000-0000-000000000003",
       "exerciseId": "10000000-0000-0000-0000-000000000019",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 7
     },
@@ -290,7 +290,7 @@
       "id": "40000000-0000-0000-0000-000000000028",
       "workoutDayId": "30000000-0000-0000-0000-000000000003",
       "exerciseId": "10000000-0000-0000-0000-000000000021",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 8
     },
@@ -298,7 +298,7 @@
       "id": "40000000-0000-0000-0000-000000000029",
       "workoutDayId": "30000000-0000-0000-0000-000000000004",
       "exerciseId": "10000000-0000-0000-0000-000000000045",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 0
     },
@@ -306,7 +306,7 @@
       "id": "40000000-0000-0000-0000-000000000030",
       "workoutDayId": "30000000-0000-0000-0000-000000000004",
       "exerciseId": "10000000-0000-0000-0000-000000000046",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 1
     },
@@ -314,7 +314,7 @@
       "id": "40000000-0000-0000-0000-000000000031",
       "workoutDayId": "30000000-0000-0000-0000-000000000004",
       "exerciseId": "10000000-0000-0000-0000-000000000049",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 2
     },
@@ -322,7 +322,7 @@
       "id": "40000000-0000-0000-0000-000000000032",
       "workoutDayId": "30000000-0000-0000-0000-000000000004",
       "exerciseId": "10000000-0000-0000-0000-000000000011",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 3
     },
@@ -330,7 +330,7 @@
       "id": "40000000-0000-0000-0000-000000000033",
       "workoutDayId": "30000000-0000-0000-0000-000000000004",
       "exerciseId": "10000000-0000-0000-0000-000000000042",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 4
     },
@@ -338,7 +338,7 @@
       "id": "40000000-0000-0000-0000-000000000034",
       "workoutDayId": "30000000-0000-0000-0000-000000000004",
       "exerciseId": "10000000-0000-0000-0000-000000000053",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 5
     },
@@ -346,7 +346,7 @@
       "id": "40000000-0000-0000-0000-000000000035",
       "workoutDayId": "30000000-0000-0000-0000-000000000004",
       "exerciseId": "10000000-0000-0000-0000-000000000059",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 6
     },
@@ -354,7 +354,7 @@
       "id": "40000000-0000-0000-0000-000000000036",
       "workoutDayId": "30000000-0000-0000-0000-000000000004",
       "exerciseId": "10000000-0000-0000-0000-000000000021",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 7
     },
@@ -362,7 +362,7 @@
       "id": "40000000-0000-0000-0000-000000000037",
       "workoutDayId": "30000000-0000-0000-0000-000000000005",
       "exerciseId": "10000000-0000-0000-0000-000000000034",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 0
     },
@@ -370,7 +370,7 @@
       "id": "40000000-0000-0000-0000-000000000038",
       "workoutDayId": "30000000-0000-0000-0000-000000000005",
       "exerciseId": "10000000-0000-0000-0000-000000000011",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 1
     },
@@ -378,7 +378,7 @@
       "id": "40000000-0000-0000-0000-000000000039",
       "workoutDayId": "30000000-0000-0000-0000-000000000005",
       "exerciseId": "10000000-0000-0000-0000-000000000028",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 2
     },
@@ -386,7 +386,7 @@
       "id": "40000000-0000-0000-0000-000000000040",
       "workoutDayId": "30000000-0000-0000-0000-000000000005",
       "exerciseId": "10000000-0000-0000-0000-000000000014",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 3
     },
@@ -394,7 +394,7 @@
       "id": "40000000-0000-0000-0000-000000000041",
       "workoutDayId": "30000000-0000-0000-0000-000000000005",
       "exerciseId": "10000000-0000-0000-0000-000000000030",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 4
     },
@@ -402,7 +402,7 @@
       "id": "40000000-0000-0000-0000-000000000042",
       "workoutDayId": "30000000-0000-0000-0000-000000000005",
       "exerciseId": "10000000-0000-0000-0000-000000000007",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 5
     },
@@ -410,7 +410,7 @@
       "id": "40000000-0000-0000-0000-000000000043",
       "workoutDayId": "30000000-0000-0000-0000-000000000005",
       "exerciseId": "10000000-0000-0000-0000-000000000016",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 6
     },
@@ -418,7 +418,7 @@
       "id": "40000000-0000-0000-0000-000000000044",
       "workoutDayId": "30000000-0000-0000-0000-000000000005",
       "exerciseId": "10000000-0000-0000-0000-000000000038",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 7
     },
@@ -426,7 +426,7 @@
       "id": "40000000-0000-0000-0000-000000000045",
       "workoutDayId": "30000000-0000-0000-0000-000000000006",
       "exerciseId": "10000000-0000-0000-0000-000000000057",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 0
     },
@@ -434,7 +434,7 @@
       "id": "40000000-0000-0000-0000-000000000046",
       "workoutDayId": "30000000-0000-0000-0000-000000000006",
       "exerciseId": "10000000-0000-0000-0000-000000000011",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 1
     },
@@ -442,7 +442,7 @@
       "id": "40000000-0000-0000-0000-000000000047",
       "workoutDayId": "30000000-0000-0000-0000-000000000006",
       "exerciseId": "10000000-0000-0000-0000-000000000060",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 2
     },
@@ -450,7 +450,7 @@
       "id": "40000000-0000-0000-0000-000000000048",
       "workoutDayId": "30000000-0000-0000-0000-000000000006",
       "exerciseId": "10000000-0000-0000-0000-000000000061",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 3
     },
@@ -458,7 +458,7 @@
       "id": "40000000-0000-0000-0000-000000000049",
       "workoutDayId": "30000000-0000-0000-0000-000000000006",
       "exerciseId": "10000000-0000-0000-0000-000000000041",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 4
     },
@@ -466,7 +466,7 @@
       "id": "40000000-0000-0000-0000-000000000050",
       "workoutDayId": "30000000-0000-0000-0000-000000000006",
       "exerciseId": "10000000-0000-0000-0000-000000000021",
-      "targetSets": 2,
+      "targetSets": null,
       "targetReps": null,
       "orderIndex": 5
     }

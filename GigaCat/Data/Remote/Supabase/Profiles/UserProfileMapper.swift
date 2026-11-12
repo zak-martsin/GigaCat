@@ -3,6 +3,9 @@ enum UserProfileMapper {
         User(
             id: dto.id,
             selectedProgramId: dto.selectedProgramID,
+            goal: dto.goal,
+            level: dto.level,
+            avatarPath: dto.avatarPath,
             createdAt: dto.createdAt,
             updatedAt: dto.updatedAt
         )

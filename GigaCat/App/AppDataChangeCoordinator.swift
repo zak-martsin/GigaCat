@@ -35,7 +35,7 @@ final class AppDataChangeCoordinator {
             invalidateProgress()
             invalidateWorkout()
             await refreshWorkoutSessionExpiration()
-        case .programCatalog:
+        case .programCatalog, .remoteProfile:
             invalidateCatalog()
             invalidateProgress()
             invalidateWorkout()

@@ -15,6 +15,7 @@ final class AppContainer {
     let programDetailViewModel: ProgramDetailViewModel
     private let dataChangeCoordinator: AppDataChangeCoordinator
     private let dataChangeDispatcher: AppDataChangeDispatcher
+    private let profileChanges: ProfileChangeSource
     private let userRepository: any UserRepository
     private let profileBootstrapper: any ProfileBootstrapping
     private let syncCoordinator: any SyncCoordinating
@@ -111,6 +112,7 @@ final class AppContainer {
         self.dataChangeCoordinator = dataChangeCoordinator
         self.dataChangeDispatcher = dataChangeDispatcher
         self.userRepository = repositoryFactory.userRepository
+        self.profileChanges = repositoryFactory.profileChanges
         self.profileBootstrapper = profileBootstrapper
         self.syncCoordinator = syncCoordinator
         self.systemCatalogSynchronizer = systemCatalogSynchronizer
@@ -137,14 +139,24 @@ final class AppContainer {
         return result
     }
 
+    /// The app shell owns cancellation; events for other accounts cannot invalidate this shell.
+    func observeProfileChanges(for userID: UUID, onChange: @MainActor () async -> Void) async {
+        for await changedUserID in profileChanges.changes() {
+            guard !Task.isCancelled else { return }
+            guard changedUserID == userID,
+                  (try? await userRepository.currentUser())?.id == userID else { continue }
+            await dataChangeDispatcher.send(.remoteProfile)
+            await onChange()
+        }
+    }
+
     func pauseSessionExpirationMonitoring() {
         workoutSessionExpirationMonitor.stop()
     }
 
     private func performForegroundRefresh(for userID: UUID) async -> ForegroundRefreshResult {
         let sessionDidExpire = await workoutSessionExpirationMonitor.refresh(for: userID)
-        let selectedProgramBefore = try? await userRepository
-            .user(id: userID)?.selectedProgramId
+        let profileBefore = try? await userRepository.user(id: userID)
         let catalogDidChange: Bool
         let catalogWasRefreshed: Bool
         do {
@@ -165,21 +177,20 @@ final class AppContainer {
         let profileDidChange = (
             try? await profileBootstrapper.refreshProfile(for: userID)
         ) ?? false
-        let selectedProgramAfter = try? await userRepository
-            .user(id: userID)?.selectedProgramId
+        let profileAfter = try? await userRepository.user(id: userID)
+        if profileBefore != profileAfter || profileDidChange {
+            await dataChangeDispatcher.send(.remoteProfile)
+        }
 
         if catalogDidChange {
             await dataChangeDispatcher.send(.programCatalog)
-        }
-        if selectedProgramBefore != selectedProgramAfter {
-            await dataChangeDispatcher.send(.selectedProgram)
         }
 
         return ForegroundRefreshResult(
             didChange: sessionDidExpire
                 || catalogDidChange
                 || selectionWasReconciled
-                || profileDidChange,
+                || profileDidChange || profileBefore != profileAfter,
             selectedProgramBecameUnavailable: selectionWasReconciled
         )
     }
