@@ -7,6 +7,7 @@ enum DomainValidationError: LocalizedError, Equatable {
     case nonPositiveValue(field: String)
     case invalidSessionTransition
     case invalidCompletionDate
+    case duplicateExerciseTarget
 
     var errorDescription: String? {
         switch self {
@@ -18,6 +19,8 @@ enum DomainValidationError: LocalizedError, Equatable {
             return "\(field) must be greater than zero."
         case .invalidSessionTransition:
             return "The workout session can not transition to the requested state."
+        case .duplicateExerciseTarget:
+            return "A session can have only one recommendation per exercise assignment."
         case .invalidCompletionDate:
             return "The completion date must be later than the session start date."
         }
