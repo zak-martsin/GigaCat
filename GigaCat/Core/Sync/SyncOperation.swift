@@ -31,6 +31,8 @@ struct SyncOperation: Identifiable, Equatable, Sendable {
 
 struct UserProfileSyncPayload: Codable, Equatable, Sendable {
     let selectedProgramID: UUID?
+    /// Absent in pre-Profile-v1 outbox entries; those entries must not clear remote fields.
+    var personalization: ProfilePersonalization?
 }
 
 enum SyncExecutionResult: Equatable, Sendable {

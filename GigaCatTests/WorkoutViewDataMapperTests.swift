@@ -83,7 +83,8 @@ struct WorkoutViewDataMapperTests {
                     setCount: 4,
                     targetReps: 6,
                     artwork: nil,
-                    artworkFileURL: nil
+                    artworkFileURL: nil,
+                    recommendedSets: 4
                 )
             ]
         )
@@ -282,7 +283,8 @@ private extension WorkoutViewDataMapperTests {
                         exercises: [
                             WorkoutExerciseContent(
                                 dayExercise: dayExercise,
-                                exercise: exercise
+                                exercise: exercise,
+                                recommendedSets: dayExercise.targetSets
                             )
                         ]
                     ),

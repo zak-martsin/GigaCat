@@ -5,8 +5,10 @@ import SwiftData
 @MainActor
 final class LocalSyncOutboxRepository: SyncOutboxRepository {
     private let context: ModelContext
+    private let profileChanges: ProfileChangeSource
 
-    init(context: ModelContext) {
+    init(context: ModelContext, profileChanges: ProfileChangeSource = ProfileChangeSource()) {
+        self.profileChanges = profileChanges
         self.context = context
     }
 
@@ -51,20 +53,19 @@ final class LocalSyncOutboxRepository: SyncOutboxRepository {
         switch result {
         case .userProfile(let remoteProfile):
             guard operation.aggregateType == .userProfile,
-                  remoteProfile.id == operation.aggregateID else {
-                throw SyncError.unsupportedOperation
-            }
-
-            if let user = try findUser(id: remoteProfile.id),
-               user.revision == operation.revision {
-                user.selectedProgramId = remoteProfile.selectedProgramId
-                user.createdAt = remoteProfile.createdAt
-                user.updatedAt = remoteProfile.updatedAt
+                  operation.userID == remoteProfile.id,
+                  remoteProfile.id == operation.aggregateID else { throw SyncError.unsupportedOperation }
+            if let user = try findUser(id: remoteProfile.id) {
+                let hasNewerChange = try hasNewerProfileOperation(than: operation)
+                let acceptsResponse = user.revision == operation.revision && !hasNewerChange
+                let profile = acceptsResponse ? remoteProfile : UserMapper.toDomain(user)
+                let didChange = try LocalProfileApplication(context: context).apply(profile, to: user, removing: [entity])
+                if didChange { profileChanges.publish(userID: remoteProfile.id) }
+            } else {
+                context.delete(entity)
+                try context.save()
             }
         }
-
-        context.delete(entity)
-        try context.save()
     }
 
     func fail(

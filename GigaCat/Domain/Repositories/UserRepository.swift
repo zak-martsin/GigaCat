@@ -14,7 +14,11 @@ protocol UserRepository {
     func user(id: UUID) async throws -> User?
     func save(_ user: User) async throws
     func updateSelectedProgram(for userId: UUID, programId: UUID?) async throws -> User
+    /// Atomically saves training inputs, active-session recommendations and a profile outbox entry.
+    func updateTrainingPreferences(for userID: UUID, goal: TrainingGoal?, level: TrainingLevel?) async throws -> User
     func profileSnapshot(for userID: UUID) async throws -> LocalProfileSnapshot
-    /// Applies a fetched profile only if no local selection changed or remains in the outbox.
+    /// Accepts explicit recovery only if the fetched version is still current and all outgoing changes have failed.
+    func discardFailedProfileChanges(applying user: User, ifUnchangedSince snapshot: LocalProfileSnapshot) async throws -> Bool
+    /// Applies a fetched profile and active-session targets only if no local mutation remains unresolved.
     func applyFetchedProfile(_ user: User, ifUnchangedSince snapshot: LocalProfileSnapshot) async throws -> Bool
 }

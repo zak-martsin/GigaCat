@@ -326,7 +326,7 @@ private struct UserProfileRemoteRepositoryStub: UserProfileRemoteRepository {
         try result.get()
     }
 
-    func updateProfile(for _: UUID, selectedProgramID _: UUID?) throws -> User {
+    func updateProfile(for _: UUID, selectedProgramID _: UUID?, personalization _: ProfilePersonalization?) throws -> User {
         try result.get()
     }
 }
@@ -344,7 +344,7 @@ private actor UserProfileRemoteRepositorySpy: UserProfileRemoteRepository {
         return profile
     }
 
-    func updateProfile(for _: UUID, selectedProgramID _: UUID?) -> User {
+    func updateProfile(for _: UUID, selectedProgramID _: UUID?, personalization _: ProfilePersonalization?) -> User {
         profile
     }
 }
@@ -408,6 +408,18 @@ private final class SyncOutboxRepositoryStub: SyncOutboxRepository {
 
 @MainActor
 private final class UserRepositorySpy: UserRepository {
+    func discardFailedProfileChanges(applying user: User, ifUnchangedSince snapshot: LocalProfileSnapshot) -> Bool {
+        applyFetchedProfile(user, ifUnchangedSince: snapshot)
+    }
+
+    func updateTrainingPreferences(for userID: UUID, goal: TrainingGoal?, level: TrainingLevel?) async throws -> User {
+        guard let storedUser, storedUser.id == userID else { throw RepositoryError.userNotFound }
+        let updated = storedUser.updatingTraining(goal: goal, level: level)
+        self.storedUser = updated
+        revision = (revision ?? 0) + 1
+        return updated
+    }
+
     private var storedUser: User?
     private var receivedUsers: [User] = []
     private var revision: Int?

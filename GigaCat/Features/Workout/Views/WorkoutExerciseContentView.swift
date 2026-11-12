@@ -79,7 +79,8 @@ struct WorkoutExerciseContentView: View {
                 .foregroundStyle(AppColor.textPrimary)
                 .multilineTextAlignment(.center)
 
-            Text(viewData.targetSummary)
+            Text("Recommended: \(viewData.targetSummary)")
+                .accessibilityIdentifier("workout.recommendation")
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(AppColor.textSecondary)
                 .multilineTextAlignment(.center)
@@ -315,6 +316,7 @@ private struct WorkoutSetRow: View {
     ) -> some View {
         HStack(spacing: AppSpacing.xs) {
             TextField(placeholder, text: text)
+                .accessibilityIdentifier("workout.set.\(viewData.setNumber).\(unit)")
                 .keyboardType(keyboardType)
                 .multilineTextAlignment(.trailing)
                 .font(.headline)

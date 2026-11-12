@@ -266,6 +266,9 @@ struct SyncWorkerTests {
         let canonicalProfile = User(
             id: userID,
             selectedProgramId: nil,
+            goal: .buildMuscle,
+            level: .advanced,
+            avatarPath: "account/avatar.png",
             createdAt: Date(timeIntervalSince1970: 1_000),
             updatedAt: Date(timeIntervalSince1970: 2_000)
         )
@@ -282,6 +285,9 @@ struct SyncWorkerTests {
             try await factory.userRepository.user(id: userID)
         )
         #expect(localProfile.selectedProgramId == canonicalProfile.selectedProgramId)
+        #expect(localProfile.goal == canonicalProfile.goal)
+        #expect(localProfile.level == canonicalProfile.level)
+        #expect(localProfile.avatarPath == canonicalProfile.avatarPath)
         #expect(localProfile.createdAt == canonicalProfile.createdAt)
         #expect(localProfile.updatedAt == canonicalProfile.updatedAt)
         #expect(try factory.syncOutboxRepository.operationCount(for: userID) == 0)

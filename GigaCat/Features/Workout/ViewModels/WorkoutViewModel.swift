@@ -18,6 +18,9 @@ enum WorkoutSessionActionState: Equatable {
 @Observable
 final class WorkoutViewModel {
     private(set) var context: WorkoutContext?
+    private(set) var dataRevision = 0
+    @ObservationIgnored private var presentedExercise: WorkoutExerciseViewModel?
+    @ObservationIgnored private var presentedExerciseRoute: UUID?
     private(set) var loadState: WorkoutLoadState = .loading
     private(set) var selectedDayID: UUID?
     private(set) var sessionActionState: WorkoutSessionActionState = .idle
@@ -98,6 +101,7 @@ final class WorkoutViewModel {
 
     func invalidate() {
         loadTracker.invalidate()
+        dataRevision += 1
     }
 
     /// Reloads the workout entry context from the repository-backed context service.
@@ -109,7 +113,7 @@ final class WorkoutViewModel {
 
         repeat {
             let loadingRevision = loadTracker.currentRevision
-            loadState = .loading
+            if context == nil { loadState = .loading }
 
             do {
                 guard let context = try await contextService.loadContext() else {
@@ -123,10 +127,18 @@ final class WorkoutViewModel {
                     continue
                 }
 
+                let preserveSelection = self.context?.program.id == context.program.id
+                    && self.context?.activeSession?.id == context.activeSession?.id
                 resetExerciseSetCountsIfSessionChanged(to: context)
                 self.context = context
                 preserveCurrentArtworkURLs(in: context)
-                selectedDayID = context.initialDayID
+                if !preserveSelection || !context.dayContents.contains(where: { $0.day.id == selectedDayID }) {
+                    selectedDayID = context.initialDayID
+                }
+                if let detail = presentedExercise,
+                   let dayContent = context.dayContents.first(where: { $0.day.id == detail.day.id }) {
+                    detail.refresh(dayContent: dayContent, session: context.activeSession, logs: context.activeSessionLogs)
+                }
                 loadTracker.markLoaded(revision: loadingRevision)
                 loadState = .loaded
             } catch {
@@ -223,6 +235,11 @@ final class WorkoutViewModel {
 
     // MARK: - Exercise Detail
 
+    func dismissExercise() {
+        presentedExercise = nil
+        presentedExerciseRoute = nil
+    }
+
     func makeExerciseViewModel(
         dayContent: WorkoutDayContent,
         initialDayExerciseID: UUID
@@ -232,7 +249,9 @@ final class WorkoutViewModel {
             return nil
         }
 
-        return WorkoutExerciseViewModel(
+        if let presentedExercise, presentedExercise.day.id == dayContent.day.id,
+           presentedExerciseRoute == initialDayExerciseID { return presentedExercise }
+        let detail = WorkoutExerciseViewModel(
             userID: context.userID,
             activeSession: context.activeSession,
             dayContent: dayContent,
@@ -240,9 +259,12 @@ final class WorkoutViewModel {
             initialSetCounts: exerciseSetCounts,
             workoutRepository: workoutRepository,
             artworkService: artworkService,
-            onEvent: handleExerciseEvent,
+            onEvent: { [weak self] in self?.handleExerciseEvent($0) },
             onDataChanged: onDataChanged
         )
+        presentedExercise = detail
+        presentedExerciseRoute = initialDayExerciseID
+        return detail
     }
 
     private func handleExerciseEvent(_ event: WorkoutExerciseEvent) {
@@ -273,7 +295,17 @@ final class WorkoutViewModel {
         self.context = WorkoutContext(
             userID: context.userID,
             program: context.program,
-            dayContents: context.dayContents,
+            dayContents: context.dayContents.map { day in
+                guard day.day.id == result.session.workoutDayId else { return day }
+                let targets = Dictionary(uniqueKeysWithValues: (result.session.exerciseTargets ?? []).map {
+                    ($0.workoutDayExerciseID, $0.targetSets)
+                })
+                return WorkoutDayContent(day: day.day, exercises: day.exercises.map { exercise in
+                    var updated = exercise
+                    updated.recommendedSets = targets[exercise.dayExercise.id]
+                    return updated
+                })
+            },
             initialDayID: context.initialDayID,
             activeSession: result.session,
             activeSessionLogs: activeSessionLogs

@@ -1,6 +1,7 @@
 import CoreGraphics
 
 enum AppIconSize {
+    static let profileAvatar: CGFloat = 48
     static let iconButton: CGFloat = 16
     static let programInfo: CGFloat = 14
     static let exerciseArtwork: CGFloat = 22

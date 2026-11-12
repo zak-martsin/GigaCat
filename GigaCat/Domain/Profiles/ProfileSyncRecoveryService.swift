@@ -42,15 +42,8 @@ struct ProfileSyncRecoveryService: ProfileSyncRecovering {
     func discardFailedLocalChange(for userID: UUID) async throws -> Bool {
         guard case .failed = try status(for: userID) else { return false }
 
-        let localProfile = try await userRepository.user(id: userID)
+        let snapshot = try await userRepository.profileSnapshot(for: userID)
         let remoteProfile = try await remoteRepository.profile(for: userID)
-        let didChange = localProfile != remoteProfile
-
-        if didChange {
-            try await userRepository.save(remoteProfile)
-        }
-
-        _ = try outboxRepository.removeFailedProfileOperations(for: userID)
-        return didChange
+        return try await userRepository.discardFailedProfileChanges(applying: remoteProfile, ifUnchangedSince: snapshot)
     }
 }

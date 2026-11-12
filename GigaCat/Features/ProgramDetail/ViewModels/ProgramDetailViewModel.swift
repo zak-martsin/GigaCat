@@ -47,6 +47,19 @@ final class ProgramDetailViewModel: ObservableObject {
         }
     }
 
+    func refreshIfPresented() async {
+        guard let id = presentedDetail?.id else { return }
+        do {
+            guard let user = try await userRepository.currentUser() else { return }
+            let detail = try await service.makeDetail(for: id, user: user)
+            guard presentedDetail?.id == id else { return }
+            currentUser = user
+            presentedDetail = detail
+        } catch {
+            // Keep a readable sheet when a background refresh fails.
+        }
+    }
+
     func dismiss() {
         presentedDetail = nil
         artworkFileURL = nil

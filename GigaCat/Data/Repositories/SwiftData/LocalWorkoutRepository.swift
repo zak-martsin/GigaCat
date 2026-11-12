@@ -22,7 +22,12 @@ struct LocalWorkoutRepository: WorkoutRepository {
             return nil
         }
 
-        return try WorkoutSessionMapper.toDomain(entity)
+        let session = try resolvedSession(entity)
+        if entity.exerciseTargets == nil {
+            entity.exerciseTargets = session.exerciseTargets
+            do { try context.save() } catch { context.rollback(); throw error }
+        }
+        return session
     }
 
     func startSession(
@@ -30,7 +35,7 @@ struct LocalWorkoutRepository: WorkoutRepository {
         workoutDayId: UUID,
         startedAt: Date
     ) async throws -> WorkoutSession {
-        guard try findUser(id: userId) != nil else {
+        guard let userEntity = try findUser(id: userId) else {
             throw RepositoryError.userNotFound
         }
 
@@ -45,7 +50,10 @@ struct LocalWorkoutRepository: WorkoutRepository {
         let session = try WorkoutSession(
             userId: userId,
             workoutDayId: workoutDayId,
-            startedAt: startedAt
+            startedAt: startedAt,
+            exerciseTargets: LocalWorkoutTargetStore(context: context).initialTargets(
+                workoutDayID: workoutDayId, user: UserMapper.toDomain(userEntity)
+            )
         )
         context.insert(WorkoutSessionMapper.toEntity(session))
         try context.save()
@@ -63,7 +71,7 @@ struct LocalWorkoutRepository: WorkoutRepository {
         }
         try validateOwnership(of: entity, userId: userId)
 
-        let session = try WorkoutSessionMapper.toDomain(entity)
+        let session = try resolvedSession(entity)
         let completedSession = try session.markCompleted(at: completedAt)
         update(entity, from: completedSession)
         try context.save()
@@ -93,7 +101,7 @@ struct LocalWorkoutRepository: WorkoutRepository {
         }
         try validateOwnership(of: sessionEntity, userId: userId)
 
-        let completedSession = try WorkoutSessionMapper.toDomain(sessionEntity)
+        let completedSession = try resolvedSession(sessionEntity)
             .markCompleted(at: completedAt)
         let (userEntity, updatedUser) = try userSelectingProgram(
             userId: userId,
@@ -135,7 +143,7 @@ struct LocalWorkoutRepository: WorkoutRepository {
     }
 
     func saveSet(_ input: WorkoutSetInput) async throws -> WorkoutSetSaveResult {
-        guard try findUser(id: input.userId) != nil else {
+        guard let userEntity = try findUser(id: input.userId) else {
             throw RepositoryError.userNotFound
         }
 
@@ -155,10 +163,13 @@ struct LocalWorkoutRepository: WorkoutRepository {
         }
 
         let didStartSession = existingSessionEntity == nil
-        let session = try existingSessionEntity.map(WorkoutSessionMapper.toDomain) ?? WorkoutSession(
+        let session = try existingSessionEntity.map(resolvedSession) ?? WorkoutSession(
             userId: input.userId,
             workoutDayId: input.workoutDayId,
-            startedAt: input.performedAt
+            startedAt: input.performedAt,
+            exerciseTargets: LocalWorkoutTargetStore(context: context).initialTargets(
+                workoutDayID: input.workoutDayId, user: UserMapper.toDomain(userEntity)
+            )
         )
         let existingLogEntity = try findExerciseLog(
             sessionId: session.id,
@@ -177,6 +188,8 @@ struct LocalWorkoutRepository: WorkoutRepository {
 
         if didStartSession {
             context.insert(WorkoutSessionMapper.toEntity(session))
+        } else {
+            existingSessionEntity?.exerciseTargets = session.exerciseTargets
         }
 
         if let existingLogEntity {
@@ -400,6 +413,11 @@ private extension LocalWorkoutRepository {
         return try context.fetch(descriptor).map(\.id)
     }
 
+    private func resolvedSession(_ entity: WorkoutSessionEntity) throws -> WorkoutSession {
+        guard let user = try findUser(id: entity.userId) else { throw RepositoryError.userNotFound }
+        return try LocalWorkoutTargetStore(context: context).resolved(entity, user: UserMapper.toDomain(user))
+    }
+
     // MARK: - Mutation Helpers
 
     private func validateOwnership(
@@ -443,6 +461,7 @@ private extension LocalWorkoutRepository {
         entity.statusRawValue = session.status.rawValue
         entity.startedAt = session.startedAt
         entity.completedAt = session.completedAt
+        entity.exerciseTargets = session.exerciseTargets
     }
 
     private func update(_ entity: ExerciseLogEntity, from log: ExerciseLog) {

@@ -209,10 +209,10 @@ private struct WorkoutExerciseRow: View {
     @ViewBuilder
     private var exerciseProgress: some View {
         if let completedSets = exercise.completedSets,
-           let setCount = exercise.setCount,
+           let setCount = exercise.recommendedSets,
            setCount > 0 {
             SwiftUI.ProgressView(
-                value: Double(completedSets),
+                value: Double(min(completedSets, setCount)),
                 total: Double(setCount)
             )
             .progressViewStyle(WorkoutExerciseCardProgressStyle())
@@ -228,7 +228,7 @@ private struct WorkoutExerciseRow: View {
 
     private var progressAccessibilityValue: String {
         guard let completedSets = exercise.completedSets,
-              let setCount = exercise.setCount,
+              let setCount = exercise.recommendedSets,
               setCount > 0 else {
             return ""
         }
@@ -237,7 +237,7 @@ private struct WorkoutExerciseRow: View {
     }
 
     private var exerciseSummary: String {
-        switch (exercise.setCount, exercise.targetReps) {
+        switch (exercise.recommendedSets, exercise.targetReps) {
         case let (setCount?, targetReps?):
             return "\(setCount) x \(targetReps) reps"
         case let (setCount?, nil):

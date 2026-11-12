@@ -5,6 +5,7 @@ struct WorkoutDayExercise: Identifiable, Codable, Equatable, Sendable {
     let id: UUID
     let workoutDayId: UUID
     let exerciseId: UUID
+    /// Optional program override; nil delegates the recommendation to the user profile.
     let targetSets: Int?
     let targetReps: Int?
     let orderIndex: Int

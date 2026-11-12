@@ -80,7 +80,8 @@ struct WorkoutViewDataMapper {
             setCount: setCount,
             targetReps: content.dayExercise.targetReps,
             artwork: content.exercise.artwork,
-            artworkFileURL: artworkFileURLs[content.exercise.id]
+            artworkFileURL: artworkFileURLs[content.exercise.id],
+            recommendedSets: content.recommendedSets
         )
     }
 
@@ -114,7 +115,7 @@ struct WorkoutViewDataMapper {
         for content in selectedDayContent.exercises {
             let dayExerciseID = content.dayExercise.id
             let setCount = [
-                content.dayExercise.targetSets,
+                content.recommendedSets,
                 exerciseSetCounts[dayExerciseID],
                 highestSavedSetNumbers[dayExerciseID]
             ]

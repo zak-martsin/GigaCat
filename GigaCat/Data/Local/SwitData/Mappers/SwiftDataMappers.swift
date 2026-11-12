@@ -9,6 +9,9 @@ enum UserMapper {
     static func toDomain(_ entity: UserEntity) -> User {
         User(id: entity.id,
              selectedProgramId: entity.selectedProgramId,
+             goal: entity.goal,
+             level: entity.level,
+             avatarPath: entity.avatarPath,
              createdAt: entity.createdAt,
              updatedAt: entity.updatedAt
         )
@@ -18,12 +21,18 @@ enum UserMapper {
         UserEntity(id: domain.id,
                    selectedProgramId: domain.selectedProgramId,
                    createdAt: domain.createdAt,
-                   updatedAt: domain.updatedAt
+                   updatedAt: domain.updatedAt,
+                   goal: domain.goal,
+                   level: domain.level,
+                   avatarPath: domain.avatarPath
         )
     }
 
     static func update(_ entity: UserEntity, from domain: User) {
         entity.selectedProgramId = domain.selectedProgramId
+        entity.goal = domain.goal
+        entity.level = domain.level
+        entity.avatarPath = domain.avatarPath
         entity.createdAt = domain.createdAt
         entity.updatedAt = domain.updatedAt
     }
@@ -40,7 +49,8 @@ enum WorkoutSessionMapper {
                                   workoutDayId: entity.workoutDayId,
                                   status: status,
                                   startedAt: entity.startedAt,
-                                  completedAt: entity.completedAt
+                                  completedAt: entity.completedAt,
+                                  exerciseTargets: entity.exerciseTargets
         )
     }
 
@@ -50,7 +60,8 @@ enum WorkoutSessionMapper {
                              workoutDayId: domain.workoutDayId,
                              statusRawValue: domain.status.rawValue,
                              startedAt: domain.startedAt,
-                             completedAt: domain.completedAt)
+                             completedAt: domain.completedAt,
+                             exerciseTargets: domain.exerciseTargets)
     }
 }
 

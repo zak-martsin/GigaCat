@@ -245,12 +245,9 @@ struct ProgramDetailService: ProgramDetailServicing {
             return nil
         }
 
-        let plannedExercises = try await workoutProgramRepository.fetchWorkoutDayExercisesForHistory(
-            workoutDayId: context.workoutDay.id
-        )
         let logs = try await workoutRepository.fetchExerciseLogs(sessionId: context.session.id)
         guard let percentage = completionPercentage(
-            plannedExercises: plannedExercises,
+            targets: context.session.exerciseTargets ?? [],
             logs: logs
         ) else {
             return nil
@@ -268,13 +265,11 @@ struct ProgramDetailService: ProgramDetailServicing {
     }
 
     private func completionPercentage(
-        plannedExercises: [WorkoutDayExercise],
+        targets: [WorkoutExerciseTarget],
         logs: [ExerciseLog]
     ) -> Int? {
         let plannedSetCounts = Dictionary(
-            uniqueKeysWithValues: plannedExercises.compactMap { exercise in
-                exercise.targetSets.map { (exercise.id, $0) }
-            }
+            uniqueKeysWithValues: targets.map { ($0.workoutDayExerciseID, $0.targetSets) }
         )
         let totalPlannedSets = plannedSetCounts.values.reduce(0, +)
         guard totalPlannedSets > 0 else { return nil }

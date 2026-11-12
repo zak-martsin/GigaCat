@@ -11,7 +11,14 @@ struct UserProfileOutboxWriter {
 
     func enqueueProfileUpdate(for user: UserEntity, now: Date = Date()) throws {
         let payload = try JSONEncoder().encode(
-            UserProfileSyncPayload(selectedProgramID: user.selectedProgramId)
+            UserProfileSyncPayload(
+                selectedProgramID: user.selectedProgramId,
+                personalization: ProfilePersonalization(
+                    goal: user.goal,
+                    level: user.level,
+                    avatarPath: user.avatarPath
+                )
+            )
         )
 
         if let replaceableOperation = try replaceableProfileOperation(for: user.id) {

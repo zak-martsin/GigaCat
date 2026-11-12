@@ -15,6 +15,7 @@ final class WorkoutSessionEntity: Identifiable {
     var statusRawValue: String
     var startedAt: Date
     var completedAt: Date?
+    var exerciseTargets: [WorkoutExerciseTarget]?
 
     init(
         id: UUID,
@@ -22,7 +23,8 @@ final class WorkoutSessionEntity: Identifiable {
         workoutDayId: UUID,
         statusRawValue: String,
         startedAt: Date,
-        completedAt: Date?
+        completedAt: Date?,
+        exerciseTargets: [WorkoutExerciseTarget]? = nil
     ) {
         self.id = id
         self.userId = userId
@@ -30,5 +32,6 @@ final class WorkoutSessionEntity: Identifiable {
         self.statusRawValue = statusRawValue
         self.startedAt = startedAt
         self.completedAt = completedAt
+        self.exerciseTargets = exerciseTargets
     }
 }

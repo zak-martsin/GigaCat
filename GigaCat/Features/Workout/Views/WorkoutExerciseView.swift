@@ -3,17 +3,16 @@ import SwiftUI
 struct WorkoutExerciseView: View {
     @State private var viewModel: WorkoutExerciseViewModel
     @State private var transitionDirection: ExerciseTransitionDirection = .forward
-    @State private var drafts = WorkoutSetDraftCollection()
 
     private let mapper = WorkoutExerciseDetailViewDataMapper()
-    private let onExerciseInfo: () -> Void
+    private let onOpenProfile: () -> Void
 
     init(
         viewModel: WorkoutExerciseViewModel,
-        onExerciseInfo: @escaping () -> Void = {}
+        onOpenProfile: @escaping () -> Void = {}
     ) {
         _viewModel = State(initialValue: viewModel)
-        self.onExerciseInfo = onExerciseInfo
+        self.onOpenProfile = onOpenProfile
     }
 
     var body: some View {
@@ -21,7 +20,7 @@ struct WorkoutExerciseView: View {
             if let viewData {
                 WorkoutExerciseContentView(
                     viewData: viewData,
-                    drafts: $drafts,
+                    drafts: Binding(get: { viewModel.drafts }, set: { viewModel.drafts = $0 }),
                     onPreviousExercise: selectPreviousExercise,
                     onNextExercise: selectNextExercise,
                     onAddSet: addSet,
@@ -46,10 +45,8 @@ struct WorkoutExerciseView: View {
         .toolbar(.visible, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button(action: onExerciseInfo) {
-                    Image(systemName: "info")
-                }
-                .accessibilityLabel("Exercise information")
+                Button(action: onOpenProfile) { Image(systemName: "person.crop.circle") }
+                    .accessibilityLabel("Profile")
             }
         }
         .task {

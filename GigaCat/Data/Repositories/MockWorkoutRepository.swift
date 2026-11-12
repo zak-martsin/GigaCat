@@ -9,7 +9,7 @@ struct MockWorkoutRepository: WorkoutRepository {
     }
 
     func activeSession(for userId: UUID) async throws -> WorkoutSession? {
-        await store.activeSession(for: userId)
+        try await store.reconcileActiveSession(for: userId)
     }
 
     func startSession(userId: UUID, workoutDayId: UUID, startedAt: Date) async throws -> WorkoutSession {

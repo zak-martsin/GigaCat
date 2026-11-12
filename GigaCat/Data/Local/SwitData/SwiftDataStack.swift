@@ -11,16 +11,7 @@ import SwiftData
 /// Owns the shared SwiftData schema and container used by local repositories.
 @MainActor
 final class SwiftDataStack {
-    static let schema = Schema([
-        UserEntity.self,
-        WorkoutProgramEntity.self,
-        WorkoutDayEntity.self,
-        WorkoutDayExerciseEntity.self,
-        ExerciseEntity.self,
-        WorkoutSessionEntity.self,
-        ExerciseLogEntity.self,
-        SyncOperationEntity.self
-    ])
+    static let schema = Schema(versionedSchema: GigaCatSchemaV3.self)
 
     let container: ModelContainer
     let mainContext: ModelContext
@@ -45,6 +36,7 @@ final class SwiftDataStack {
         }
         let container = try ModelContainer(
             for: Self.schema,
+            migrationPlan: GigaCatSchemaMigrationPlan.self,
             configurations: [configuration]
         )
 

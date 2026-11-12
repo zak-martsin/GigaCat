@@ -8,6 +8,8 @@ struct WorkoutSession: Identifiable, Codable, Equatable, Sendable {
     let status: WorkoutSessionStatus
     let startedAt: Date
     let completedAt: Date?
+    /// Nil identifies legacy history whose original recommendations were never recorded.
+    let exerciseTargets: [WorkoutExerciseTarget]?
 
     init(
         id: UUID = UUID(),
@@ -15,7 +17,8 @@ struct WorkoutSession: Identifiable, Codable, Equatable, Sendable {
         workoutDayId: UUID,
         status: WorkoutSessionStatus = .inProgress,
         startedAt: Date = Date(),
-        completedAt: Date? = nil
+        completedAt: Date? = nil,
+        exerciseTargets: [WorkoutExerciseTarget]? = nil
     ) throws {
         if let completedAt {
             guard completedAt >= startedAt else {
@@ -31,12 +34,24 @@ struct WorkoutSession: Identifiable, Codable, Equatable, Sendable {
             throw DomainValidationError.invalidSessionTransition
         }
 
+        if let exerciseTargets {
+            guard Set(exerciseTargets.map(\.workoutDayExerciseID)).count == exerciseTargets.count else {
+                throw DomainValidationError.duplicateExerciseTarget
+            }
+            for target in exerciseTargets {
+                guard target.targetSets > 0, (target.programOverride ?? 1) > 0 else {
+                    throw DomainValidationError.nonPositiveValue(field: "targetSets")
+                }
+            }
+        }
+
         self.id = id
         self.userId = userId
         self.workoutDayId = workoutDayId
         self.status = status
         self.startedAt = startedAt
         self.completedAt = completedAt
+        self.exerciseTargets = exerciseTargets
     }
 
     // MARK: - Lifecycle
@@ -61,7 +76,20 @@ struct WorkoutSession: Identifiable, Codable, Equatable, Sendable {
             workoutDayId: workoutDayId,
             status: .completed,
             startedAt: startedAt,
-            completedAt: date
+            completedAt: date,
+            exerciseTargets: exerciseTargets
+        )
+    }
+}
+
+extension WorkoutSession {
+    /// Updates the planned workload without changing lifecycle dates or recorded performance.
+    func replacingTargets(_ targets: [WorkoutExerciseTarget]) throws -> WorkoutSession {
+        guard isActive else { throw DomainValidationError.invalidSessionTransition }
+        return try WorkoutSession(
+            id: id, userId: userId, workoutDayId: workoutDayId,
+            status: status, startedAt: startedAt, completedAt: completedAt,
+            exerciseTargets: targets
         )
     }
 }

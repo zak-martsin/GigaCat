@@ -61,9 +61,19 @@ struct WorkoutView: View {
                 Text("All logged sets from this workout will be deleted.")
             }
             .onChange(of: viewModel.loadState) { _, loadState in
-                if loadState == .loading {
+                if loadState == .empty || loadState == .failed {
                     selectedDayExerciseID = nil
                 }
+            }
+            .task(id: viewModel.dataRevision) { await viewModel.loadIfNeeded() }
+            .onChange(of: selectedDayExerciseID) { _, id in
+                if id == nil { viewModel.dismissExercise() }
+            }
+            .onChange(of: viewModel.selectedDayID) { _, _ in
+                selectedDayExerciseID = nil
+            }
+            .onChange(of: viewModel.activeSession?.id) { previous, current in
+                if previous != nil && previous != current { selectedDayExerciseID = nil }
             }
             .onChange(of: isActive) { _, isActive in
                 if !isActive {
@@ -184,7 +194,7 @@ struct WorkoutView: View {
                dayContent: dayContent,
                initialDayExerciseID: dayExerciseID
            ) {
-            WorkoutExerciseView(viewModel: exerciseViewModel)
+            WorkoutExerciseView(viewModel: exerciseViewModel, onOpenProfile: { onHeaderAction(.profile) })
         } else {
             AppMessageCard(
                 title: "Exercise unavailable",

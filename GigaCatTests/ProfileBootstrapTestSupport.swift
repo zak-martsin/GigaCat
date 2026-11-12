@@ -45,7 +45,7 @@ actor BlockingUserProfileRemoteRepository: UserProfileRemoteRepository {
         return storedProfile
     }
 
-    func updateProfile(for _: UUID, selectedProgramID _: UUID?) -> User {
+    func updateProfile(for _: UUID, selectedProgramID _: UUID?, personalization _: ProfilePersonalization?) -> User {
         storedProfile
     }
 

@@ -13,12 +13,15 @@ struct LocalUserRepository: UserRepository {
     private let context: ModelContext
     private let currentUserIDProvider: any CurrentUserIDProviding
     private let outboxWriter: UserProfileOutboxWriter
+    private let profileChanges: ProfileChangeSource
 
     init(
         context: ModelContext,
-        currentUserIDProvider: any CurrentUserIDProviding
+        currentUserIDProvider: any CurrentUserIDProviding,
+        profileChanges: ProfileChangeSource = ProfileChangeSource()
     ) {
         self.context = context
+        self.profileChanges = profileChanges
         self.currentUserIDProvider = currentUserIDProvider
         outboxWriter = UserProfileOutboxWriter(context: context)
     }
@@ -54,6 +57,10 @@ struct LocalUserRepository: UserRepository {
         try context.save()
     }
 
+    func updateTrainingPreferences(for userID: UUID, goal: TrainingGoal?, level: TrainingLevel?) async throws -> User {
+        try LocalTrainingProfileWriter(context: context).update(userID: userID, goal: goal, level: level)
+    }
+
     func profileSnapshot(for userID: UUID) async throws -> LocalProfileSnapshot {
         let entity = try findUser(id: userID)
         return LocalProfileSnapshot(
@@ -67,7 +74,8 @@ struct LocalUserRepository: UserRepository {
         _ user: User,
         ifUnchangedSince snapshot: LocalProfileSnapshot
     ) async throws -> Bool {
-        guard user.id == snapshot.userID else { return false }
+        guard user.id == snapshot.userID,
+              await currentUserIDProvider.currentUserID() == user.id else { return false }
 
         // Keep the version/outbox check and the write in one actor-isolated operation.
         let entity = try findUser(id: user.id)
@@ -80,14 +88,26 @@ struct LocalUserRepository: UserRepository {
             return false
         }
 
-        guard currentUser != user else { return false }
-        if let entity {
-            UserMapper.update(entity, from: user)
-        } else {
-            context.insert(UserMapper.toEntity(user))
-        }
-        try context.save()
-        return true
+        let didChange = try LocalProfileApplication(context: context).apply(user, to: entity)
+        if didChange { profileChanges.publish(userID: user.id) }
+        return didChange
+    }
+
+    func discardFailedProfileChanges(applying user: User, ifUnchangedSince snapshot: LocalProfileSnapshot) async throws -> Bool {
+        guard user.id == snapshot.userID,
+              await currentUserIDProvider.currentUserID() == user.id else { return false }
+        let entity = try findUser(id: user.id)
+        guard entity?.revision == snapshot.revision, entity.map(UserMapper.toDomain) == snapshot.user else { return false }
+        let profileType = SyncAggregateType.userProfile.rawValue
+        let userID = user.id
+        let operations = try context.fetch(FetchDescriptor<SyncOperationEntity>(predicate: #Predicate {
+            $0.userId == userID && $0.aggregateTypeRawValue == profileType
+        }))
+        guard !operations.isEmpty,
+              operations.allSatisfy({ $0.statusRawValue == SyncOperationStatus.failed.rawValue }) else { return false }
+        let didChange = try LocalProfileApplication(context: context).apply(user, to: entity, removing: operations)
+        if didChange { profileChanges.publish(userID: user.id) }
+        return didChange
     }
 
     func updateSelectedProgram(for userId: UUID, programId: UUID?) async throws -> User {

@@ -22,7 +22,7 @@ struct WorkoutExerciseDetailViewDataMapper {
             name: selectedExercise.exercise.name,
             position: selectedExerciseIndex + 1,
             totalCount: totalCount,
-            targetSummary: makeTargetSummary(from: selectedExercise.dayExercise),
+            targetSummary: makeTargetSummary(sets: selectedExercise.recommendedSets, reps: selectedExercise.dayExercise.targetReps),
             artworkFileURL: artworkFileURL,
             previousResult: mapResult(logContext.historySummary?.previousLog),
             bestResult: mapResult(logContext.historySummary?.bestLog),
@@ -71,8 +71,8 @@ struct WorkoutExerciseDetailViewDataMapper {
 
     // MARK: - Formatting
 
-    private func makeTargetSummary(from dayExercise: WorkoutDayExercise) -> String {
-        switch (dayExercise.targetSets, dayExercise.targetReps) {
+    private func makeTargetSummary(sets: Int?, reps: Int?) -> String {
+        switch (sets, reps) {
         case let (targetSets?, targetReps?):
             let setUnit = targetSets == 1 ? "set" : "sets"
             let repUnit = targetReps == 1 ? "rep" : "reps"

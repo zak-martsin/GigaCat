@@ -21,6 +21,12 @@ struct WorkoutSetDraftCollection: Equatable, Sendable {
         draftsByKey[key] ?? fallback
     }
 
+    func highestEnteredSetNumber(for dayExerciseID: UUID) -> Int {
+        draftsByKey.filter { key, value in
+            key.dayExerciseID == dayExerciseID && (!value.weightText.isEmpty || !value.repsText.isEmpty)
+        }.keys.map(\.setNumber).max() ?? 0
+    }
+
     mutating func update(
         _ draft: WorkoutSetDraft,
         for key: WorkoutSetDraftKey

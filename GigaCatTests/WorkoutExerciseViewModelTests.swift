@@ -19,7 +19,6 @@ struct WorkoutExerciseViewModelTests {
         #expect(viewModel.canSelectPreviousExercise)
         #expect(viewModel.canSelectNextExercise)
     }
-
     @Test
     func selectsPreviousAndNextExercisesWithinDayBounds() throws {
         let fixture = try Fixture()
@@ -42,7 +41,6 @@ struct WorkoutExerciseViewModelTests {
         viewModel.selectPreviousExercise()
         #expect(viewModel.selectedDayExerciseID == fixture.second.dayExercise.id)
     }
-
     @Test
     func fallsBackToFirstExerciseWhenInitialIDIsOutsideDay() throws {
         let fixture = try Fixture()
@@ -493,7 +491,8 @@ extension WorkoutExerciseViewModelTests {
 
             return WorkoutExerciseContent(
                 dayExercise: dayExercise,
-                exercise: exercise
+                exercise: exercise,
+                recommendedSets: dayExercise.targetSets
             )
         }
     }

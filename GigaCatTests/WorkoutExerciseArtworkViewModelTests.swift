@@ -108,7 +108,8 @@ private extension WorkoutExerciseArtworkViewModelTests {
             )
             return WorkoutExerciseContent(
                 dayExercise: dayExercise,
-                exercise: exercise
+                exercise: exercise,
+                recommendedSets: dayExercise.targetSets
             )
         }
     }

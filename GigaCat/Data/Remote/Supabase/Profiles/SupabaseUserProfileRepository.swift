@@ -20,12 +20,14 @@ struct SupabaseUserProfileRepository: UserProfileRemoteRepository {
 
     func updateProfile(
         for userID: UUID,
-        selectedProgramID: UUID?
+        selectedProgramID: UUID?,
+        personalization: ProfilePersonalization? = nil
     ) async throws -> User {
         let dto = try await profileClient.updateProfile(
             id: userID,
             request: UpdateUserProfileDTO(
-                selectedProgramID: selectedProgramID
+                selectedProgramID: selectedProgramID,
+                personalization: personalization
             )
         )
         return UserProfileMapper.toDomain(dto)

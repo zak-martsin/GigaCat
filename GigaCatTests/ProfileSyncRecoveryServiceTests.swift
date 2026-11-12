@@ -145,7 +145,7 @@ private struct ProfileSyncRemoteRepositoryStub: UserProfileRemoteRepository {
         profile
     }
 
-    func updateProfile(for _: UUID, selectedProgramID _: UUID?) -> User {
+    func updateProfile(for _: UUID, selectedProgramID _: UUID?, personalization _: ProfilePersonalization?) -> User {
         profile
     }
 }
