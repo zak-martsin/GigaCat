@@ -9,9 +9,34 @@ The authenticated person using the app.
 
 - `id`: provider-independent Supabase Auth identity
 - `selectedProgramId`: optional explicitly selected `WorkoutProgram`
+- `goal`: optional `TrainingGoal` (`loseWeight`, `maintain`, `buildMuscle`)
+- `level`: optional `TrainingLevel` (`beginner`, `intermediate`, `advanced`)
+- `avatarPath`: optional stored object path; avatar upload is outside Profile v1
 - `createdAt`, `updatedAt`: lifecycle timestamps
 
-A user owns many workout sessions and can select one system program.
+A user owns many workout sessions and can select one system program. There is no profile-completion state.
+Email belongs to the authenticated account, not the synchronized profile.
+
+`TargetSetsPolicy` resolves program overrides before applying the profile matrix:
+
+| Goal / Level | Beginner | Intermediate | Advanced |
+| --- | --- | --- | --- |
+| loseWeight | 2 | 3 | 3 |
+| maintain | 2 | 3 | 3 |
+| buildMuscle | 3 | 4 | 4 |
+
+A non-nil exercise `targetSets` overrides this matrix even for an incomplete profile.
+With no override, missing either profile input yields 2. Both bundled programs delegate to the profile
+by leaving every set override nil. The profile and catalog migrations were applied to the linked project on 2026-11-09.
+
+The local training-preference write atomically updates the profile, every active-session exercise
+recommendation, revision and outbox. Accepted remote profiles use the same atomic recommendation
+application, without generating new outgoing work. A remote response cannot replace newer local
+intent, and explicit failure recovery is version-checked. The profile sheet edits an independent draft,
+with nullable selections and explicit Save/Cancel. Auth email is passed to the sheet for display and
+is not duplicated in the profile table. Avatar v1 uses a placeholder; uploading remains out of scope.
+The policy is never implemented in ViewDataMapper or Views. Workout screens consume resolved
+recommendations and preserve recorded sets, manually added rows and entered drafts on refresh.
 
 ## WorkoutProgram
 
@@ -43,7 +68,7 @@ preserving stable historical lookups.
 The ordered relationship between a workout day and a reusable exercise.
 
 - `id`, `workoutDayId`, `exerciseId`
-- optional `targetSets`, `targetReps`
+- optional `targetSets` (a program override), `targetReps`
 - `orderIndex`
 
 Targets are optional because catalog content may intentionally omit them. Historical ID lookups must
@@ -64,6 +89,17 @@ A user-owned performance of one workout day.
 - `id`, `userId`, `workoutDayId`
 - `status`: in progress or completed
 - `startedAt`, optional `completedAt`
+- optional `exerciseTargets`: ordered `WorkoutExerciseTarget` snapshots for every assigned exercise,
+  including exercises without logged sets
+
+Each target contains the assignment ID, resolved `targetSets`, and the captured `programOverride`.
+It is a recommendation, not a cap or the number of visible rows. Profile edits re-evaluate all targets
+in an in-progress session against their captured overrides. Catalog edits do not rewrite the session.
+Manual completion, completion with program selection, and expiration preserve these values.
+
+Nil targets identify legacy sessions. Completed legacy history remains unknown; active legacy sessions
+initialize their recommendations once when resolved. Actual ExerciseLog rows are never changed by
+personalization. A completed count greater than the recommendation is valid.
 
 At most one session may be in progress for a user.
 
