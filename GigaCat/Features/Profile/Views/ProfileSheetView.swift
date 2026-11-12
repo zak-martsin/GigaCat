@@ -1,89 +1,127 @@
 import SwiftUI
 
 struct ProfileSheetView: View {
-    let user: User?
+    @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: ProfileSheetViewModel
     let onSignOut: () -> Void
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: AppSpacing.lg) {
-                Text("Profile")
-                    .font(.system(.title2, design: .rounded, weight: .bold))
-                    .foregroundStyle(AppColor.textPrimary)
-
-                if let user {
-                    profileRow(title: "User ID", value: user.id.uuidString)
-                    profileRow(
-                        title: "Selected Program ID",
-                        value: user.selectedProgramId?.uuidString ?? "No program selected"
-                    )
-                    profileRow(title: "Created At", value: formatted(user.createdAt))
-                    profileRow(title: "Updated At", value: formatted(user.updatedAt))
-                } else {
-                    Text("User profile is not available yet.")
-                        .font(.body)
-                        .foregroundStyle(AppColor.textSecondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(AppSpacing.lg)
-                        .appCardStyle()
+        NavigationStack {
+            Form {
+                Section {
+                    HStack(spacing: AppSpacing.lg) {
+                        Image(systemName: "person.crop.circle.fill")
+                            .font(.system(size: AppIconSize.profileAvatar))
+                            .foregroundStyle(AppColor.textSecondary)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                            Text("Email").font(.subheadline).foregroundStyle(AppColor.textSecondary)
+                            Text(viewModel.email ?? "Email unavailable")
+                                .textSelection(.enabled)
+                                .accessibilityIdentifier("profile.email")
+                        }
+                    }
+                    .padding(.vertical, AppSpacing.sm)
                 }
 
+                if viewModel.isLoaded {
+                    Section {
+                        Picker("Goal", selection: $viewModel.goal) {
+                            Text("Not set").tag(TrainingGoal?.none)
+                            ForEach(TrainingGoal.allCases, id: \.self) { goal in
+                                Text(goal.profileTitle).tag(Optional(goal))
+                            }
+                        }
+                        .accessibilityIdentifier("profile.goal")
+                        Picker("Level", selection: $viewModel.level) {
+                            Text("Not set").tag(TrainingLevel?.none)
+                            ForEach(TrainingLevel.allCases, id: \.self) { level in
+                                Text(level.profileTitle).tag(Optional(level))
+                            }
+                        }
+                        .accessibilityIdentifier("profile.level")
+                    } header: {
+                        Text("Training preferences")
+                    } footer: {
+                        Text("These preferences recommend your starting sets. You can always add more during a workout.")
+                    }
+                    .disabled(viewModel.isSaving)
+                } else if viewModel.errorMessage == nil {
+                    Section { SwiftUI.ProgressView("Loading profile…") }
+                }
+
+                if let error = viewModel.errorMessage {
+                    Section {
+                        Text(error).foregroundStyle(AppColor.textSecondary)
+                            .accessibilityIdentifier("profile.error")
+                        if !viewModel.isLoaded {
+                            Button("Retry") { Task { await viewModel.load() } }
+                        }
+                    }
+                }
                 if viewModel.isSyncFailureVisible {
-                    Label(
-                        "Your program change is saved on this device, but could not sync yet.",
-                        systemImage: "exclamationmark.arrow.triangle.2.circlepath"
-                    )
-                    .font(.subheadline)
-                    .foregroundStyle(AppColor.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(AppSpacing.lg)
-                    .appCardStyle()
-                    .accessibilityIdentifier("profileSyncFailureStatus")
+                    Section {
+                        Label(
+                            "Your changes are saved on this device, but could not sync yet.",
+                            systemImage: "exclamationmark.arrow.triangle.2.circlepath"
+                        )
+                        .foregroundStyle(AppColor.textSecondary)
+                        .accessibilityIdentifier("profileSyncFailureStatus")
+                    }
                 }
-
-                Spacer(minLength: AppSpacing.lg)
-
-                Button(role: .destructive, action: onSignOut) {
-                    Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: AppControlSize.buttonHeight)
+                Section {
+                    Button("Sign Out", role: .destructive, action: onSignOut)
+                        .disabled(viewModel.isSaving)
                 }
-                .buttonStyle(.bordered)
             }
-            .padding(.horizontal, AppSpacing.lg)
-            .padding(.top, AppSpacing.lg)
-            .padding(.bottom, AppSpacing.xxl)
+            .scrollContentBackground(.hidden)
+            .background(AppColor.background)
+            .navigationTitle("Profile")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .disabled(viewModel.isSaving)
+                        .accessibilityIdentifier("profile.cancel")
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button {
+                        Task { if await viewModel.save() { dismiss() } }
+                    } label: {
+                        if viewModel.isSaving { SwiftUI.ProgressView() } else { Text("Save") }
+                    }
+                    .disabled(!viewModel.canSave)
+                    .accessibilityIdentifier("profile.save")
+                }
+            }
+            .interactiveDismissDisabled(viewModel.isSaving)
         }
-        .background(AppColor.background.ignoresSafeArea())
         .task {
+            await viewModel.load()
             while !Task.isCancelled {
                 viewModel.refreshSyncStatus()
                 try? await Task.sleep(for: .seconds(5))
             }
         }
     }
+}
 
-    private func profileRow(title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: AppSpacing.xs) {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(AppColor.textSecondary)
-
-            Text(value)
-                .font(.body)
-                .foregroundStyle(AppColor.textPrimary)
+private extension TrainingGoal {
+    var profileTitle: String {
+        switch self {
+        case .loseWeight: "Lose weight"
+        case .maintain: "Maintain"
+        case .buildMuscle: "Build muscle"
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(AppSpacing.lg)
-        .appCardStyle()
     }
+}
 
-    private func formatted(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+private extension TrainingLevel {
+    var profileTitle: String {
+        switch self {
+        case .beginner: "Beginner"
+        case .intermediate: "Intermediate"
+        case .advanced: "Advanced"
+        }
     }
 }

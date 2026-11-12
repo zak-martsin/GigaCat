@@ -13,6 +13,7 @@ struct ContentView: View {
     init(
         repositoryFactory: some RepositoryFactory,
         userID: UUID,
+        email: String?,
         syncCoordinator: any SyncCoordinating,
         systemCatalogSynchronizer: any SystemCatalogSyncing,
         artworkService: any ArtworkServicing,
@@ -23,6 +24,7 @@ struct ContentView: View {
         appShellView = AppShellView(
             repositoryFactory: repositoryFactory,
             userID: userID,
+            email: email,
             syncCoordinator: syncCoordinator,
             systemCatalogSynchronizer: systemCatalogSynchronizer,
             artworkService: artworkService,

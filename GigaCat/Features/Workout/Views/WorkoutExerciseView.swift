@@ -5,14 +5,14 @@ struct WorkoutExerciseView: View {
     @State private var transitionDirection: ExerciseTransitionDirection = .forward
 
     private let mapper = WorkoutExerciseDetailViewDataMapper()
-    private let onExerciseInfo: () -> Void
+    private let onOpenProfile: () -> Void
 
     init(
         viewModel: WorkoutExerciseViewModel,
-        onExerciseInfo: @escaping () -> Void = {}
+        onOpenProfile: @escaping () -> Void = {}
     ) {
         _viewModel = State(initialValue: viewModel)
-        self.onExerciseInfo = onExerciseInfo
+        self.onOpenProfile = onOpenProfile
     }
 
     var body: some View {
@@ -45,10 +45,8 @@ struct WorkoutExerciseView: View {
         .toolbar(.visible, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button(action: onExerciseInfo) {
-                    Image(systemName: "info")
-                }
-                .accessibilityLabel("Exercise information")
+                Button(action: onOpenProfile) { Image(systemName: "person.crop.circle") }
+                    .accessibilityLabel("Profile")
             }
         }
         .task {

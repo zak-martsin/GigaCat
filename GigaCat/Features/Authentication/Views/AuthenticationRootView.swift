@@ -58,6 +58,7 @@ struct AuthenticationRootView<Factory: RepositoryFactory>: View {
                 ContentView(
                     repositoryFactory: repositoryFactory,
                     userID: account.id,
+                    email: account.email,
                     syncCoordinator: syncCoordinator,
                     systemCatalogSynchronizer: systemCatalogSynchronizer,
                     artworkService: artworkService,

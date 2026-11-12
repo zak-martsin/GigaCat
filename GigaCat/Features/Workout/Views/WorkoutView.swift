@@ -194,7 +194,7 @@ struct WorkoutView: View {
                dayContent: dayContent,
                initialDayExerciseID: dayExerciseID
            ) {
-            WorkoutExerciseView(viewModel: exerciseViewModel)
+            WorkoutExerciseView(viewModel: exerciseViewModel, onOpenProfile: { onHeaderAction(.profile) })
         } else {
             AppMessageCard(
                 title: "Exercise unavailable",

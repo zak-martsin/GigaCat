@@ -52,6 +52,7 @@ struct GigaCatApp: App {
                 ContentView(
                     repositoryFactory: dependencies.repositoryFactory,
                     userID: dependencies.userID,
+                    email: "athlete@example.com",
                     syncCoordinator: dependencies.syncCoordinator,
                     systemCatalogSynchronizer: dependencies.systemCatalogSynchronizer,
                     artworkService: dependencies.artworkService,

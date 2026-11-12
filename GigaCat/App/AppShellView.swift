@@ -20,6 +20,7 @@ struct AppShellView: View {
     init(
         repositoryFactory: some RepositoryFactory,
         userID: UUID,
+        email: String?,
         syncCoordinator: any SyncCoordinating,
         systemCatalogSynchronizer: any SystemCatalogSyncing,
         artworkService: any ArtworkServicing,
@@ -43,9 +44,8 @@ struct AppShellView: View {
         _catalogViewModel = StateObject(wrappedValue: container.catalogViewModel)
         _programDetailViewModel = StateObject(wrappedValue: container.programDetailViewModel)
         _profileSheetViewModel = StateObject(
-            wrappedValue: ProfileSheetViewModel(
-                recoveryService: profileSyncRecoveryService,
-                userID: userID
+            wrappedValue: container.makeProfileViewModel(
+                userID: userID, email: email, recoveryService: profileSyncRecoveryService
             )
         )
     }
@@ -104,7 +104,7 @@ struct AppShellView: View {
                 }
                 if isSyncFailureNoticeVisible {
                     foregroundNotice(
-                        "Your program change could not sync. It is still saved on this device.",
+                        "Your changes could not sync. They are still saved on this device.",
                         identifier: "profileSyncFailureNotice"
                     )
                 }
@@ -121,15 +121,19 @@ struct AppShellView: View {
         } message: {
             Text(programDetailViewModel.errorMessage ?? "Please try again.")
         }
-        .sheet(isPresented: $isProfilePresented) {
+        .sheet(isPresented: $isProfilePresented, onDismiss: {
+            Task {
+                await loadSelectedTabIfNeeded()
+                await programDetailViewModel.refreshIfPresented()
+            }
+        }, content: {
             ProfileSheetView(
-                user: catalogViewModel.profileUser,
                 viewModel: profileSheetViewModel,
                 onSignOut: signOut
             )
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
-        }
+        })
         .task(id: selectedTab) {
             switch selectedTab {
             case .catalog:
@@ -138,6 +142,13 @@ struct AppShellView: View {
                 await workoutViewModel.loadIfNeeded()
             case .progress:
                 await progressViewModel.loadIfNeeded()
+            }
+        }
+        .task {
+            await container.observeProfileChanges(for: userID) {
+                await profileSheetViewModel.refreshIfUnedited()
+                await programDetailViewModel.refreshIfPresented()
+                await loadSelectedTabIfNeeded()
             }
         }
         .task {

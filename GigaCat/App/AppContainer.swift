@@ -139,6 +139,15 @@ final class AppContainer {
         return result
     }
 
+    func makeProfileViewModel(
+        userID: UUID, email: String?, recoveryService: any ProfileSyncRecovering
+    ) -> ProfileSheetViewModel {
+        ProfileSheetViewModel(
+            recoveryService: recoveryService, userID: userID, email: email,
+            userRepository: userRepository, onDataChanged: dataChangeDispatcher.send
+        )
+    }
+
     /// The app shell owns cancellation; events for other accounts cannot invalidate this shell.
     func observeProfileChanges(for userID: UUID, onChange: @MainActor () async -> Void) async {
         for await changedUserID in profileChanges.changes() {

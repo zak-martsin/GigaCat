@@ -25,7 +25,7 @@ final class AppDataChangeCoordinator {
 
     func handle(_ change: AppDataChange) async {
         switch change {
-        case .selectedProgram:
+        case .selectedProgram, .trainingPreferences:
             requestProfileSync()
             invalidateCatalog()
             invalidateProgress()

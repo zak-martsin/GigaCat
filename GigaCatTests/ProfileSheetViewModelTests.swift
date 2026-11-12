@@ -7,7 +7,10 @@ struct ProfileSheetViewModelTests {
     @Test
     func terminalFailureIsAnnouncedOnceAndClearsAfterSync() {
         let recovery = ProfileSyncRecoveryStub(status: .waiting)
-        let viewModel = ProfileSheetViewModel(recoveryService: recovery, userID: UUID())
+        let viewModel = ProfileSheetViewModel(
+            recoveryService: recovery, userID: UUID(), email: "test@example.com",
+            userRepository: MockUserRepository(store: MockDataStore())
+        )
 
         #expect(!viewModel.refreshSyncStatus())
         #expect(!viewModel.isSyncFailureVisible)
