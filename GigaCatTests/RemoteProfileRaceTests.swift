@@ -34,7 +34,8 @@ struct RemoteProfileRaceTests {
         await remote.releaseFetch()
         #expect(try await !pull.value)
         #expect(try await fixture.factory.userRepository.user(id: fixture.user.id) == local)
-        #expect(try await fixture.factory.workoutRepository.activeSession(for: fixture.user.id)?.exerciseTargets?.map(\.targetSets) == [3, 5, 3])
+        let session = try await fixture.factory.workoutRepository.activeSession(for: fixture.user.id)
+        #expect(session?.exerciseTargets?.map(\.targetSets) == [3, 5, 3])
         #expect(try outbox.operationCount(for: fixture.user.id) == 1)
     }
 
@@ -49,7 +50,8 @@ struct RemoteProfileRaceTests {
         let local = try await repository.updateTrainingPreferences(for: fixture.user.id, goal: nil, level: nil)
         try outbox.complete(old, with: .userProfile(fixture.user))
         #expect(try await repository.user(id: fixture.user.id) == local)
-        #expect(try await fixture.factory.workoutRepository.activeSession(for: fixture.user.id)?.exerciseTargets?.map(\.targetSets) == [2, 5, 2])
+        let session = try await fixture.factory.workoutRepository.activeSession(for: fixture.user.id)
+        #expect(session?.exerciseTargets?.map(\.targetSets) == [2, 5, 2])
         #expect(try outbox.operationCount(for: fixture.user.id) == 1)
     }
 

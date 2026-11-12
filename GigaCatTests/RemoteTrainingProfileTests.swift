@@ -88,7 +88,9 @@ struct RemoteTrainingProfileTests {
         let active = try await fixture.start()
         _ = try await fixture.factory.userRepository.updateSelectedProgram(for: fixture.user.id, programId: nil)
         if terminal {
-            let operation = try #require(try fixture.factory.syncOutboxRepository.claimNextReadyOperation(for: fixture.user.id, now: Date()))
+            let operation = try #require(
+                try fixture.factory.syncOutboxRepository.claimNextReadyOperation(for: fixture.user.id, now: Date())
+            )
             try fixture.factory.syncOutboxRepository.failPermanently(operation, message: "Rejected")
         }
         let remote = fixture.user.updatingTraining(goal: nil, level: nil)
